@@ -1,0 +1,145 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/mathlib-initiative/formalization.yaml/main/schema/formalization.schema.json
+version: "v0.4"
+
+project:
+  name: "Latency hardness for stacked proofs of space"
+  description: >-
+    A Lean 4 formalization of a conditional latency lower bound for stacked
+    proof-of-space graphs. Given an expansion profile, uniform intra-layer
+    depth robustness, red and black pebbling budgets, and the stated scalar
+    hypotheses, the main theorem constructs a nonempty unpebbled directed
+    path from the challenge footprint whose explicit length grows with the
+    number of layers. The development also derives concrete Filecoin-shaped
+    constants and records precisely the additional hypotheses required by
+    that specialization.
+  authors:
+    - "Diego de Estrada (@diegode)"
+  license: "Apache-2.0"
+  responsible_maintainers:
+    - "Diego de Estrada (@diegode)"
+
+classification:
+  arxiv: ["cs.CR"]
+  msc2020: ["94A60", "68Q25"]
+
+sources:
+  - title: "The Hardness of Proofs of Space Beyond Depth Robustness"
+    type: "manuscript"
+    location: "docs/explanation.tex"
+    relationship: "formalizes"
+    note: >-
+      The self-contained manuscript bundled with this repository. The main
+      compared theorem corresponds to thm:latency; the README gives a
+      declaration-by-declaration map and explains the indexing convention.
+      The bundled manuscript retains anonymous-submission authorship.
+    license: "Apache-2.0"
+    author_endorsement: "n/a"
+  - title: "Proofs of space with maximal hardness"
+    authors: ["Leonid Reyzin"]
+    type: "conference paper"
+    location: "65th IEEE Symposium on Foundations of Computer Science, 2024, pages 1159-1177"
+    relationship: "background"
+    note: >-
+      Supplies the footprint framework and expansion-profile results on which
+      the manuscript builds; the present theorem permits chains to break and
+      performs its own global ledger analysis.
+
+related_formalizations: []
+
+status:
+  scope: >-
+    The compared result is the full general conditional latency theorem
+    ProofOfSpaceStatement.latency_general and its explicit path witness. The
+    formalization proves the footprint recurrence, search, continuation,
+    growth, ledger, and latency argument for a static red/black pebbling
+    snapshot. Expansion and intra-layer depth robustness are hypotheses of the
+    theorem, not constructed universally. The concrete Chung-8/Filecoin
+    specialization separately assumes concavity and a unique gain maximizer,
+    and its deployed graph certificate remains conditional. No reduction from
+    the static snapshot statement to a time-indexed cryptographic sequential-
+    time game is claimed.
+  sorry_count: 0
+  sorry_in_definitions: 0
+  axioms: ["propext", "Classical.choice", "Quot.sound"]
+  main_results:
+    - declaration: "ProofOfSpaceStatement.latency_general"
+      file: "Solution.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
+
+automation:
+  methods:
+    - method: "manual"
+      models: []
+      framework: "n/a"
+      tool_setup: >-
+        Human-directed Lean development using Mathlib, editor feedback, and
+        the project's mechanical axiom audit.
+      cost:
+        wall_time: "not tracked"
+        spend_usd: "not tracked"
+        hardware: "local machine"
+      prompting_notes: "n/a"
+    - method: "agent"
+      models: ["OpenAI Codex"]
+      framework: "Codex"
+      tool_setup: >-
+        Used under human direction to prepare the Palomar Challenge/Solution
+        wrapper, diagnose elaboration errors, run the official Comparator,
+        and package submission metadata and CI.
+      cost:
+        wall_time: "not tracked"
+        spend_usd: "subscription-based; exact amount not tracked"
+        hardware: "hosted agent plus local Lean toolchain"
+      prompting_notes: >-
+        Iterative requests to audit the existing development and prepare an
+        honest Palomar submission following the public template and Sendov
+        example; a complete transcript was not archived in the repository.
+  spend_usd: "not tracked"
+  notes: >-
+    The mathematical development was human-directed. Exact historical effort
+    and any automation used before the Palomar packaging pass were not
+    reconstructed; all submitted Lean code is checked by Lean, the axiom
+    audit, and Palomar's statement comparator.
+
+fidelity:
+  divergences: >-
+    The main theorem follows thm:latency in the bundled manuscript. Lean counts
+    depth forward from the challenge layer, whereas the manuscript numbers
+    levels in the opposite direction; README.md explains the translation.
+    Several displayed ledger inequalities are fused into one induction in
+    Lean. The submitted Challenge expands the project's bundled structures
+    into primitive Mathlib-level hypotheses so that the statement is small
+    and independently comparable; Solution.lean proves that this is exactly
+    the public theorem. The theorem concerns a static pebbling snapshot and
+    does not itself formalize a time-indexed sequential game.
+
+review:
+  status: "self-assessed"
+  reviewers:
+    - "Diego de Estrada"
+  notes: >-
+    No independent mathematical review is recorded. The full project builds
+    with Lean 4, an environment-level audit rejects nonstandard axioms and
+    sorryAx throughout the ProofOfSpace namespace, and Palomar Comparator
+    checks the submitted Challenge theorem against Solution.lean.
+
+alignment:
+  namespace: "ProofOfSpaceStatement"
+  statements:
+    - source: "docs/explanation.tex, theorem thm:latency"
+      lean: "ProofOfSpaceStatement.latency_general"
+      module: "Solution"
+      status: "proved"
+      note: >-
+        Exact Palomar-facing statement of the general conditional latency
+        theorem. It exposes the bundled setting, graph, tracking, and pebbling
+        structures as primitive parameters and concludes with the same
+        explicit unpebbled path and length bound.
+
+acknowledgements: >-
+  Built with Lean and Mathlib. The proof architecture builds on work by Ben
+  Fisch and Leonid Reyzin. Thanks to the Palomar Registry maintainers for the
+  submission template and Comparator tooling.
