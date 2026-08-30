@@ -5,7 +5,7 @@ import Mathlib.Probability.Distributions.Uniform
 # Concrete graph constructions and their remaining certificates
 
 `Latency.lean` consumes `LayeredGraph.DepthRobust` as a hypothesis about an abstract
-graph.  This module names the actual graphs the paper proposes for that slot and asks,
+graph.  This module names the actual graphs the development proposes for that slot and asks,
 for each, whether the hypothesis is a theorem.
 
 * `StandaloneGraph`: the reusable within-layer abstraction.
@@ -65,7 +65,7 @@ theorem NodeDR.mono {H : StandaloneGraph n} {e e' dep dep' : ℝ}
 /-! ### Block variants on a standalone layer -/
 
 /-- The length-`B` interval ending at one of the selected nodes.  This is the
-zero-based version of the paper's `N_B(T)`. -/
+zero-based version of the development's `N_B(T)`. -/
 def blockNeighborhood (B : ℕ) (T : Finset (Fin n)) : Finset (Fin n) :=
   Finset.univ.filter fun v => ∃ t ∈ T, v.val ≤ t.val ∧ t.val < v.val + B
 
@@ -310,9 +310,9 @@ theorem permutationStack_depthRobust_of_nodeDR (H : StandaloneGraph n) (S : Sett
 
 /-! ### DRSample, and the depth robustness Filecoin assumes of it
 
-Nodes are `0, …, n-1`, the zero-based translation of the paper's `[n]`.  Vertex
-`v ≥ 2` has two parents: the line parent `v-1`, and a sampled parent `v-g`.  In the
-paper's `GetParent`, a bucket `i ∈ [1, ⌊log₂(v+1)⌋+1]` is selected, its capped upper
+Nodes are `0, …, n-1`, the zero-based translation of the development's `[n]`.  Vertex
+`v ≥ 2` has two parents: the line parent `v-1`, and a sampled parent `v-g`.  In
+`DRSample.GetParent`, a bucket `i ∈ [1, ⌊log₂(v+1)⌋+1]` is selected, its capped upper
 endpoint is `c = min(v, 2^i)`, and then `g ∈ [max(⌊c/2⌋,2),c]` is selected.  The
 lower bound `2` keeps the random parent distinct from the line parent.  A *seed* fixes
 that draw for every node; the probability law is defined below. -/
@@ -337,7 +337,7 @@ buckets. -/
 /-- Zero-based representation of the uniformly sampled bucket index. -/
 abbrev DRSampleBucket (v : ℕ) := Fin (Nat.log 2 (v + 1) + 1)
 
-/-- The paper's one-based bucket number. -/
+/-- The development's one-based bucket number. -/
 def DRSampleBucket.index {v : ℕ} (i : DRSampleBucket v) : ℕ := i.val + 1
 
 /-- Capped upper end of bucket `i`. -/
@@ -414,9 +414,9 @@ noncomputable def PermutationInterlayer.uniformLaw (n d : ℕ) :
   PMF.uniformOfFintype (PermutationInterlayer n d)
 
 /-- Probability-facing form of the expansion claim required by a stack: that a sampled
-`d`-tuple of permutations *realizes* `β` in the sense of `def:permutation-stack`.  The
-paper does not compute this probability — `prop:stack` and
-`prop:deployed-layer-suffices` take realization as a hypothesis — and neither does this
+`d`-tuple of permutations *realizes* `β` in the sense of `permutation-stack construction`.  This
+development does not compute the probability — `stack realization proposition` and
+`deployed-layer sufficiency result` take realization as a hypothesis — and neither does this
 development.  Nothing below consumes this definition; it names the gap. -/
 def PermutationExpansionWhpClaim (S : Setting) (n d : ℕ) (δ : ℝ≥0∞) : Prop :=
   HoldsWithFailureAtMost (PermutationInterlayer.uniformLaw n d)
@@ -752,7 +752,7 @@ theorem metaBucket5_indegree {n : ℕ} (s : DRSampleSeed (5 * n)) :
     (MetaBucket5 s).InDegreeAtMost 6 := by
   simpa using bucketSample_indegree (r := 5) (n := n) (by norm_num) s
 
-/-! The deterministic transfer result used by the paper is a substantial list/path
+/-! The deterministic transfer result used by the development is a substantial list/path
 argument, not a consequence of the graph definitions above.  It is stated here and
 proved below, as `intervalBlockTransfer`. -/
 
@@ -1076,9 +1076,9 @@ theorem depthRobust_of_filecoinWithinLayerTarget {S : Setting} (hpi : S.pi = (4 
 /-- **Open.**  Whether *some* seed meets the target at the deployed size.  The sampler
 draws a seed at random, so the deployed claim is that this holds with high probability;
 `FilecoinWithinLayerTarget` is not a property of the construction's shape, as
-`shortSeed_not_target` below shows.  The source paper records the question as unproved.
-The two quantitative facts behind that are recorded here rather than in the
-paper: the audited certificate reaches deletion budget `4971` at `n = 2^30`, against the
+`shortSeed_not_target` below shows.  The prior analysis records the question as unproved.
+The two quantitative facts behind that are recorded here explicitly: the audited
+certificate reaches deletion budget `4971` at `n = 2^30`, against the
 `0.2 n = 214,748,364` demanded here, and at `n = 2^15` a local search *refutes* the
 triple for one sampled graph. -/
 def DRSampleFilecoinConjecture (n : ℕ) : Prop :=

@@ -1,21 +1,21 @@
 /-
 # The mirror-based growth theorem
 
-This file formalizes part of `sec:footprint-proof` in `docs/explanation.tex`:
+This file formalizes part of `footprint analysis` in this development:
 
-* `mirror_floor` — `lem:mirror-floor`: while the footprint of a source set of weight `σ`
+* `mirror_floor` — `mirror-floor lemma`: while the footprint of a source set of weight `σ`
   sitting at a `ĝ`-expandable depth stays below `π`, it never falls below the tracking
   floor `π̂`.
-* `growth_exhaustion` — the gain-sum core of `lem:growth-window`.
-* `growth_window` / `growth_window_real` — `lem:growth-window` proper: the first crossing of
+* `growth_exhaustion` — the gain-sum core of `growth-window lemma`.
+* `growth_window` / `growth_window_real` — `growth-window lemma` proper: the first crossing of
   `π` happens within `u(x) = max{1, ⌊(π - σ + x)/ĝ⌋}` levels, where `x` is the spend
   *inside the window*, and `u(x) ≤ a + x/ĝ`.
-* `post_floor` — the no-break form of `lem:break-charge`: once a footprint reaches `π` it
+* `post_floor` — the no-break form of `break-charge lemma`: once a footprint reaches `π` it
   never afterwards drops
   below `β_δ(π) - ρ`.
 
-Everything is stated in the depth indexing of `Footprint.lean`: depth `d` is the
-paper's level `ℓ - d`, so the depth `t + i` here is the paper's level `ℓ - t - i`, and
+Everything is stated in the depth indexing of `Footprint.lean`: depth `d` is Reyzin's
+published level `ℓ - d`, so the depth `t + i` here is the corresponding level `ℓ - t - i`, and
 moving to larger depth is moving to smaller level.
 -/
 import ProofOfSpace.Tracking
@@ -32,7 +32,7 @@ variable {S : Setting} {B : Budget S} {T : Tracking S} {t : ℕ} {f : ℕ → �
 /--
 The gain accumulated over `i ≥ 1` levels below a source of weight `σ` is at least
 `(i+1) ĝ`: the source step contributes `gain_δ(σ) ≥ 2 ĝ`, and each of the `i - 1`
-later steps contributes at least `ĝ` by `eq:tracking-gain`.
+later steps contributes at least `ĝ` by `tracking-gain bound`.
 -/
 theorem gain_sum_ge (hinit : f t = T.σ) {i : ℕ} (hi : 1 ≤ i)
     (hfloor : ∀ m, m < i → T.lam ≤ f (t + m))
@@ -59,10 +59,10 @@ theorem gain_sum_ge (hinit : f t = T.σ) {i : ℕ} (hi : 1 ≤ i)
   push_cast
   linarith
 
-/-! ### `lem:mirror-floor` -/
+/-! ### `mirror-floor lemma` -/
 
 /--
-**Mirror tracking floor** (`lem:mirror-floor`).
+**Mirror tracking floor** (`mirror-floor lemma`).
 
 Let `f` be the footprint bound of an unpebbled set of weight `σ` at a
 `ĝ`-expandable depth `t`.  If the footprint does not exceed `π` during the next `j`
@@ -86,10 +86,10 @@ theorem mirror_floor (hexp : Expandable B T.ghat t) (hbound : IsFootprintBound S
       have : T.σ ≤ f (t + i) := by linarith
       exact le_trans T.lam_le_σ this
 
-/-! ### `lem:growth-window` -/
+/-! ### `growth-window lemma` -/
 
 /--
-**`eq:growth-window`.**  If the footprint stays at most `π` for `m ≥ 1` levels below a
+**`growth-window inequality`.**  If the footprint stays at most `π` for `m ≥ 1` levels below a
 `ĝ`-expandable source of weight `σ`, then `(m+1) ĝ ≤ π - σ + x`, where `x` is the
 spend inside the window.
 -/
@@ -113,7 +113,7 @@ noncomputable def growthSpan (S : Setting) (T : Tracking S) (x : ℝ) : ℕ :=
   max 1 ⌊(S.pi - T.σ + x) / T.ghat⌋₊
 
 /--
-**`lem:growth-window`, integer form.**  If `t1 > t` is the first level at which the footprint
+**`growth-window lemma`, integer form.**  If `t1 > t` is the first level at which the footprint
 of the source exceeds `π`, then `t1 - t ≤ u(x)`, where `x` is the spend strictly between
 `t` and `t1`.
 -/
@@ -138,13 +138,13 @@ theorem growth_window (hexp : Expandable B T.ghat t) (hbound : IsFootprintBound 
       exact hex
     refine le_trans (Nat.le_floor hfloorle) (le_max_right _ _)
 
-/-- `a = max{1, (π - σ)/ĝ}`, the asymptotic growth span of `eq:cap-span-global`. -/
+/-- `a = max{1, (π - σ)/ĝ}`, the asymptotic growth span of `optimized span bound`. -/
 noncomputable def asymptoticGrowth (S : Setting) (T : Tracking S) : ℝ :=
   max 1 ((S.pi - T.σ) / T.ghat)
 
 theorem one_le_asymptoticGrowth : 1 ≤ asymptoticGrowth S T := le_max_left _ _
 
-/-- `u(x) ≤ a + x/ĝ`, the real-valued form of `lem:growth-window`. -/
+/-- `u(x) ≤ a + x/ĝ`, the real-valued form of `growth-window lemma`. -/
 theorem growthSpan_le {x : ℝ} (hx : 0 ≤ x) :
     ((growthSpan S T x : ℕ) : ℝ) ≤ asymptoticGrowth S T + x / T.ghat := by
   have hdiv : 0 ≤ x / T.ghat := div_nonneg hx T.ghat_pos.le
@@ -173,7 +173,7 @@ theorem growthSpan_mono {x y : ℝ} (hxy : x ≤ y) :
 /-! ### The post-fertile floor -/
 
 /--
-**Post-fertile floor**, the no-break form of `lem:break-charge`.
+**Post-fertile floor**, the no-break form of `break-charge lemma`.
 
 Assume `β_δ(π) - ρ > α_δ^min`.  If the footprint reaches `π` at depth `d0`, then below
 `d0` it never falls under `β_δ(π) - ρ`.
@@ -210,13 +210,13 @@ theorem post_floor (hbound : IsFootprintBound S B t f) (h0 : 0 ≤ f t) (hmax : 
 
 /--
 **The window charge of a break**, the sharp form of the second conclusion of
-`lem:fertile-continuation`.
+`fertile-continuation lemma`.
 
 If the tracked footprint is fertile at `t1`, and `D` is the first depth below `t1` at
 which it falls under `c`, then the black pebbles placed strictly inside `(t1, D]` weigh
 more than `β_δ(π) - c`.
 
-This is `lem:break-charge`: the expansion step at `t1` itself is kept rather than
+This is `break-charge lemma`: the expansion step at `t1` itself is kept rather than
 discarded, so the charge is `β_δ(π) - c` and not merely `π - c`.  That one step is what
 turns the no-break condition `ρ < β_δ(π) - π̄` into the statement
 that *no* break can be paid for, and hence what lets a single break-aware latency
@@ -279,7 +279,7 @@ slope of `Φ` below `σ̃`.  The two constants to compare are therefore `Φ_{σ�
 `a`, and `growthPot_pi_succ_lt_asymptoticGrowth` says exactly when the former wins.
 
 The generic helper declarations below call their arbitrary split point `split`; when
-the ledger instantiates it with `T.mid`, that point is the paper's `σ̃`.
+the ledger instantiates it with `T.mid`, that point is the development's `σ̃`.
 
 **What consumes this.**  `growthConst = min{a, Φ_{σ̃}(π) + 1}` at the end of this file is
 the constant `Chain.h₁` is built from, so the potential feeds the *real-valued* ledger
@@ -391,7 +391,7 @@ theorem two_ghat_le_gainD_of_mem {split x : ℝ} (hsplit : 2 * T.ghat ≤ S.gain
   have h := S.gainD_concaveOn.min_le_of_mem_Icc T.σ_mem_Icc hsplitmem ⟨hx, hxsplit⟩
   exact le_trans (le_min T.two_ghat_le_gainD_σ hsplit) h
 
-/-- `lem:mirror-floor`, in the sharper form its own proof establishes: at a
+/-- `mirror-floor lemma`, in the sharper form its own proof establishes: at a
 `ĝ`-expandable depth the tracked footprint never falls below the *source weight*
 `σ`, not merely below the tracking floor `π̂`. -/
 theorem mirror_floor_sigma (hexp : Expandable B T.ghat t) (hbound : IsFootprintBound S B t f)
@@ -567,7 +567,7 @@ theorem two_ghat_le_gainD_of_le_mid {x : ℝ} (hx : T.σ ≤ x) (hxmid : x ≤ T
     2 * T.ghat ≤ S.gainD x :=
   two_ghat_le_gainD_of_mem T.two_ghat_le_gainD_mid T.mid_mem_Icc hx hxmid
 
-/-- **The growth constant of `eq:cap-span-global`**, `min{a, Φ_{σ̃}(π) + 1}`: the better
+/-- **The growth constant of `optimized span bound`**, `min{a, Φ_{σ̃}(π) + 1}`: the better
 of the single-constant count `a = max{1, (π-σ)/ĝ}` and the two-piece potential count. -/
 noncomputable def growthConst (S : Setting) (T : Tracking S) : ℝ :=
   min (asymptoticGrowth S T) (growthPot S T T.mid S.pi + 1)
@@ -588,7 +588,7 @@ theorem growthConst_le_asymptoticGrowth : growthConst S T ≤ asymptoticGrowth S
   min_le_left _ _
 
 /--
-**`lem:growth-window` at the growth constant.**  Both window bounds hold, so their
+**`growth-window lemma` at the growth constant.**  Both window bounds hold, so their
 minimum does: an attempt's growth phase spans at most `growthConst + x/ĝ` levels, where
 `x` is the spend strictly inside the window.
 -/

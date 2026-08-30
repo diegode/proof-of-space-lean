@@ -4,13 +4,13 @@
 This file connects the latency development to the threshold curve actually constructed
 in `ChungCurve.lean`.  On `(0,1)`, `chungBeta8` is definitionally the unique zero of
 the degree-eight Chung union-bound exponent.  Its endpoint values use the `0` and `1`
-convention required by the paper's closed-interval shape assumptions.
+convention required by the development's closed-interval shape assumptions.
 
 There are two distinct kinds of input:
 
 * `chungBeta8_maps`, `chungBeta8_expands`, `chungBeta8_strictMonoOn`, and
   `chungBeta8_reversal` are proved here/from `ChungCurve.lean` for the defined curve;
-* `Chung8AnalyticAssumptions` records the remaining global shape facts that the paper
+* `Chung8AnalyticAssumptions` records the remaining global shape facts that the development
   states as standing analytic assumptions.  After the reductions in this file that is
   just two: concavity of `chungBeta8` on `[0,1]`, and the uniqueness of the gain
   maximizer.  The two adjusted-gain roots used to live here too; they are now derived.
@@ -92,9 +92,9 @@ theorem chungBeta8_strictMonoOn :
     exact chungBeta_strictMonoOn (8 : ℝ) (by norm_num)
       ⟨hx0, hxy.trans hy1⟩ ⟨hx0.trans hxy, hy1⟩ hxy
 
-/-! ### The paper's remaining analytic profile assumptions -/
+/-! ### The development's remaining analytic profile assumptions -/
 
-/-- The global analytic facts about the genuine Chung-8 profile that the paper uses as
+/-- The global analytic facts about the genuine Chung-8 profile that the development uses as
 standing assumptions but that are not derived from the exponent construction here.
 
 This is intentionally much smaller than `Setting`.  Mapping, strict expansion, strict
@@ -250,7 +250,7 @@ theorem αmin_mem : H.αmin ∈ Icc (0 : ℝ) H.αg := by
   nlinarith [H.gd_αg_pos, gd_pi_pos]
 
 /-- **The right root is the mirror of the left one.**  The mirror identity of
-`eq:reversal` says the map
+`reversal identity` says the map
 `x ↦ 1 - β(x)` preserves the gain, so it carries one zero of `gain_δ` to the other.  The
 right root therefore does not have to be assumed: it is `1 - β(α_min)`. -/
 noncomputable def αmax : ℝ := 1 - chungBeta8 H.αmin
@@ -286,7 +286,7 @@ theorem chung8_αg_lt_pi (H : Chung8AnalyticAssumptions) : H.αg < (4 : ℝ) / 5
 
 /-! ### Exact Chung-8 `Setting` and Filecoin bundles -/
 
-/-- The paper's parameter setting with the *actual constructed Chung-8 curve* as `β`. -/
+/-- The development's parameter setting with the *actual constructed Chung-8 curve* as `β`. -/
 noncomputable def chung8Setting (H : Chung8AnalyticAssumptions) : Setting where
   β := chungBeta8
   αg := H.αg
@@ -446,7 +446,7 @@ noncomputable def chung8Tracking (H : Chung8AnalyticAssumptions) :
 
 The Filecoin specialization does not assume these; it proves them of the constructed
 curve, and `chung8Filecoin` records the three collapses they imply.  They are the
-inequalities `eq:no-break-conditions` of `app:filecoin`. -/
+inequalities `no-break parameter conditions` of `Filecoin specialization`. -/
 
 /-- `π̄ < ζ_δ - ρ`: the challenge floor stays above the tracking floor. -/
 theorem chung8_entry (H : Chung8AnalyticAssumptions) :
@@ -515,7 +515,7 @@ theorem chung8Filecoin (H : Chung8AnalyticAssumptions) :
       rw [(chung8Tracking H).lam_eq_piBar (chung8_condB H), hb]
       linarith [chung8_condC H])
 
-/-- The Filecoin setting satisfies `eq:scalar-conditions`, so `latency_general` is not
+/-- The Filecoin setting satisfies `general scalar conditions`, so `latency_general` is not
 vacuous here.  The entry condition follows from the stronger `chung8_entry`, since
 `α_δ^min < π̄` always. -/
 theorem chung8GeneralRegime (H : Chung8AnalyticAssumptions) :
@@ -528,7 +528,7 @@ theorem chung8GeneralRegime (H : Chung8AnalyticAssumptions) :
   zeta_le := chung8_zeta_le H
 
 /-- The two bundles used by the public latency theorem are simultaneously satisfied by
-the defined Chung-8 curve, conditional only on the paper's explicitly isolated global
+the defined Chung-8 curve, conditional only on the development's explicitly isolated global
 analytic profile assumptions. -/
 theorem chung8_filecoin_bundles (H : Chung8AnalyticAssumptions) :
     FilecoinLatencyParameters (chung8Setting H) (chung8Tracking H) ∧

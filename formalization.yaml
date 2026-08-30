@@ -2,16 +2,17 @@
 version: "v0.4"
 
 project:
-  name: "Latency hardness for stacked proofs of space"
+  name: "Formalized latency bounds for stacked proofs of space"
   description: >-
     A Lean 4 formalization of a conditional latency lower bound for stacked
     proof-of-space graphs. Given an expansion profile, uniform intra-layer
     depth robustness, red and black pebbling budgets, and the stated scalar
     hypotheses, the main theorem constructs a nonempty unpebbled directed
     path from the challenge footprint whose explicit length grows with the
-    number of layers. The development also derives concrete Filecoin-shaped
-    constants and records precisely the additional hypotheses required by
-    that specialization.
+    number of layers. The development formalizes and extends the published
+    footprint analyses of Fisch (EUROCRYPT 2019) and Reyzin (FOCS 2024). It
+    also derives concrete Filecoin-shaped constants and records precisely the
+    additional hypotheses required by that specialization.
   authors:
     - "Diego de Estrada (@diegode)"
   license: "Apache-2.0"
@@ -23,26 +24,28 @@ classification:
   msc2020: ["94A60", "68Q25"]
 
 sources:
-  - title: "The Hardness of Proofs of Space Beyond Depth Robustness"
-    type: "manuscript"
-    location: "docs/explanation.tex"
-    relationship: "formalizes"
-    note: >-
-      The self-contained manuscript bundled with this repository. The main
-      compared theorem corresponds to thm:latency; the README gives a
-      declaration-by-declaration map and explains the indexing convention.
-      The bundled manuscript retains anonymous-submission authorship.
-    license: "Apache-2.0"
-    author_endorsement: "n/a"
   - title: "Proofs of space with maximal hardness"
     authors: ["Leonid Reyzin"]
     type: "conference paper"
+    id: "https://dblp.org/rec/conf/focs/Reyzin24"
     location: "65th IEEE Symposium on Foundations of Computer Science, 2024, pages 1159-1177"
+    relationship: "adapts"
+    note: >-
+      The formalization uses Reyzin's footprint recurrence, expansion
+      profile, and chain-growth framework. It adapts the analysis to permit
+      continuation chains to break and restart, with an explicit global
+      ledger and path witness.
+    author_endorsement: "not-contacted"
+  - title: "Tight proofs of space and replication"
+    authors: ["Ben Fisch"]
+    type: "conference paper"
+    id: "https://doi.org/10.1007/978-3-030-17656-3_12"
+    location: "EUROCRYPT 2019, Part II, pages 324-348"
     relationship: "background"
     note: >-
-      Supplies the footprint framework and expansion-profile results on which
-      the manuscript builds; the present theorem permits chains to break and
-      performs its own global ledger analysis.
+      Provides the stacked depth-robust graph proof-of-space setting and the
+      Filecoin-shaped parameters used by the concrete specialization.
+    author_endorsement: "not-contacted"
 
 related_formalizations: []
 
@@ -106,15 +109,15 @@ automation:
 
 fidelity:
   divergences: >-
-    The main theorem follows thm:latency in the bundled manuscript. Lean counts
-    depth forward from the challenge layer, whereas the manuscript numbers
-    levels in the opposite direction; README.md explains the translation.
-    Several displayed ledger inequalities are fused into one induction in
-    Lean. The submitted Challenge expands the project's bundled structures
-    into primitive Mathlib-level hypotheses so that the statement is small
-    and independently comparable; Solution.lean proves that this is exactly
-    the public theorem. The theorem concerns a static pebbling snapshot and
-    does not itself formalize a time-indexed sequential game.
+    Relative to Reyzin's published FOCS 2024 analysis, the main theorem allows
+    continuation chains to break and restart and tracks those events in a
+    single global ledger. Lean counts depth forward from the challenge layer,
+    opposite to the published level numbering; README.md explains the
+    translation. The submitted Challenge expands the project's bundled
+    structures into primitive Mathlib-level hypotheses so that the statement
+    is small and independently comparable; Solution.lean proves that this is
+    exactly the public Lean theorem. The result concerns a static pebbling
+    snapshot and does not itself formalize a time-indexed sequential game.
 
 review:
   status: "self-assessed"
@@ -129,15 +132,15 @@ review:
 alignment:
   namespace: "ProofOfSpaceStatement"
   statements:
-    - source: "docs/explanation.tex, theorem thm:latency"
+    - source: "Reyzin, Proofs of Space with Maximal Hardness (FOCS 2024), footprint and chain-growth framework"
       lean: "ProofOfSpaceStatement.latency_general"
       module: "Solution"
-      status: "proved"
+      status: "adapted and proved"
       note: >-
-        Exact Palomar-facing statement of the general conditional latency
-        theorem. It exposes the bundled setting, graph, tracking, and pebbling
-        structures as primitive parameters and concludes with the same
-        explicit unpebbled path and length bound.
+        Palomar-facing statement of the general conditional latency theorem.
+        It exposes the setting, graph, tracking, and pebbling structures as
+        primitive parameters and proves an explicit unpebbled path and length
+        bound while permitting broken and restarted continuation chains.
 
 acknowledgements: >-
   Built with Lean and Mathlib. The proof architecture builds on work by Ben

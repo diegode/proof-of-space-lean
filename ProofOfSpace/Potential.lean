@@ -11,7 +11,7 @@ arbitrary finite **reference chain**
 and the associated piecewise-linear potential `refPot`, normalized so that
 `refPot (x k) = k`.  The natural chain is the `β_δ` orbit of the tracking floor,
 `x 0 = π̂`, `x (k+1) = β_δ (x k)`, run until it passes `π`; its bucket widths are the
-gains `gain_δ (x k)`, which are at least `ĝ` exactly on `[π̂, π]` (`eq:tracking-gain`),
+gains `gain_δ (x k)`, which are at least `ĝ` exactly on `[π̂, π]` (`tracking-gain bound`),
 so the width condition is automatic there and *fails* immediately above `π`.  That is
 why a chain stops one step past `π` and the potential saturates at `m`.
 

@@ -1,16 +1,16 @@
 /-
 # The search, the base case, and the fertile continuation
 
-This file finishes the continuation argument in `sec:footprint-proof` of
-`docs/explanation.tex`:
+This file finishes the continuation argument in `footprint analysis` of
+this development:
 
-* `search_reaches` — `lem:first-source`: if a window of `q + blockedCap(g)` levels contains at
+* `search_reaches` — `first-source lemma`: if a window of `q + blockedCap(g)` levels contains at
   most `q` infertile levels, it contains a fertile `g`-expandable level.
-* `basecase` — `lem:first-source`: the challenge footprint reaches a fertile `g`-expandable
+* `basecase` — `first-source lemma`: the challenge footprint reaches a fertile `g`-expandable
   level within `s(g,h) = infertileCap(h) + blockedCap(g)` levels.
-* `basecase_gen` — `lem:first-source` again, outside the no-break entry condition,
-  at the general infertile-gain floor `g̃` of `lem:challenge-floor`.
-* `fertile_continuation` — `lem:fertile-continuation`: below a depth carrying weight at
+* `basecase_gen` — `first-source lemma` again, outside the no-break entry condition,
+  at the general infertile-gain floor `g̃` of `challenge-floor lemma`.
+* `fertile_continuation` — `fertile-continuation lemma`: below a depth carrying weight at
   least `π`, a fertile `ĝ`-expandable level (or the bottom of the graph) is reached
   within `r(x) = max{0, 2⌈x/ĝ⌉ - 1}` levels, where `x` is the spend *inside* the window.
 * `fertile_continuation_gen` — the same search with the footprint-bound hypotheses imposed only
@@ -29,7 +29,7 @@ open Set Finset
 
 variable {S : Setting} {B : Budget S} {T : Tracking S}
 
-/-! ### `lem:first-source`: the search -/
+/-! ### `first-source lemma`: the search -/
 
 /-- The number of levels inside disjoint blocked ranges is at most `blockedCap(g)`. -/
 theorem blocked_le_qB {g : ℝ} (hg : 0 < g) {Q : ℕ} {x : ℝ} (hx : x ≤ S.ρ)
@@ -43,7 +43,7 @@ theorem blocked_le_qB {g : ℝ} (hg : 0 < g) {Q : ℕ} {x : ℝ} (hx : x ≤ S.�
     omega
 
 /--
-**The fertile–expandable search** (`lem:first-source`).
+**The fertile–expandable search** (`first-source lemma`).
 
 If at most `q` of the depths in every prefix below `t` are infertile, then within
 `q + blockedCap(g)` levels the search meets a level that is both fertile and `g`-expandable.
@@ -64,13 +64,13 @@ theorem search_reaches {g : ℝ} (hg : 0 < g) (Fert : ℕ → Prop) [DecidablePr
     blocked_le_qB hg (B.sum_Ico_le (t + 1) P) hQ
   omega
 
-/-! ### `lem:first-source`: the level it stops at -/
+/-! ### `first-source lemma`: the level it stops at -/
 
 /--
-**The first fertile expandable level** (`lem:first-source`, the pebbling half).
+**The first fertile expandable level** (`first-source lemma`, the pebbling half).
 
 Under the entry condition, the challenge footprint reaches a level that is simultaneously
-fertile and `g`-expandable within `s(g,h)` levels.  Clause (ii) of the paper statement —
+fertile and `g`-expandable within `s(g,h)` levels.  Clause (ii) of the development statement —
 the set `S_σ` of sources of long paths inside `F_π` — is the depth-robustness input,
 recorded separately in `Chain.lean`.
 
@@ -105,15 +105,15 @@ theorem basecase {C : ChallengeBound S B} {g h : ℝ} (hg : 0 < g)
   exact ⟨p, by omega, hfert, hexp⟩
 
 /--
-**The first fertile expandable level, general parameters** (`lem:first-source`).
+**The first fertile expandable level, general parameters** (`first-source lemma`).
 
 Outside the entry condition `π̄ < ζ_δ - ρ` the infertile levels of the challenge
-footprint can no longer be charged at rate `g_π`.  `lem:challenge-floor` replaces
+footprint can no longer be charged at rate `g_π`.  `challenge-floor lemma` replaces
 that rate by `g̃`, and the same search then reaches a fertile `g`-expandable level
 within `s(g, g̃) = infertileCap(g̃) + blockedCap(g)` levels.
 
 The search is charged on `[0, P)` for arbitrary `P`, so — as the paragraph after
-`lem:first-source` records — the same capacity also covers every *restart* search: the
+`first-source lemma` records — the same capacity also covers every *restart* search: the
 searches run over disjoint level ranges and between them meet only a subset of the same
 `infertileCap(g̃)` infertile challenge depths.  `Ledger.lean` is where that is used.
 -/
@@ -136,7 +136,7 @@ theorem basecase_gen {C : ChallengeBound S B} {g : ℝ} (hg : 0 < g)
       (infertileCap S S.gtilde) hq (le_of_eq rfl)
   exact ⟨p, by omega, hfert, hexp⟩
 
-/-! ### `lem:fertile-continuation` -/
+/-! ### `fertile-continuation lemma` -/
 
 /-- The constant-charge continuation span `r(x) = max{0, 2⌈x/ĝ⌉ - 1}`. -/
 noncomputable def contSpan (T : Tracking S) (x : ℝ) : ℕ := 2 * ⌈x / T.ghat⌉₊ - 1
@@ -172,7 +172,7 @@ theorem contSpan_le {x : ℝ} (hx : 0 ≤ x) :
     linarith
 
 /--
-**Fertile continuation, break, or exhaustion** (`lem:fertile-continuation`).
+**Fertile continuation, break, or exhaustion** (`fertile-continuation lemma`).
 
 Search forward from a depth `t1` whose tracked footprint weighs at least `π`.  The
 hypotheses are imposed only *above the cut-off* `E`: the tracked footprint has to stay
@@ -293,7 +293,7 @@ theorem fertile_continuation_gen {f : ℕ → ℝ} {t1 E : ℕ}
   omega
 
 /--
-**Fertile continuation or exhaustion** (`lem:fertile-continuation`, uniform form).
+**Fertile continuation or exhaustion** (`fertile-continuation lemma`, uniform form).
 
 Search forward from a depth `t1` whose tracked footprint weighs at least `π` and stays
 above the tracking floor `π̂`.  Within `r(x)` levels the search reaches a fertile

@@ -2,7 +2,7 @@
 # Concrete layered graphs and footprints
 
 This module connects the scalar footprint analysis to actual nodes and directed
-paths.  The graph interface records the paper's standing inter-layer expansion
+paths.  The graph interface records the development's standing inter-layer expansion
 property and retains `depthRobust` as the requested intra-layer construction
 assumption.  The footprint recurrence, chain construction, and path-splicing arguments
 are proved below.
@@ -154,11 +154,11 @@ noncomputable def drop (P : Path E unpebbled) (i : ℕ) (hi : i < P.length) : Pa
 
 end Path
 
-/-- A stacked DAG indexed by depth (see `Footprint.lean` for how this relates to the
-paper's level numbering): `layer 0` is the paper's bottom layer `V_ℓ`, which carries
+/-- A stacked DAG indexed by depth (see `Footprint.lean` for how this relates to
+Reyzin's published level numbering): `layer 0` is the bottom layer `V_ℓ`, which carries
 the challenge, and inter-layer edges run from `layer (d+1)` to `layer d`.  `expands` is
-`eq:expansion`, the standing property of the constructed vertical edges.  Intra-layer
-robustness (`eq:depth-robust`) is stated separately so that different layer ranges may
+`expansion condition`, the standing property of the constructed vertical edges.  Intra-layer
+robustness (`depth-robustness condition`) is stated separately so that different layer ranges may
 use different graph constructions. -/
 structure LayeredGraph (V : Type u) (S : Setting) (ℓ n : ℕ) where
   /-- The normalized path length promised by intra-layer depth robustness. -/
@@ -317,7 +317,7 @@ end LayeredGraph
 
 /--
 A concrete red/black pebble placement.  The budget fields are precisely the adversarial
-bounds of the paper, expressed per layer: `black_total` caps the *total* stored weight
+bounds of the development, expressed per layer: `black_total` caps the *total* stored weight
 across all layers at `ρ`, and `red_bound` caps each layer's red set at `δ n`.
 
 **Scope of the model.**  This is a *static space snapshot*, not a time-indexed pebbling
@@ -325,14 +325,14 @@ game: `black` is one fixed assignment, the adversary's stored state at challenge
 and there is no move sequence.  Consequently the theorems in `Latency.lean` do not bound
 a running time directly — they exhibit an unpebbled directed path of a given length that
 ends at a challenge and lies inside the challenge footprint.  The bridge to latency is
-`LayeredGraph.depth_add_one_le_path_length` together with the paper's argument that such
-a path must be recomputed sequentially; that last step is prose, here as in the paper.
+`LayeredGraph.depth_add_one_le_path_length` together with the development's argument that such
+a path must be recomputed sequentially; that last step is prose, here as in the development.
 
 Note also what the challenge set is required to be: the latency theorems take
 `A ⊆ layer 0` with `weight n A ≥ ζ_δ` and `A` disjoint from `red 0`.  At the Filecoin
 parameters `ζ_δ = 0.8622`, so `A` is essentially the whole final layer, not a small
 sampled challenge.  This is consistent — `red_bound` caps red at `δ n = 0.0378 n`, and
-`0.8622 ≤ 1 - 0.0378` — but it is a modelling choice inherited from the paper. -/
+`0.8622 ≤ 1 - 0.0378` — but it is a modelling choice inherited from the development. -/
 structure Pebbling {S : Setting} {ℓ n : ℕ} (G : LayeredGraph V S ℓ n) where
   black : ℕ → Finset V
   red : ℕ → Finset V
@@ -532,8 +532,8 @@ theorem footprintBound_nonneg (P : Pebbling G) {start : ℕ} {c : ℝ} (hc : 0 �
   · exact (P.footprintBound_isBound start c).nonneg hlt
 
 /-- **The footprint bound really is a lower bound** on the genuine footprint weight, by
-induction of the one-step bound through every remaining layer.  The paper takes the
-recurrence `eq:footprint-bound` from Reyzin and works with it directly, never restating
+induction of the one-step bound through every remaining layer.  The development takes the
+recurrence `footprint recurrence` from Reyzin and works with it directly, never restating
 this dominance; it is proved here. -/
 theorem footprintBound_le (P : Pebbling G) (hn : 0 < n) {A : Finset V}
     {start : ℕ} {c : ℝ} (hc : 0 ≤ c)
@@ -678,8 +678,8 @@ theorem pathTo_nodes_mem_footprint (P : Pebbling G) (A : Finset V) {u : V} {L : 
     exact hR.symm.trans (hs.trans hQ)
   exact hlast'.trans hlast
 
-/-- Eliminate the compact chain certificate into exactly the witness described in the
-paper: a genuine unpebbled directed path all of whose nodes lie in the footprint. -/
+/-- Eliminate the compact chain certificate into a genuine unpebbled directed path all
+of whose nodes lie in the footprint. -/
 theorem hasPath_witness (P : Pebbling G) (A : Finset V) {L : ℝ}
     (h : P.HasUnpebbledPathInFootprint A L) :
     ∃ Q : Path G.edge P.unpebbled,
@@ -786,7 +786,7 @@ def chainPathLength (G : LayeredGraph V S ℓ n) (T : Tracking S) (z : ℕ) : �
 
 /-- A concrete last link together with all the path certificates needed to extend it.
 The `tail` field is the certified tail from every source node to `A` that a link
-carries in `sec:latency`, strengthened
+carries in `latency analysis`, strengthened
 inductively so that it already includes all later links. -/
 structure Link [DecidableEq V] (P : Pebbling G) (T : Tracking S) (A : Finset V) where
   depth : ℕ
@@ -829,7 +829,7 @@ theorem local_path (L : Link P T A) (hn : 0 < n) {d : ℕ} (hd : d < ℓ)
   exact P.depthRobust_path (hDepth hd) (P.layerFootprint_subset L.source d)
     Finset.Subset.rfl hcard
 
-/-- The base link supplied by `lem:first-source`, with all set and path conclusions proved
+/-- The base link supplied by `first-source lemma`, with all set and path conclusions proved
 from the actual challenge footprint and the assumed depth robustness. -/
 noncomputable def base (hn : 0 < n) (hσapi : T.σ ≤ G.αpi)
     (hDepth : G.DepthRobust G.αpi) {b : ℕ} (hb : b < ℓ)

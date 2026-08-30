@@ -3,7 +3,7 @@ import ProofOfSpace.Latency
 /-!
 # A consistency witness for the hypothesis stack
 
-This file is **not** the paper's specialization; `ChungFilecoin.lean` is, on the genuine
+This file is **not** the development's specialization; `ChungFilecoin.lean` is, on the genuine
 degree-eight Chung curve.  What this file does is exhibit a closed model of the whole
 hypothesis stack, so that the structures the development quantifies over are known to be
 inhabited and its theorems are not vacuous.
@@ -20,10 +20,10 @@ model closes: on the Chung curve those two facts are assumptions
 (`Chung8AnalyticAssumptions`), so that specialization cannot play this role.
 
 The Möbius family is the natural place to look for a model because the reversal law
-`eq:reversal` `β(1 - β x) = 1 - x` says exactly that `x ↦ 1 - β x` is an involution,
+`reversal identity` `β(1 - β x) = 1 - x` says exactly that `x ↦ 1 - β x` is an involution,
 and `x ↦ (1-x)/(1+kx)` is one for every `k`.
 
-This curve is not a profile the paper claims for any construction: at `k = 2291/625` it
+This curve is not a profile the development claims for any construction: at `k = 2291/625` it
 runs above the degree-eight Chung boundary, so the degree-eight union bound does not
 certify it.  Read it as a consistency proof, never as an expansion certificate.
 -/
@@ -80,7 +80,7 @@ theorem one_sub_mbeta {x : ℝ} (hx : 0 ≤ x) :
   field_simp
   ring
 
-/-- **`eq:reversal`**: `x ↦ 1 - β x` is an involution. -/
+/-- **`reversal identity`**: `x ↦ 1 - β x` is an involution. -/
 theorem mbeta_reversal {x : ℝ} (hx : x ∈ Ioo (0:ℝ) 1) :
     mbeta (1 - mbeta x) = 1 - x := by
   obtain ⟨hx0, hx1⟩ := hx
@@ -281,7 +281,7 @@ theorem wSetting_piBar : wSetting.piBar = 625 / 12289 := by
   simp only [Setting.piBar, wSetting_β, wSetting_pi]
   norm_num [mbeta]
 
-/-- The paper's selected source weight `σ = 0.1184` for this auxiliary witness. -/
+/-- The development's selected source weight `σ = 0.1184` for this auxiliary witness. -/
 noncomputable def wTracking : Tracking wSetting where
   σ := 74 / 625
   σ_gt := by simpa using amin_lt_sigma
@@ -302,7 +302,7 @@ noncomputable def wTracking : Tracking wSetting where
 
 /-! ### The two hypothesis bundles -/
 
-/-- The scalar facts of `eq:no-break-conditions`, proved for the Möbius profile. -/
+/-- The scalar facts of `no-break parameter conditions`, proved for the Möbius profile. -/
 theorem wEntry : wSetting.piBar < wSetting.ζδ - wSetting.ρ := by
   rw [wSetting_piBar]; norm_num
 
@@ -344,7 +344,7 @@ theorem wFilecoin : FilecoinLatencyParameters wSetting wTracking where
       rw [wTracking.lam_eq_piBar wCondB, hb]
       linarith [wCondC])
 
-/-- The paper's Filecoin-shaped corollary for the unconditional Möbius profile.  The
+/-- The development's Filecoin-shaped corollary for the unconditional Möbius profile.  The
 graph hypotheses remain explicit: a sampled permutation stack supplies `expands`, while
 the chosen small-indegree layer graph supplies `DepthRobust`. -/
 theorem mobius_latency_corollary
@@ -391,7 +391,7 @@ Filecoin corollaries of `Latency.lean` are not vacuously true.
 
 The construction assumptions on the graph itself (`LayeredGraph.expands` and
 `LayeredGraph.depthRobust`) remain explicit.  The former is supplied probabilistically
-by the paper's permutation-interlayer bound; the latter is the chosen intra-layer DAG's
+by the development's permutation-interlayer bound; the latter is the chosen intra-layer DAG's
 depth-robustness certificate.
 -/
 theorem filecoinParameters_consistent :

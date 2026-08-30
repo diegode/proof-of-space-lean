@@ -1,14 +1,14 @@
 /-
 # Blockable and expandable levels, and the fertile–expandable search
 
-This file formalizes the search behind `lem:first-source` of `docs/explanation.tex`.
+This file formalizes the search behind `first-source lemma` of this development.
 
-`search_bound` is the reusable core.  It runs the paper's search, forward in depth — one
+`search_bound` is the reusable core.  It runs the development's search, forward in depth — one
 level at an infertile level, a whole blocked range at a fertile blockable level — and
-returns the two capacities the paper adds: the number `I` of single-level skips (each at
+returns the two capacities the development adds: the number `I` of single-level skips (each at
 a distinct infertile depth) and the number `Q` of levels inside blocked ranges (whose
-*disjoint* spends exceed `Q g`).  Both `lem:first-source` and
-`lem:fertile-continuation` are instances; they differ only in how `I` is bounded.
+*disjoint* spends exceed `Q g`).  Both `first-source lemma` and
+`fertile-continuation lemma` are instances; they differ only in how `I` is bounded.
 -/
 import ProofOfSpace.Footprint
 
@@ -18,12 +18,12 @@ open Finset
 
 variable {S : Setting}
 
-/-- `eq:expandable`: depth `t` is `g`-*expandable* when, for every window of `i` levels
+/-- `expandability condition`: depth `t` is `g`-*expandable* when, for every window of `i` levels
 immediately below it, the black-pebble spend is at most `(i+1) g`. -/
 def Expandable (B : Budget S) (g : ℝ) (t : ℕ) : Prop :=
   ∀ i : ℕ, 1 ≤ i → ∑ m ∈ Finset.range i, B.spend (t + m + 1) ≤ ((i : ℝ) + 1) * g
 
-/-- `eq:expandable`: depth `t` is `g`-*blockable* when some window immediately below it
+/-- `expandability condition`: depth `t` is `g`-*blockable* when some window immediately below it
 carries more than `g` pebbles per level on average. -/
 def Blockable (B : Budget S) (g : ℝ) (t : ℕ) : Prop :=
   ∃ k : ℕ, 1 ≤ k ∧ ((k : ℝ) + 1) * g < ∑ m ∈ Finset.range k, B.spend (t + m + 1)
@@ -138,8 +138,8 @@ theorem searchSpend_mono {i j : ℕ} (hij : i ≤ j) :
 /-- The blocked-range capacity is paid for by disjoint spends.
 
 The hypothesis is imposed only at the *search positions* strictly before the stopping
-index `J`; this is what allows the same lemma to serve both `lem:first-source`, where the
-search is stopped by a level budget, and `lem:fertile-continuation`, where it is stopped by the
+index `J`; this is what allows the same lemma to serve both `first-source lemma`, where the
+search is stopped by a level budget, and `fertile-continuation lemma`, where it is stopped by the
 first fertile expandable level it meets. -/
 theorem searchQ_spend {J : ℕ}
     (hbad : ∀ j, j < J →
@@ -284,7 +284,7 @@ theorem searchI_card_succ (j : ℕ) :
 end Search
 
 /--
-**The fertile–expandable search** (`lem:first-source`).
+**The fertile–expandable search** (`first-source lemma`).
 
 If no depth in the window `[t, t+D]` is simultaneously fertile and `g`-expandable, then
 the window is covered by `I` infertile depths and `Q` levels of *disjoint* blocked ranges,

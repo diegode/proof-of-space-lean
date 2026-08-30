@@ -377,7 +377,7 @@ theorem condB_holds_at_1184 : 2 * gpi8 ≤ gainD8 (74/625) := by
   linarith [beta_08_upper, beta_1184_lower]
 
 /-- **`σ = 0.118` violates the source condition `gain_δ(σ) ≥ 2 g_π`.**  This is why `σ_min` must be rounded up:
-the paper's earlier value `0.118` lies just below `σ_min = 0.1183474…`. -/
+the development's earlier value `0.118` lies just below `σ_min = 0.1183474…`. -/
 theorem condB_fails_at_118 : gainD8 (59/500) < 2 * gpi8 := by
   simp only [gainD8, gpi8]
   linarith [beta_08_lower, beta_118_upper]
@@ -390,7 +390,7 @@ theorem gpi8_bounds : (1113 : ℝ)/10000 < gpi8 ∧ gpi8 < (557 : ℝ)/5000 := b
   · simp only [gpi8, gainD8]; linarith [beta_08_upper]
 
 /-- **The rounding direction of `σ_min`, decided.**  the source condition separates the two
-four-digit candidates: the paper's original `σ = 0.118` is inadmissible, and `0.1184`
+four-digit candidates: the development's original `σ = 0.118` is inadmissible, and `0.1184`
 is admissible.  Both halves are theorems about the constructed curve `β₈`; no numerical
 value is taken on trust. -/
 theorem sigmaMin_rounds_up :

@@ -4,29 +4,30 @@ import ProofOfSpace.Ledger
 /-!
 # The concrete latency theorems
 
-This module is the single public home of `thm:latency`, stated in
-`docs/explanation.tex`.  The chain
+This module is the single public home of `latency_general`, stated in
+this development.  The chain
 construction lives in `Ledger.lean` and its constants in `Chain.lean`; this file adds
 the path-length interpretation, the finite hardness estimate, the small-layer
 depth-robustness bound, and the certified Filecoin specialization.
 
 There is only **one** chain-counting theorem behind all of this, and it is the general
-one: `latency_general` assumes `eq:scalar-conditions` alone and allows chains to break.
+one: `latency_general` assumes `general scalar conditions` alone and allows chains to break.
 The Filecoin numbers come from evaluating its constants, not from a second theorem —
 `FilecoinLatencyParameters` carries the collapses (`ĝ = g_π`, `g̃ = g_π`, `b^max = 0`,
-`σ̃ = 3/5`) that the appendix verifies, and `zMin_eq` turns `eq:zmin` into
+`σ̃ = 3/5`) verified by the numerical specialization, and `zMin_eq` turns
+`minimum link-count definition` into
 `filecoinZMin`.  This file maintains neither a second copy of `z_min` nor a second
 ledger.
 
-**Two optimized constants.**  The formalization and explanatory note retain these
-alongside the baseline bounds.
+**Two optimized constants.** The formalization retains these alongside the baseline
+bounds.
 
 * the per-link span `h_1` is `growthConst + 1` with
   `growthConst = min{a, Φ_{σ̃}(π) + 1}`, the two-piece growth potential of `Growth.lean`
   rather than the linearized `a = max{1, (π-σ)/ĝ}`.  At Filecoin `5.957 < h₁ < 5.961`
-  against the paper's `7.123`;
+  against the development's `7.123`;
 * the one-time offset of the ledger entry is `s₂ = searchHead + 2ρ/min{ĝ,g̃}`
-  beside the paper's `s_1 = s + 2ρ/ĝ`, charging the black budget once instead of three
+  beside the development's `s_1 = s + 2ρ/ĝ`, charging the black budget once instead of three
   times (see the header of `Ledger.lean`).  At Filecoin `s₂ < 14.82` against
   `s_1 > 28.36`.
 
@@ -148,7 +149,7 @@ namespace Pebbling
 
 variable {V : Type u} {S : Setting} {ℓ n : ℕ} {G : LayeredGraph V S ℓ n}
 
-/-- **The pebbling half of `lem:first-source`.**  Wherever the scalar
+/-- **The pebbling half of `first-source lemma`.**  Wherever the scalar
 challenge footprint bound is fertile, so is the *actual* reachability footprint of a red-free
 challenge set of weight `ζ_δ`.  This is the only thing a chain restart needs from the
 graph beyond what an ordinary extension needs. -/
@@ -176,7 +177,7 @@ theorem zetaDelta_nonneg {S : Setting} (GR : GeneralRegime S) : 0 ≤ S.ζδ := 
 /-! ### The general parameter regime -/
 
 /-- `(b^max + 1) h_1`, the per-link level span certified when breaks are possible: the
-`h_1` of `eq:cap-span-global`, shared between the at most `b^max + 1` chain segments. -/
+`h_1` of `optimized span bound`, shared between the at most `b^max + 1` chain segments. -/
 noncomputable def genLinkSpan (S : Setting) (T : Tracking S) : ℝ :=
   ((bMax S T : ℝ) + 1) * h₁ S T
 
@@ -231,10 +232,10 @@ theorem genLedgerRatio_le_zMin {S : Setting} {T : Tracking S} {ℓ : ℕ} :
     _ ≤ (zMin S T ℓ : ℕ) := by exact_mod_cast hceil
 
 /--
-**Concrete latency lower bound, general parameters** (`thm:latency`).
+**Concrete latency lower bound, general parameters** (`latency_general`).
 
 For an actual layered graph and pebble placement, and under the nontriviality
-assumptions `eq:scalar-conditions` alone, every red-free adjusted challenge set of
+assumptions `general scalar conditions` alone, every red-free adjusted challenge set of
 normalized weight at least `ζ_δ` has an unpebbled directed path of length
 `α_π n + (z_min - 1)(α_π - σ) n` in its genuine reachability footprint, with
 `z_min = zMin`.
@@ -258,7 +259,7 @@ theorem latency_general {V : Type u}
   have hζ : 0 ≤ S.ζδ := zetaDelta_nonneg GR
   let CS := P.chainSystem T A hn hσapi.le hDepth
   let C := P.challengeBound_struct hζ
-  -- the restart: `lem:first-source` supplies the level, `Link.base` the link
+  -- the restart: `first-source lemma` supplies the level, `Link.base` the link
   have hrestart : ∀ b : ℕ, b < ℓ → S.pi ≤ C.f b → Expandable P.budget T.ghat b →
       ∃ L : CS.Link, CS.depth L = b ∧ CS.count L = 1 := fun b hb hfertScalar hexp =>
     ⟨Concrete.Pebbling.Link.base hn hσapi.le hDepth hb hexp
@@ -288,7 +289,7 @@ theorem latency_general_witness {V : Type u}
 
 /-- The finite linear form: the certified path length grows linearly in `ℓ` with leading
 slope `(α_π - σ)/((b^max + 1) h_1)`.  All constants are independent of `ℓ`, which is the
-`L = Ω(ℓ n)` of `thm:latency`; with `b^max = 0` it is the slope of the no-break
+`L = Ω(ℓ n)` of `latency_general`; with `b^max = 0` it is the slope of the no-break
 corollary. -/
 theorem latencyLength_general_lower_bound
     {S : Setting} {T : Tracking S} {ℓ n : ℕ} {απ σ : ℝ} (hσ : σ ≤ απ) :
@@ -336,7 +337,7 @@ theorem hardnessGap_general_upper_bound
           ring
 
 /-- The concrete path also satisfies the ledger's explicit linear lower bound.  This
-is the finite, constant-explicit form of the paper's `Ω(ℓ n)` conclusion. -/
+is the finite, constant-explicit form of the development's `Ω(ℓ n)` conclusion. -/
 theorem latency_concrete_ledger_witness {V : Type u}
     {S : Setting} {ℓ n : ℕ} (G : Concrete.LayeredGraph V S ℓ n)
     (P : Concrete.Pebbling G) (T : Tracking S) (GR : GeneralRegime S)
@@ -412,7 +413,7 @@ theorem hardnessGap_upper_bound
 /-! ### Filecoin Chung-8 specialization -/
 
 /-- The numerical certificates used in `cor:filecoin`.  The Chung threshold is
-recorded by the certified interval printed in the paper, rather than identified with a
+recorded by the certified interval printed in the development, rather than identified with a
 rounded decimal. -/
 structure FilecoinLatencyParameters (S : Setting) (T : Tracking S) : Prop where
   pi_eq : S.pi = (4 : ℝ) / 5
@@ -536,7 +537,7 @@ theorem jointSlack_eq (F : FilecoinLatencyParameters S T) :
   simp only [jointSlack, F.gmin_eq, F.rho_eq]
 
 /-- The joint head is `1 - 0.0622/g_π ≈ 0.4414`: the ceiling slack of
-`lem:infertile-capacity` less the head start the challenge weight `ζ_δ > π` already
+`infertile-capacity lemma` less the head start the challenge weight `ζ_δ > π` already
 gives.  The `max 0` is inactive because `g_π > 0.0622`. -/
 theorem searchHead_eq (F : FilecoinLatencyParameters S T) :
     searchHead S = 1 + ((4 : ℝ) / 5 - (4311 : ℝ) / 5000) / S.gpi := by
@@ -591,7 +592,7 @@ theorem s₂_bounds (F : FilecoinLatencyParameters S T) :
 
 
 /-- The ledger slope `(α_π - σ)/h_1 ≈ 0.0115`, with a certified rounding interval.
-The paper's `0.0100` was computed with the older `h_1 = a + 2`. -/
+The development's `0.0100` was computed with the older `h_1 = a + 2`. -/
 theorem ledgerSlope_bounds (F : FilecoinLatencyParameters S T) :
     (1368 : ℝ) / 100000 <
         ((1 : ℝ) / 5 - (74 : ℝ) / 625) / h₁ S T ∧
@@ -619,7 +620,7 @@ theorem slope_comparison (F : FilecoinLatencyParameters S T) :
       nlinarith [hbounds.1]
 
 /-- The exact formula displayed in `cor:filecoin`, now with four entries: the base
-link, the per-link ledger entry of `eq:zmin`, the **joint** ledger entry, and the
+link, the per-link ledger entry of `minimum link-count definition`, the **joint** ledger entry, and the
 constant-charge entry.  The joint entry is the one that binds here. -/
 noncomputable def filecoinZMin (gpi : ℝ) (ℓ : ℕ) : ℕ :=
   max 1 (max
@@ -753,13 +754,13 @@ theorem s₂_lt_s₁ (F : FilecoinLatencyParameters S T) :
   push_cast
   linarith
 
-/-- With no break to pay for, the whole non-chain overhead of `eq:global-constants` is
+/-- With no break to pay for, the whole non-chain overhead of `global constants` is
 the search overhead. -/
 theorem s₀_eq (F : FilecoinLatencyParameters S T) : s₀ S T = 14 := by
   simp only [s₀, F.bMax_eq, Nat.zero_mul, Nat.add_zero]
   exact F.sCap_eq
 
-/-- **The general chain length, evaluated.**  `zMin` of `eq:zmin` is `filecoinZMin`
+/-- **The general chain length, evaluated.**  `zMin` of `minimum link-count definition` is `filecoinZMin`
 here: no break weakens either entry, and both constants are the closed forms above. -/
 theorem zMin_eq (F : FilecoinLatencyParameters S T) (ℓ : ℕ) :
     zMin S T ℓ = filecoinZMin S.gpi ℓ := by

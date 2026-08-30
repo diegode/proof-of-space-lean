@@ -12,7 +12,7 @@ is invariant under the anti-diagonal reflection `(x,y) ↦ (1-y, 1-x)`
 form `y H(x/y) - H(x) = (x-y) log (y-x) + y log y + (1-x) log (1-x)`.
 
 That symmetry is what yields the reversal law `β (1 - β α) = 1 - α` — Proposition
-`eq:reversal` of `docs/explanation.tex`,
+`reversal identity` of this development,
 = Claim 13 of Reyzin, *Proofs of Space with Maximal Hardness*, FOCS 2024.  The reversal
 law itself is proved in `ChungCurve.lean` (`chungBeta_reversal`), directly for the
 constructed threshold rather than through an abstract interface.
@@ -55,7 +55,7 @@ theorem mul_binEntropy_div_sub_binEntropy {x y : ℝ} (hx : 0 < x) (hxy : x < y)
 
 /-- **The anti-diagonal symmetry of the Chung exponent.**
 `E(x, y) = E(1 - y, 1 - x)` for `0 < x < y < 1`.  This is the analytic content of
-`eq:reversal`. -/
+`reversal identity`. -/
 theorem chungExponent_symm {d x y : ℝ} (hx : 0 < x) (hxy : x < y) (hy : y < 1) :
     chungExponent d x y = chungExponent d (1 - y) (1 - x) := by
   have h1 := mul_binEntropy_div_sub_binEntropy hx hxy hy

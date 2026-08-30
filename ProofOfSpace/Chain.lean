@@ -1,23 +1,23 @@
 /-
 # Chains and the constants of the latency theorems
 
-This file formalizes the constants and chain of `docs/explanation.tex`:
+This file formalizes the constants and chain of this development:
 
 * `h₁`, `ledgerSlack`, `spendCap`, `growthCap`, `h₀`, `localSpan` — the per-link
-  constants of `eq:cap-span`/`eq:cap-span-global`, and `zMinNoBreak`, the chain length of
-  `thm:latency`.
-* `ChainSystem` — the chain of `sec:latency`, in the form in which the analysis uses it.  All the
-  graph-specific content of the paper is confined to its two fields `extend` (depth
-  robustness at a fertile expandable level, plus the path splicing of `lem:path-payoff`) and
-  `realizes`.  Depth robustness is the one input the paper leaves unproven for the
+  constants of `span bound`/`optimized span bound`, and `zMinNoBreak`, the chain length of
+  `latency_general`.
+* `ChainSystem` — the chain of `latency analysis`, in the form in which the analysis uses it.  All the
+  graph-specific content of the development is confined to its two fields `extend` (depth
+  robustness at a fertile expandable level, plus the path splicing of `path-payoff lemma`) and
+  `realizes`.  Depth robustness is the one input the development leaves unproven for the
   concrete construction, so it is an assumption here as well.
 
-The accounting itself — `lem:extension-attempt`, `eq:level-ledger`, and the chain
+The accounting itself — `extension-attempt lemma`, `level ledger`, and the chain
 count — is *not* here.  There is a single accounting for both parameter regimes and it lives in
 `Ledger.lean`, because it needs one input beyond a `ChainSystem`: the ability to restart
 a broken chain.
 
-Depths increase away from the challenge (Lean depth `d` is the paper's level `ℓ - d`;
+Depths increase away from the challenge (Lean depth `d` is the development's level `ℓ - d`;
 see `Footprint.lean`), so the windows of successive attempts are the pairwise disjoint
 intervals `(b_j, b_{j+1}]`, and the ledger is just the total-budget bound applied to
 their union.
@@ -32,9 +32,9 @@ universe u
 
 variable {S : Setting} {B : Budget S} {T : Tracking S}
 
-/-! ### The per-link constants of `eq:cap-span` and `eq:cap-span-global` -/
+/-! ### The per-link constants of `span bound` and `optimized span bound` -/
 
-/-- **`h_1` of `eq:cap-span-global`**: `growthConst + 1`.
+/-- **`h_1` of `optimized span bound`**: `growthConst + 1`.
 
 The `+1` is exactly the constant of `contSpan`: an attempt spends
 `growthConst + growthSpend/ĝ` levels growing and `2 continuationSpend/ĝ + 1` levels on
@@ -50,12 +50,12 @@ back; the Filecoin Chung-8 mid-point `σ̃ = 3/5` gets `Φ + 1 < 4.961` against
 noncomputable def h₁ (S : Setting) (T : Tracking S) : ℝ := growthConst S T + 1
 
 /-- `2ρ/ĝ`, the one-time global-budget term of the level offset `s_1` in
-`eq:global-constants`.  The paper does not name it separately. -/
+`global constants`.  The development does not name it separately. -/
 noncomputable def ledgerSlack (S : Setting) (T : Tracking S) : ℝ := 2 * S.ρ / T.ghat
 
 /-! ### The joint ledger constants
 
-The level offset `s_1 = s + 2ρ/ĝ` of `eq:global-constants` charges the budget `ρ` three
+The level offset `s_1 = s + 2ρ/ĝ` of `global constants` charges the budget `ρ` three
 times over: once as the infertile-capacity term of `s`, once as its blocked-window term
 `⌈ρ/ĝ⌉ - 1`, and twice more as `2ρ/ĝ`.  All three charges are levied on *disjoint*
 ranges of levels — the searches and the attempts partition the stack — so one interval
@@ -75,7 +75,7 @@ the sum `⌈ρ/g̃⌉ + (⌈ρ/ĝ⌉ - 1) + 2ρ/ĝ` of `s_1`. -/
 noncomputable def jointSlack (S : Setting) (T : Tracking S) : ℝ := 2 * S.ρ / gmin S T
 
 /-- `max{0, 1 + (π - ζ_δ)/g̃}`: the spend-free head of the joint ledger.  It is the
-ceiling slack of `lem:infertile-capacity` plus the distance the challenge footprint has
+ceiling slack of `infertile-capacity lemma` plus the distance the challenge footprint has
 to climb from its *undiminished* weight `ζ_δ` — the diminution is charged to
 `jointSlack` instead of granted for free. -/
 noncomputable def searchHead (S : Setting) : ℝ := max 0 (1 + (S.pi - S.ζδ) / S.gtilde)
@@ -109,23 +109,23 @@ theorem gmin_charge_mono (hg : 0 < S.gtilde) {x y : ℝ} (hxy : x ≤ y) :
   rw [div_le_div_iff_of_pos_right (gmin_pos (T := T) hg)]
   linarith
 
-/-- `⌈ρ/ĝ⌉`, the blocked-window term of `eq:cap-span`. -/
+/-- `⌈ρ/ĝ⌉`, the blocked-window term of `span bound`. -/
 noncomputable def spendCap (S : Setting) (T : Tracking S) : ℕ := ⌈S.ρ / T.ghat⌉₊
 
-/-- `max{1, ⌊(π - σ + ρ)/ĝ⌋}`, the growth term of `eq:cap-span`. -/
+/-- `max{1, ⌊(π - σ + ρ)/ĝ⌋}`, the growth term of `span bound`. -/
 noncomputable def growthCap (S : Setting) (T : Tracking S) : ℕ := growthSpan S T S.ρ
 
-/-- **`h_0` of `eq:cap-span`**: `max{1, ⌊(π - σ + ρ)/ĝ⌋} + 2⌈ρ/ĝ⌉`, the
+/-- **`h_0` of `span bound`**: `max{1, ⌊(π - σ + ρ)/ĝ⌋} + 2⌈ρ/ĝ⌉`, the
 constant-charge per-link span. -/
 noncomputable def h₀ (S : Setting) (T : Tracking S) : ℕ := growthCap S T + 2 * spendCap S T
 
 /-- The number of levels an attempt actually consumes when every local charge is
-replaced by the whole budget: the `h_0 - 1` of `eq:attempt-bound`, whenever `ρ > 0`. -/
+replaced by the whole budget: the `h_0 - 1` of `attempt-span bound`, whenever `ρ > 0`. -/
 noncomputable def localSpan (S : Setting) (T : Tracking S) : ℕ :=
   growthCap S T + contSpan T S.ρ
 
-/-- **`z_min` of `eq:zmin`, specialized to `b^max = 0`**: the maximum defining the link
-count when no break can be paid for.  `Ledger.zMin` is the general `eq:zmin`, and `Ledger.zMin_eq_zMinNoBreak`
+/-- **`z_min` of `minimum link-count definition`, specialized to `b^max = 0`**: the maximum defining the link
+count when no break can be paid for.  `Ledger.zMin` is the general `minimum link-count definition`, and `Ledger.zMin_eq_zMinNoBreak`
 identifies the two there. -/
 noncomputable def zMinNoBreak (S : Setting) (T : Tracking S) (ℓ s : ℕ) : ℕ :=
   max 1 (max ⌈((ℓ : ℝ) - s - ledgerSlack S T) / h₁ S T⌉₊
@@ -146,7 +146,7 @@ theorem localSpan_succ_le_h₀ (hρ : 0 < S.ρ) : localSpan S T + 1 = h₀ S T :
 /-! ### Chains -/
 
 /--
-**The chain of `sec:latency`, in the form the analysis consumes.**
+**The chain of `latency analysis`, in the form the analysis consumes.**
 
 A `ChainSystem` is the graph-side data of chains for a fixed pebbling: a type of links,
 each carrying its depth `b_i`, the footprint bound `wt` bounding the footprint weights of its
@@ -155,8 +155,8 @@ source set of the link below `b_i`, and the number `count` of links already spli
 `extend` is the *only* graph input: at a fertile `ĝ`-expandable depth `b` strictly
 inside the graph and strictly below the current link, depth robustness produces a path of
 length `α_π n` inside the footprint at `b`, whose first `σ n` nodes form the next source set, and
-the footprint inclusions a link carries (`lem:path-payoff`) splice the paths.  Depth
-robustness of the construction is *assumed*, exactly as in the paper.
+the footprint inclusions a link carries (`path-payoff lemma`) splice the paths.  Depth
+robustness of the construction is *assumed*, exactly as in the development.
 -/
 structure ChainSystem (S : Setting) (B : Budget S) (T : Tracking S) (ℓ : ℕ)
     (Realizes : ℕ → Prop) where
@@ -170,16 +170,16 @@ structure ChainSystem (S : Setting) (B : Budget S) (T : Tracking S) (ℓ : ℕ)
   bound : ∀ L, IsFootprintBound S B (depth L) (wt L)
   /-- The source set has weight exactly `σ`. -/
   init : ∀ L, wt L (depth L) = T.σ
-  /-- The last level of the chain is `ĝ`-expandable (`eq:expandable`). -/
+  /-- The last level of the chain is `ĝ`-expandable (`expandability condition`). -/
   expandable : ∀ L, Expandable B T.ghat (depth L)
   /-- The link lies inside the graph. -/
   inside : ∀ L, depth L < ℓ
   /-- The number of links of the chain ending at this one. -/
   count : Link → ℕ
   count_pos : ∀ L, 1 ≤ count L
-  /-- The spliced path realized by the chain (`lem:path-payoff`). -/
+  /-- The spliced path realized by the chain (`path-payoff lemma`). -/
   realizes : ∀ L, Realizes (count L)
-  /-- **Depth robustness** (assumed) and the splice of `lem:path-payoff`. -/
+  /-- **Depth robustness** (assumed) and the splice of `path-payoff lemma`. -/
   extend : ∀ (L : Link) (b : ℕ), depth L < b → b < ℓ → S.pi ≤ wt L b →
       Expandable B T.ghat b → ∃ L' : Link, depth L' = b ∧ count L' = count L + 1
 

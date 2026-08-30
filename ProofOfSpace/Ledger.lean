@@ -2,13 +2,13 @@
 # The chain ledger: one latency accounting for both parameter regimes
 
 This file proves the *only* chain-counting theorem in the development.  It formalizes
-`sec:latency` of `docs/explanation.tex` — chain breaks, restarts, and `thm:latency` — in a form
-strong enough that `thm:latency` is a corollary rather than a parallel proof.
+`latency analysis` of this development — chain breaks, restarts, and `latency_general` — in a form
+strong enough that `latency_general` is a corollary rather than a parallel proof.
 
 Two things change once breaks are possible, and nothing else does:
 
 * infertile challenge levels are charged at the coarser rate `g̃` of
-  `lem:challenge-floor` (`Footprint.lean`) instead of `g_π`, which moves the search
+  `challenge-floor lemma` (`Footprint.lean`) instead of `g_π`, which moves the search
   overhead from `s(g_π, g_π)` to `s(ĝ, g̃)`;
 * an attempt can *break* — concentrated spending pushes the tracked footprint below
   `π̂` and the chain must restart from the challenge footprint.
@@ -22,25 +22,25 @@ the chain length into the closed form the numerical corollary evaluates, which i
 
 Contents:
 
-* `GeneralRegime` — `eq:scalar-conditions`.
+* `GeneralRegime` — `general scalar conditions`.
 * `bMax`, `sCap`, `s₀`, `zMin` — the constants, together with the
   three lemmas above that collapse them onto `zMinNoBreak`.
 * `search_stops` — the search of `Search.lean` run to completion, in the positive
   form the restart searches need.
-* `ChainSystem.extension_attempt_gen` — `lem:extension-attempt`: an attempt ends at the bottom
+* `ChainSystem.extension_attempt_gen` — `extension-attempt lemma`: an attempt ends at the bottom
   of the graph, at the next link, or at a break; it consumes at most `h_0 - 1` levels and
   simultaneously at most `h_1 + 2x/ĝ`, where `x` is the spend inside its own window.
 * `ChainSystem.general_ledger` — the accounting that runs the whole construction, and
-  carries both of those bounds through one induction.  `lem:break-charge` and
-  `eq:level-ledger` are two of its components.
-* `ChainSystem.exists_many_links_gen` / `latency_gen` — `lem:chain-length` and
-  `thm:latency`, with all entries of `eq:zmin`: the ledger entry
+  carries both of those bounds through one induction.  `break-charge lemma` and
+  `level ledger` are two of its components.
+* `ChainSystem.exists_many_links_gen` / `latency_gen` — `chain-length lemma` and
+  `latency_general`, with all entries of `minimum link-count definition`: the ledger entry
   (slope `1/((b^max+1) h_1)`), the joint-ledger entry `jointEntry`, and the
   constant-charge one (slope `1/((b^max+1) h_0)`).
 
 ## The joint ledger
 
-`eq:global-constants` offsets the ledger entry by `s_1 = s + 2ρ/ĝ`, and that charges the
+`global constants` offsets the ledger entry by `s_1 = s + 2ρ/ĝ`, and that charges the
 black budget `ρ` three times over: once in the infertile-capacity term of `s`, once in
 its blocked-window term `⌈ρ/ĝ⌉ - 1`, and twice in `2ρ/ĝ`.  The three charges are levied
 on *disjoint* ranges of levels — a search and an attempt never share a level, and the
@@ -71,11 +71,11 @@ variable {S : Setting} {B : Budget S} {T : Tracking S}
 
 /-! ### The general parameter regime -/
 
-/-- **`eq:scalar-conditions`.**  The nontriviality assumptions of the general regime: the
+/-- **`general scalar conditions`.**  The nontriviality assumptions of the general regime: the
 challenge weight stays inside the active interval even after the whole budget is spent.
 
 The Filecoin specialization verifies the stronger `π̄ < ζ_δ - ρ` of
-`eq:no-break-conditions`, from which this follows since `α_δ^min < π̄` always. -/
+`no-break parameter conditions`, from which this follows since `α_δ^min < π̄` always. -/
 structure GeneralRegime (S : Setting) : Prop where
   /-- `α_δ^min < zetaFloor = ζ_δ - ρ`. -/
   entry : S.αmin < S.zetaFloor
@@ -93,10 +93,10 @@ theorem gtilde_pos (GR : GeneralRegime S) (hρ : 0 < S.ρ) : 0 < S.gtilde :=
 
 end GeneralRegime
 
-/-! ### The constants of `thm:latency` -/
+/-! ### The constants of `latency_general` -/
 
 /-- `b^max = ⌈ρ/(β_δ(π) - π̂)⌉ - 1`, the number of chain breaks the whole black-pebble
-budget can pay for (`eq:cap-break`).  `break_charge` is `lem:break-charge`, the charge a
+budget can pay for (`break-cap definition`).  `break_charge` is `break-charge lemma`, the charge a
 break actually costs, and it is what makes `bMax_eq_zero` fire at the Filecoin
 budget.  The
 denominator is positive because
@@ -104,11 +104,11 @@ denominator is positive because
 noncomputable def bMax (S : Setting) (T : Tracking S) : ℕ :=
   blockedCap S (S.betaD S.pi - T.lam)
 
-/-- `s(ĝ, g̃) = infertileCap(g̃) + blockedCap(ĝ)` (`eq:cap-search`): the total search overhead,
+/-- `s(ĝ, g̃) = infertileCap(g̃) + blockedCap(ĝ)` (`search-cap definition`): the total search overhead,
 covering the initial search and *all* restart searches together. -/
 noncomputable def sCap (S : Setting) (T : Tracking S) : ℕ := sCapOf S T.ghat S.gtilde
 
-/-- **`s_0` of `eq:global-constants`**: the total non-chain overhead `s + b^max h_0`.
+/-- **`s_0` of `global constants`**: the total non-chain overhead `s + b^max h_0`.
 
 Only the `b^max` broken attempts need a whole link span; the final incomplete attempt of
 the surviving segment is already paid for, because an attempt consumes at most
@@ -133,7 +133,7 @@ noncomputable def jointEntry (S : Setting) (T : Tracking S) (ℓ : ℕ) : ℕ :=
   if bMax S T = 0 then ⌈((ℓ : ℝ) - searchHead S - jointSlack S T) / h₁ S T⌉₊ else 0
 
 /--
-**`z_min` of `eq:zmin`**: the chain length certified by `lem:chain-length`.
+**`z_min` of `minimum link-count definition`**: the chain length certified by `chain-length lemma`.
 
 It is the maximum of the base entry `1` and three substantive bounds: the global
 `h_1` ledger entry, the no-break joint-ledger entry, and the constant-charge `h_0`
@@ -146,7 +146,7 @@ one link span each.
 is *literally* `zMinNoBreak`.  So the single break-aware latency theorem gives away
 nothing at the Filecoin parameters.
 
-The ledger entry — the `⌈(ℓ - s_1)/((b^max+1) h_1)⌉_+` of `eq:zmin` — is what keeps the
+The ledger entry — the `⌈(ℓ - s_1)/((b^max+1) h_1)⌉_+` of `minimum link-count definition` — is what keeps the
 slope at `1/h_1` instead of `1/h_0 = 1/29`, and the *joint* ledger entry beside it
 replaces the offset `s + 2ρ/ĝ` by `searchHead + 2ρ/min{ĝ,g̃}`, which charges the budget
 once instead of three times.  Both are kept: neither dominates the other for every
@@ -164,10 +164,10 @@ theorem betaD_pi_sub_lam_pos : 0 < S.betaD S.pi - T.lam := by
   rw [hb]
   linarith [T.lam_lt_pi, S.gpi_pos']
 
-/-- **A budget below one break's charge forbids breaks outright.**  `lem:break-charge`
+/-- **A budget below one break's charge forbids breaks outright.**  `break-charge lemma`
 prices a break at `β_δ(π) - π̂`, so `ρ < β_δ(π) - π̂` says the budget cannot pay for a
 single one.  At the Filecoin parameters this is the budget inequality
-`ρ < β_δ(π) - π̄` of `eq:no-break-conditions`, together with `π̂ = π̄`. -/
+`ρ < β_δ(π) - π̄` of `no-break parameter conditions`, together with `π̂ = π̄`. -/
 theorem bMax_eq_zero (hlt : S.ρ < S.betaD S.pi - T.lam) : bMax S T = 0 := by
   have hceil : ⌈S.ρ / (S.betaD S.pi - T.lam)⌉₊ ≤ 1 := by
     refine Nat.ceil_le.mpr ?_
@@ -208,7 +208,7 @@ exactly `I + Q` levels: `I` single-level skips at distinct infertile depths of `
 and `Q` levels inside blocked ranges whose *disjoint* spends exceed `Q g`.
 
 `search_bound` packages the same search in the contrapositive form used by
-`lem:first-source`; this version keeps the position it stops at, which is what a restart
+`first-source lemma`; this version keeps the position it stops at, which is what a restart
 needs. -/
 theorem search_stops {B : Budget S} {g : ℝ} (Fert : ℕ → Prop) [DecidablePred Fert]
     (t E : ℕ) :
@@ -308,11 +308,11 @@ The conclusions are, in order:
   progress.
 * every level of `[b, ℓ)` belongs to a search (`I + Q` of them) or to an attempt, which
   consumes at most `localSpan = h_0 - 1` levels — the constant-charge accounting;
-* …and, *simultaneously*, the same levels counted by the ledger of `eq:level-ledger`: an
+* …and, *simultaneously*, the same levels counted by the ledger of `level ledger`: an
   attempt consumes at most `h_1` levels plus `2/ĝ` per unit of black pebble spent
   inside its own window.  Because the windows are disjoint, the whole construction pays
   the `2ρ/ĝ` slack once rather than once per link.  Carrying both bounds through the
-  same induction is what lets one theorem match `thm:latency`'s slope in the uniform
+  same induction is what lets one theorem match `latency_general`'s slope in the uniform
   regime and still survive breaks outside it;
 * …and, when *no break was charged*, the **joint** ledger: the searches and the
   attempts occupy disjoint ranges of levels, so the infertile charge of
@@ -323,7 +323,7 @@ The conclusions are, in order:
   link);
 * the blocked levels are paid for at rate `ĝ` on disjoint spends;
 * the breaks are paid for at rate `β_δ(π) - π̂` on disjoint spends — this is
-  `lem:break-charge`, at the sharper rate of `break_charge`.
+  `break-charge lemma`, at the sharper rate of `break_charge`.
 -/
 def GenLedger (S : Setting) (B : Budget S) (T : Tracking S) (Fert : ℕ → Prop)
     [DecidablePred Fert] (ℓ b base : ℕ) (Good Near : ℕ → Prop) (head : ℝ) (w : ℕ) : Prop :=
@@ -342,20 +342,20 @@ def GenLedger (S : Setting) (B : Budget S) (T : Tracking S) (Fert : ℕ → Prop
       ∑ d ∈ Finset.Ico (b + 1) N, B.spend d)
 
 
-/-! ### `lem:extension-attempt` -/
+/-! ### `extension-attempt lemma` -/
 
 namespace ChainSystem
 
 variable {ℓ : ℕ} {Realizes : ℕ → Prop} (CS : ChainSystem.{u} S B T ℓ Realizes)
 
 /--
-**Chain extension with a possible break** (`lem:extension-attempt`).
+**Chain extension with a possible break** (`extension-attempt lemma`).
 
 An attempt from a link consumes at most `growthCap + contSpan = h_0 - 1` levels and ends in one of
 three ways: the bottom of the graph, the next link, or a *break* — the tracked footprint
 falling below `π̂`.  In the break case the levels traversed carry total spend greater
-than `π - π̂`, which is the second conclusion of `lem:fertile-continuation` and the
-charge that `lem:break-charge` uses.
+than `π - π̂`, which is the second conclusion of `fertile-continuation lemma` and the
+charge that `break-charge lemma` uses.
 
 This is `extension_attempt` with the post-fertile floor `post_floor` and the no-break condition
 removed.  In the no-break regime those two rule out the third outcome altogether; here
@@ -521,7 +521,7 @@ theorem extension_attempt_gen (L : CS.Link) :
     exact ⟨t2, by omega, Or.inr (Or.inl ⟨L', hL'depth, hL'count⟩), hwindow, hlocal⟩
 
 
-/-! ### The general construction and `thm:latency` -/
+/-! ### The general construction and `latency_general` -/
 
 /--
 **The general construction and its ledger.**
@@ -541,10 +541,10 @@ search statement then uses it at the *same* budget, since a search may find its 
 the depth it starts from.
 
 `restart` is the only additional graph input over `ChainSystem`, and it is exactly
-`lem:first-source` applied below a break.
+`first-source lemma` applied below a break.
 
-This single accounting subsumes both `eq:level-ledger` and the level count of
-`thm:latency`; `exists_many_links_gen` reads both off it at once.
+This single accounting subsumes both `level ledger` and the level count of
+`latency_general`; `exists_many_links_gen` reads both off it at once.
 -/
 theorem general_ledger (Fert : ℕ → Prop) [DecidablePred Fert]
     (restart : ∀ b : ℕ, b < ℓ → Fert b → Expandable B T.ghat b →
@@ -855,11 +855,11 @@ theorem general_ledger (Fert : ℕ → Prop) [DecidablePred Fert]
 
 Running the construction from depth `0` covers the whole graph.  The four capacities of
 `general_ledger` pay for every level: at most `s(ĝ, g̃)` belong to the initial and
-restart searches (`lem:challenge-floor` caps `I`, disjoint blocked spends cap `Q`);
-at most `b^max` attempts break (`lem:break-charge`, at the sharp rate of
+restart searches (`challenge-floor lemma` caps `I`, disjoint blocked spends cap `Q`);
+at most `b^max` attempts break (`break-charge lemma`, at the sharp rate of
 `break_charge`), so there are at most `b^max + 1` segments; and the remaining levels are
 charged to attempts, simultaneously at `h_0 - 1` levels each and through the ledger of
-`eq:level-ledger`.  The best segment therefore holds at least `zMin` links, and — if no
+`level ledger`.  The best segment therefore holds at least `zMin` links, and — if no
 break was charged — its final link lies within `localSpan` levels of the bottom.
 -/
 theorem exists_many_links_gen (GR : GeneralRegime S) (hρ : 0 < S.ρ)
@@ -1011,11 +1011,11 @@ theorem exists_many_links_gen (GR : GeneralRegime S) (hρ : 0 < S.ρ)
   · exact ⟨z, hzMinNoBreak, hzr, fun h => hnear (by omega) (by omega)⟩
 
 /--
-**Latency lower bound, one theorem for both parameter regimes** (`thm:latency`,
-strengthened to subsume `thm:latency`).
+**Latency lower bound, one theorem for both parameter regimes** (`latency_general`,
+strengthened to subsume `latency_general`).
 
-`Realizes` is downward closed for the intended interpretation, exactly as in the paper's
-`thm:latency`: the construction produces a chain of `z ≥ z_min` links, and the theorem is
+`Realizes` is downward closed for the intended interpretation, exactly as in the development's
+`latency_general`: the construction produces a chain of `z ≥ z_min` links, and the theorem is
 stated at the displayed `z_min`.
 -/
 theorem latency_gen (GR : GeneralRegime S) (hρ : 0 < S.ρ)

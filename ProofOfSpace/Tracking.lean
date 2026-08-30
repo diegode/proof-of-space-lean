@@ -1,28 +1,26 @@
 /-
 # The tracking parameters `π̂` and `ĝ`
 
-This file formalizes `eq:tracking` and the uniform bound `eq:tracking-gain` of
-`docs/explanation.tex`:
+This file formalizes `tracking definitions` and the uniform bound `tracking-gain bound` of
+this development:
 
   `π̂ := min {π̄, σ, 1 - β σ}`,  `ĝ := min {g_π, gain_δ(σ)/2}`,
 
 `π̂` is built here in two steps, through the auxiliary `σ̂ := min {σ, 1 - β σ}`, so
-that `π̂ = min {π̄, σ̂}`.  The explanatory note writes the three-way minimum directly;
-`σ̂` has no separate name there.  The Lean declaration implementing `π̂` is
-`Tracking.lam`.
+that `π̂ = min {π̄, σ̂}`. The Lean declaration implementing `π̂` is `Tracking.lam`.
 
 together with
 
   `gain_δ(x) ≥ ĝ`   for `π̂ ≤ x ≤ π`.
 
 The point of `σ̂` is that `1 - β σ` is the mirror partner of `σ`, so it carries the *same*
-gain (the mirror identity of `eq:reversal`, proved in `Expansion.lean` from the
+gain (the mirror identity of `reversal identity`, proved in `Expansion.lean` from the
 Chung reversal law of
 `Chung.lean`).  Consequently the gain at `π̂` is bounded below without any assumption on
 which side of the gain peak `σ` lies.
 
 The last two results specialize under the source-gain inequality
-`gain_δ(σ) ≥ 2 g_π` from `eq:no-break-conditions`: it forces `ĝ = g_π` and `π̂ = π̄`,
+`gain_δ(σ) ≥ 2 g_π` from `no-break parameter conditions`: it forces `ĝ = g_π` and `π̂ = π̄`,
 so that `ĝ`-expandability is
 exactly the `g_π`-expandability of the base-case analysis.
 -/
@@ -33,7 +31,7 @@ namespace ProofOfSpace
 open Set
 
 /-- A source weight `σ` strictly inside the active interval and below the fertility
-threshold, as fixed in `sec:footprint-proof`. -/
+threshold, as fixed in `footprint analysis`. -/
 structure Tracking (S : Setting) where
   /-- The weight of the tracked source set. -/
   σ : ℝ
@@ -61,7 +59,7 @@ variable {S : Setting} (T : Tracking S)
 /-- `σ̂ = min{σ, 1 - β(σ)}`: the smaller member of the equal-gain mirror pair. -/
 noncomputable def sigmaHat : ℝ := min T.σ (1 - S.β T.σ)
 
-/-- `π̂ = min{π̄, σ̂}`: the tracking floor of `lem:mirror-floor`. -/
+/-- `π̂ = min{π̄, σ̂}`: the tracking floor of `mirror-floor lemma`. -/
 noncomputable def lam : ℝ := min S.piBar T.sigmaHat
 
 /-- `ĝ = min{g_π, gain_δ(σ)/2}`: the tracking gain. -/
@@ -94,7 +92,7 @@ theorem sigmaHat_mem_Icc : T.sigmaHat ∈ Icc (0:ℝ) 1 :=
   ⟨T.sigmaHat_pos.le, T.sigmaHat_lt_one.le⟩
 
 /-- **The equal-gain property of the mirror pair.**  `σ̂` has the same gain as `σ`; this is
-the mirror identity of `eq:reversal` applied to whichever of the two points realizes
+the mirror identity of `reversal identity` applied to whichever of the two points realizes
 the minimum. -/
 theorem gainD_sigmaHat : S.gainD T.sigmaHat = S.gainD T.σ := by
   rcases min_cases T.σ (1 - S.β T.σ) with ⟨h, _⟩ | ⟨h, _⟩
@@ -150,14 +148,14 @@ theorem αmin_lt_sigmaHat : S.αmin < T.sigmaHat := by
 
 theorem αmin_lt_lam : S.αmin < T.lam := lt_min S.αmin_lt_piBar T.αmin_lt_sigmaHat
 
-/-- **`eq:tracking-gain`.**  The gain at the tracking floor is at least `ĝ`. -/
+/-- **`tracking-gain bound`.**  The gain at the tracking floor is at least `ĝ`. -/
 theorem ghat_le_gainD_lam : T.ghat ≤ S.gainD T.lam := by
   rcases min_cases S.piBar T.sigmaHat with ⟨h, _⟩ | ⟨h, _⟩
   · rw [lam, h, S.gainD_piBar]; exact T.ghat_le_gpi
   · rw [lam, h, T.gainD_sigmaHat]
     linarith [T.two_ghat_le_gainD_σ, T.ghat_nonneg]
 
-/-- **`eq:tracking-gain`.**  `gain_δ ≥ ĝ` throughout `[π̂, π]`. -/
+/-- **`tracking-gain bound`.**  `gain_δ ≥ ĝ` throughout `[π̂, π]`. -/
 theorem ghat_le_gainD {x : ℝ} (hx : x ∈ Icc T.lam S.pi) : T.ghat ≤ S.gainD x := by
   have h := S.gainD_concaveOn.min_le_of_mem_Icc T.lam_mem_Icc S.pi_mem_Icc hx
   have hlam := T.ghat_le_gainD_lam

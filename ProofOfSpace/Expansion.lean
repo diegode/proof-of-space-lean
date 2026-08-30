@@ -1,15 +1,15 @@
 /-
 # Expansion profiles, the gain function, and the mirror corollary
 
-This file sets up the analytic framework of `docs/explanation.tex` and proves
-the mirror consequences of `eq:reversal` from the
+This file sets up the analytic framework of this development and proves
+the mirror consequences of `reversal identity` from the
 reversal law of `Chung.lean`.
 
 * `Setting` bundles the expansion function `β` together with the parameters
   `δ, π, ρ, ζδ` and the endpoints `αmin, αmax` of the interval where `gainδ ≥ 0`.
-  All structural hypotheses are exactly those listed in `docs/explanation.tex`.
-* `Setting.gainD_mirror` is the gain-preservation half of `eq:reversal`, the identity
-  `gain_δ(1 - β(σ)) = gain_δ(σ)` that `eq:tracking` uses; `Setting.gainD_piBar` is its
+  All structural hypotheses are exactly those listed in this development.
+* `Setting.gainD_mirror` is the gain-preservation half of `reversal identity`, the identity
+  `gain_δ(1 - β(σ)) = gain_δ(σ)` that `tracking definitions` uses; `Setting.gainD_piBar` is its
   consequence `gain_δ(π̄) = g_π`; and `Setting.piBar_lt_pi` uses that the mirror map
   fixes `α_g`.
 * `Setting.gpi_le_gainD` is the concavity consequence used everywhere downstream:
@@ -59,7 +59,7 @@ theorem concaveOn_chord_le {f : ℝ → ℝ} (hf : ConcaveOn ℝ (Icc (0:ℝ) 1)
 The full parameter setting of the analysis.
 
 The fields are the structural assumptions on the expansion function stated in
-`docs/explanation.tex` (continuity is not needed; strict monotonicity,
+this development (continuity is not needed; strict monotonicity,
 concavity and the reversal law are), together with the numeric parameters.
 -/
 structure Setting where
@@ -90,7 +90,7 @@ structure Setting where
   β_strictMonoOn : StrictMonoOn β (Icc (0:ℝ) 1)
   β_concaveOn : ConcaveOn ℝ (Icc (0:ℝ) 1) β
   β_expands : ∀ ⦃x⦄, x ∈ Ioo (0:ℝ) 1 → x < β x
-  /-- `eq:reversal`, supplied by `ChungCurve.chungBeta_reversal` for Chung expanders. -/
+  /-- `reversal identity`, supplied by `ChungCurve.chungBeta_reversal` for Chung expanders. -/
   β_reversal : ∀ ⦃x⦄, x ∈ Ioo (0:ℝ) 1 → β (1 - β x) = 1 - x
   αg_mem : αg ∈ Ioo (0:ℝ) 1
   /-- `αg` is the *unique* maximiser of the gain. -/
@@ -146,10 +146,10 @@ theorem betaD_strictMonoOn : StrictMonoOn S.betaD (Icc (0:ℝ) 1) := by
   simp only [betaD]
   exact sub_lt_sub_right (S.β_strictMonoOn hx hy hxy) _
 
-/-! ### Mirror consequences of `eq:reversal` -/
+/-! ### Mirror consequences of `reversal identity` -/
 
 /-- The mirror map `x ↦ 1 - β x` preserves the gain.  This is the identity
-`gain_δ(1 - β(σ)) = gain_δ(σ)` displayed after `eq:tracking`. -/
+`gain_δ(1 - β(σ)) = gain_δ(σ)` displayed after `tracking definitions`. -/
 theorem gainD_mirror {x : ℝ} (hx : x ∈ Ioo (0:ℝ) 1) :
     S.gainD (1 - S.β x) = S.gainD x := by
   simp only [gainD, S.β_reversal hx]; ring
@@ -327,7 +327,7 @@ theorem gainD_pos {x : ℝ} (hx : x ∈ Ioo S.αmin S.αmax) : 0 < S.gainD x := 
     nlinarith
 
 /-- **Outside the mirror interval the gain drops below `g_π`.**  Stated on the left branch,
-which is the side used by the tracking parameters of `docs/explanation.tex`. -/
+which is the side used by the tracking parameters of this development. -/
 theorem gainD_le_gpi_of_lt_piBar {x : ℝ} (hx : x ∈ Icc (0:ℝ) 1) (hlt : x < S.piBar) :
     S.gainD x ≤ S.gpi := by
   have hxpi : x < S.pi := hlt.trans S.piBar_lt_pi
@@ -386,7 +386,7 @@ theorem gainD_nonpos_of_αmax_le {x : ℝ} (hx : x ∈ Icc (0 : ℝ) 1)
 
 /-! ### The general positive floor `ζ_δ - ρ` and the infertile-gain floor `g̃`
 
-`docs/explanation.tex`, `lem:challenge-floor`.  Outside the entry condition
+this development, `challenge-floor lemma`.  Outside the entry condition
 `π̄ < ζ_δ - ρ` the challenge footprint may sink below `π̄`, so infertile levels can no
 longer be charged at rate `g_π`.  What survives is the coarser floor
 `zetaFloor = ζ_δ - ρ`,

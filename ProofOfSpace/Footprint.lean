@@ -2,40 +2,40 @@
 # Footprint bounds: the footprint identity, the gain floor, and the infertile budget
 
 This file formalizes the footprint recurrence and challenge bounds of
-`docs/explanation.tex`.
+this development.
 
-**The one convention that differs from the paper.**  The Lean field `depth` is an index
-counted from the challenge, while the paper counts levels the other way, following
-Reyzin.  Lean depth `d` is the paper's **level** `ℓ - d`, so Lean `layer 0` is the
-paper's bottom layer `V_ℓ` (which carries the targets) and Lean `layer (ℓ-1)` is the
-paper's top layer `V_1`.  Inter-layer edges run from Lean `layer (d+1)` to `layer d`,
-which is the paper's `V_{j-1}` to `V_j`.  Every direction word therefore flips: the
-paper's recurrence runs upward in `j`, this one runs forward in `d`.  Counting forward
+**The one convention that differs from the development.**  The Lean field `depth` is an index
+counted from the challenge, while the development counts levels the other way, following
+Reyzin.  Lean depth `d` is Reyzin's **level** `ℓ - d`, so Lean `layer 0` is the
+published construction's bottom layer `V_ℓ` (which carries the targets) and Lean
+`layer (ℓ-1)` is its top layer `V_1`.  Inter-layer edges run from Lean `layer (d+1)` to `layer d`,
+which is the development's `V_{j-1}` to `V_j`.  Every direction word therefore flips: the
+published recurrence runs upward in `j`, this one runs forward in `d`.  Counting forward
 is what keeps the recurrence free of truncated `ℕ` subtraction.
 
-Consequently the field named `depth` is a level index in the paper's sense — the paper
+Consequently the field named `depth` is a level index in the development's sense — the development
 reserves *depth* for the length of a path, and `NodeDepthRobust` and its relatives do
 use `depth` in that path-length sense.
 
-Because depths count forward from the challenge, the paper's upward recurrence
-`eq:footprint-bound` becomes the forward recurrence
+Because depths count forward from the challenge, the development's upward recurrence
+`footprint recurrence` becomes the forward recurrence
 `f (d+1) = max (0) (β_δ (f d) - spend (d+1))`.
 
 Results proved here:
 
-* `IsFootprintBound.sum_le` — the accumulated form of `eq:footprint-bound`, in the
+* `IsFootprintBound.sum_le` — the accumulated form of `footprint recurrence`, in the
   inequality form in which it is always used.  Because `max 0 v ≥ v`, no positivity side
-  condition is needed.  The paper does not restate it, citing it throughout
-  `docs/explanation.tex` as the accumulated bound of Reyzin, Claim 3.
-* `ChallengeBound.floor` — `lem:challenge-floor`: under the entry condition
+  condition is needed.  The development does not restate it, citing it throughout
+  this development as the accumulated bound of Reyzin, Claim 3.
+* `ChallengeBound.floor` — `challenge-floor lemma`: under the entry condition
   `ζδ - ρ > π̄` the challenge footprint never drops below `π̄` and never rises above
   `αmax`; in particular every gain along the footprint bound is nonnegative, and every
-  *infertile* gain is at least `g_π`.  This is where `lem:challenge-floor` is absorbed:
+  *infertile* gain is at least `g_π`.  This is where `challenge-floor lemma` is absorbed:
   the two invariants are proved by a single simultaneous induction, which avoids the
   circularity of quoting positivity of the gain sum before the floor is known.
-* `ChallengeBound.infertile_budget` — `lem:infertile-capacity`.
+* `ChallengeBound.infertile_budget` — `infertile-capacity lemma`.
 * `ChallengeBound.infertile_card_le` — the resulting capacity bound
-  `k ≤ infertileCap h`, the first summand of `s` in `eq:cap-search`.
+  `k ≤ infertileCap h`, the first summand of `s` in `search-cap definition`.
 -/
 import ProofOfSpace.Expansion
 import Mathlib.Algebra.Order.BigOperators.Group.Finset
@@ -47,7 +47,7 @@ namespace ProofOfSpace
 open Real Set Finset
 
 /-- A black-pebble allocation: `spend d` is the weight `ρ_d` of black pebbles placed at
-level `d`.  The prefix bound `total` is `eq:budgets`; the adversary's total budget is
+level `d`.  The prefix bound `total` is `pebbling-budget condition`; the adversary's total budget is
 `ρ`. -/
 structure Budget (S : Setting) where
   /-- Weight of black pebbles at depth `d`. -/
@@ -109,7 +109,7 @@ theorem step_ge (h : IsFootprintBound S B start f) {d : ℕ} (hd : start ≤ d) 
   exact le_max_right _ _
 
 /--
-**The accumulated bound** — Reyzin, Claim 3, as `docs/explanation.tex` cites it —
+**The accumulated bound** — Reyzin, Claim 3, as this development cites it —
 in the inequality form used throughout: the footprint at depth `t + i` is at least the starting weight plus the
 accumulated gains minus the accumulated spend.  Truncation at `0` can only help, so
 unlike the equality version this needs no positivity hypothesis.
@@ -133,8 +133,8 @@ than
 the *whole* budget is spent, then it stays above `c` minus the accumulated
 spend, and never rises above `αmax`.
 
-This is the common core of `lem:challenge-floor` and of the post-fertile floor
-`Growth.post_floor`, both in `docs/explanation.tex`: the two invariants are needed
+This is the common core of `challenge-floor lemma` and of the post-fertile floor
+`Growth.post_floor`, both in this development: the two invariants are needed
 simultaneously, because the gain used
 in the descent step is only known to be nonnegative once the footprint is enclosed in
 `[αmin, αmax]`.
@@ -176,9 +176,9 @@ and every infertile gain is at least `g` (while every gain is nonnegative), then
 pebbles strictly below `start` and above `P` weigh more than
 `f start - π + (K - 1) g`.
 
-This is the scalar form of `lem:infertile-capacity` in `docs/explanation.tex`; it is used
+This is the scalar form of `infertile-capacity lemma` in this development; it is used
 both for the challenge footprint (base case) and for a tracked source footprint
-(`lem:fertile-continuation`).
+(`fertile-continuation lemma`).
 -/
 theorem infertile_budget {g : ℝ} {P : ℕ} (h : IsFootprintBound S B start f)
     (hnn : ∀ d, start ≤ d → d < P → 0 ≤ S.gainD (f d))
@@ -286,10 +286,10 @@ namespace ChallengeBound
 
 variable {S : Setting} {B : Budget S} (C : ChallengeBound S B)
 
-/-- The two invariants of `lem:challenge-floor`, proved by simultaneous induction.
+/-- The two invariants of `challenge-floor lemma`, proved by simultaneous induction.
 
 The hypothesis is the *general* entry condition `α_δ^min < zetaFloor = ζ_δ - ρ` of
-`lem:challenge-floor`, not the stronger `π̄ < ζ_δ - ρ` of `eq:no-break-conditions`: the
+`challenge-floor lemma`, not the stronger `π̄ < ζ_δ - ρ` of `no-break parameter conditions`: the
 induction only ever needs the floor to keep the footprint inside the active interval
 `[α_δ^min, α_δ^max]`, where the gain is nonnegative.  `invariants` below is the
 specialization used by the uniform-regime results. -/
@@ -326,14 +326,14 @@ theorem invariants_gen (hζmax : S.ζδ ≤ S.αmax) (hentry : S.αmin < S.ζδ 
         · exact le_trans S.αg_mem.1.le S.αmax_mem.1
         · have := B.spend_nonneg (d + 1); linarith
 
-/-- The two invariants of `lem:challenge-floor` under the entry condition
-`eq:no-break-conditions`, which is stronger than the hypothesis of `invariants_gen`
+/-- The two invariants of `challenge-floor lemma` under the entry condition
+`no-break parameter conditions`, which is stronger than the hypothesis of `invariants_gen`
 because `α_δ^min < π̄`. -/
 theorem invariants (hζmax : S.ζδ ≤ S.αmax) (hentry : S.piBar < S.ζδ - S.ρ) (d : ℕ) :
     S.ζδ - (∑ m ∈ Finset.range (d + 1), B.spend m) ≤ C.f d ∧ C.f d ≤ S.αmax :=
   C.invariants_gen hζmax (lt_trans S.αmin_lt_piBar hentry) d
 
-/-- **`lem:challenge-floor`, lower half.** Under the entry condition the challenge footprint
+/-- **`challenge-floor lemma`, lower half.** Under the entry condition the challenge footprint
 never falls below `π̄`. -/
 theorem piBar_lt (hζmax : S.ζδ ≤ S.αmax) (hentry : S.piBar < S.ζδ - S.ρ) (d : ℕ) :
     S.piBar < C.f d := by
@@ -341,7 +341,7 @@ theorem piBar_lt (hζmax : S.ζδ ≤ S.αmax) (hentry : S.piBar < S.ζδ - S.ρ
   have hb := B.total (d + 1)
   linarith
 
-/-- **`lem:challenge-floor`, upper half.** -/
+/-- **`challenge-floor lemma`, upper half.** -/
 theorem le_αmax (hζmax : S.ζδ ≤ S.αmax) (hentry : S.piBar < S.ζδ - S.ρ) (d : ℕ) :
     C.f d ≤ S.αmax := (C.invariants hζmax hentry d).2
 
@@ -361,15 +361,15 @@ end ChallengeBound
 
 /-! ### The infertile budget bound -/
 
-/-- `⌈(π - ζ_δ + ρ)/h⌉_+`, the infertile capacity of `lem:infertile-capacity` and the
-first summand of `s` in `eq:cap-search`. -/
+/-- `⌈(π - ζ_δ + ρ)/h⌉_+`, the infertile capacity of `infertile-capacity lemma` and the
+first summand of `s` in `search-cap definition`. -/
 noncomputable def infertileCap (S : Setting) (h : ℝ) : ℕ := Nat.ceil ((S.ρ - (S.ζδ - S.pi)) / h)
 
-/-- `⌈ρ/g⌉ - 1`, the blocked-window capacity of `lem:first-source` and the second
-summand of `s` in `eq:cap-search`. -/
+/-- `⌈ρ/g⌉ - 1`, the blocked-window capacity of `first-source lemma` and the second
+summand of `s` in `search-cap definition`. -/
 noncomputable def blockedCap (S : Setting) (g : ℝ) : ℕ := Nat.ceil (S.ρ / g) - 1
 
-/-- **`s` of `eq:cap-search`**, as a function of the two gains it is evaluated at:
+/-- **`s` of `search-cap definition`**, as a function of the two gains it is evaluated at:
 `s(g,h) = infertileCap(h) + blockedCap(g)`.  `Ledger.sCap` is the instance the theorem
 uses, at `g = ĝ` and `h = g̃`. -/
 noncomputable def sCapOf (S : Setting) (g h : ℝ) : ℕ := infertileCap S h + blockedCap S g
@@ -379,7 +379,7 @@ namespace ChallengeBound
 variable {S : Setting} {B : Budget S} (C : ChallengeBound S B)
 
 /--
-**`lem:infertile-capacity`.** If at least `k > 0` of the depths `0, …, m` are infertile,
+**`infertile-capacity lemma`.** If at least `k > 0` of the depths `0, …, m` are infertile,
 then the black pebbles placed on those depths weigh more than `ζδ - π + (k-1) g_π`.
 -/
 theorem infertile_budget (hζmax : S.ζδ ≤ S.αmax) (hentry : S.piBar < S.ζδ - S.ρ)
@@ -470,15 +470,15 @@ theorem infertile_card_le (hζmax : S.ζδ ≤ S.αmax) (hentry : S.piBar < S.ζ
   omega
 
 
-/-! ### `lem:challenge-floor`: the general positive floor
+/-! ### `challenge-floor lemma`: the general positive floor
 
 Outside the entry condition `π̄ < ζ_δ - ρ` the challenge footprint may sink below `π̄`,
 and infertile levels can no longer be charged at rate `g_π`.  What survives is the
 coarser floor `zetaFloor = ζ_δ - ρ`, which the whole budget cannot breach, together with the
 rate `g̃ = min{gain_δ(ζ_δ - ρ), g_π}` certified on `[ζ_δ - ρ, π]` by concavity.  The three
-results below are the three assertions of `lem:challenge-floor`. -/
+results below are the three assertions of `challenge-floor lemma`. -/
 
-/-- **`lem:challenge-floor`, the floor.**  The challenge footprint never falls
+/-- **`challenge-floor lemma`, the floor.**  The challenge footprint never falls
 below `zetaFloor = ζ_δ - ρ`, however the adversary allocates its budget. -/
 theorem zetaFloor_le (hζmax : S.ζδ ≤ S.αmax) (hentry : S.αmin < S.zetaFloor) (d : ℕ) :
     S.zetaFloor ≤ C.f d := by
@@ -493,16 +493,16 @@ theorem gainD_nonneg_gen (hζmax : S.ζδ ≤ S.αmax) (hentry : S.αmin < S.zet
   S.gainD_nonneg ⟨le_trans hentry.le (C.zetaFloor_le hζmax hentry d),
     (C.invariants_gen hζmax hentry d).2⟩
 
-/-- **`lem:challenge-floor`, the rate.**  Every *infertile* gain along the
+/-- **`challenge-floor lemma`, the rate.**  Every *infertile* gain along the
 challenge footprint bound is at least `g̃`. -/
 theorem gtilde_le_gainD_of_infertile (hζmax : S.ζδ ≤ S.αmax) (hentry : S.αmin < S.zetaFloor)
     (hlt : S.zetaFloor < S.αmax) {d : ℕ} (hd : C.f d < S.pi) :
     S.gtilde ≤ S.gainD (C.f d) :=
   S.gtilde_le_gainD hentry hlt ⟨C.zetaFloor_le hζmax hentry d, hd.le⟩
 
-/-- **`lem:challenge-floor`, the capacity.**  At most `infertileCap(g̃)` depths of any
-prefix are infertile for the challenge footprint.  Since
-`ρ - (ζ_δ - π) = π - ζ_δ + ρ`, this is exactly the note's
+/-- **`challenge-floor lemma`, the capacity.**  At most `infertileCap(g̃)` depths of any
+prefix are infertile for the challenge footprint. Since
+`ρ - (ζ_δ - π) = π - ζ_δ + ρ`, this is exactly
 `⌈(π - ζ_δ + ρ)/g̃⌉`. -/
 theorem infertile_card_le_gen (hζmax : S.ζδ ≤ S.αmax) (hentry : S.αmin < S.zetaFloor)
     (hlt : S.zetaFloor < S.αmax) (P : ℕ) :
@@ -534,7 +534,7 @@ theorem infertile_card_le_gen (hζmax : S.ζδ ≤ S.αmax) (hentry : S.αmin < 
   omega
 
 /--
-**`lem:infertile-capacity`, window form.**
+**`infertile-capacity lemma`, window form.**
 
 The infertile challenge depths of a window `[a, p)` are paid for by the spend *inside
 that window*, plus the spend strictly above it and the one-level ceiling slack:
