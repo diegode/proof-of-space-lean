@@ -1,4 +1,4 @@
 import ProofOfSpace.ChungFilecoin
 import ProofOfSpace.Constructions
-import ProofOfSpace.Potential
+import ProofOfSpace.PotentialLedger
 import ProofOfSpace.Witness

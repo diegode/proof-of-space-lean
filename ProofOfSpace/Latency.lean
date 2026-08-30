@@ -1,5 +1,6 @@
 import ProofOfSpace.Concrete
 import ProofOfSpace.Ledger
+import ProofOfSpace.PotentialLedger
 
 /-!
 # The concrete latency theorems
@@ -10,33 +11,16 @@ construction lives in `Ledger.lean` and its constants in `Chain.lean`; this file
 the path-length interpretation, the finite hardness estimate, the small-layer
 depth-robustness bound, and the certified Filecoin specialization.
 
-There is only **one** chain-counting theorem behind all of this, and it is the general
-one: `latency_general` assumes `general scalar conditions` alone and allows chains to break.
-The Filecoin numbers come from evaluating its constants, not from a second theorem —
-`FilecoinLatencyParameters` carries the collapses (`ĝ = g_π`, `g̃ = g_π`, `b^max = 0`,
-`σ̃ = 3/5`) verified by the numerical specialization, and `zMin_eq` turns
-`minimum link-count definition` into
-`filecoinZMin`.  This file maintains neither a second copy of `z_min` nor a second
-ledger.
+`latency_general` assumes `general scalar conditions` and permits chain breaks. Its link
+count is the maximum of the certified ledger and constant-charge bounds.
+`FilecoinLatencyParameters` records the numerical identities `ĝ = g_π`, `g̃ = g_π`,
+`b^max = 0`, and `σ̃ = 3/5` used by the degree-eight specialization.
 
-**Two optimized constants.** The formalization retains these alongside the baseline
-bounds.
-
-* the per-link span `h_1` is `growthConst + 1` with
-  `growthConst = min{a, Φ_{σ̃}(π) + 1}`, the two-piece growth potential of `Growth.lean`
-  rather than the linearized `a = max{1, (π-σ)/ĝ}`.  At Filecoin `5.957 < h₁ < 5.961`
-  against the development's `7.123`;
-* the one-time offset of the ledger entry is `s₂ = searchHead + 2ρ/min{ĝ,g̃}`
-  beside the development's `s_1 = s + 2ρ/ĝ`, charging the black budget once instead of three
-  times (see the header of `Ledger.lean`).  At Filecoin `s₂ < 14.82` against
-  `s_1 > 28.36`.
-
-Both entries are kept in `zMin`, which is a maximum, so nothing is lost where the older
-constants happen to be better.  Together they move the first layer count certifying more
-than `0.2 n` from `ℓ = 36` (`filecoinZMin_35_eq`, deleted) to `ℓ = 21`
-(`filecoinZMin_20_eq`, `filecoinZMin_21_eq`, `latency_21`), with the same `0.2816 n`
-payoff at the threshold, and raise the certified slope `(α_π - σ)/h_1` from `0.01146`
-to `0.01370`.
+`latency_potential` uses the reference-trajectory potential from
+`PotentialLedger.lean`. Its head, per-link span, and budget charge are `potHead`,
+`potSpan`, and `λρ/ĝ`. A `RefChain` is an explicit argument because no reference chain
+is valid for every `Setting`. At the Chung-8 Filecoin parameters, the resulting
+asymptotic coefficient is greater than `0.02135`.
 -/
 
 namespace ProofOfSpace
@@ -193,7 +177,7 @@ noncomputable def s₁ (S : Setting) (T : Tracking S) : ℝ :=
 /-- The one-time overhead subtracted by the **joint** ledger entry of `zMin`:
 `searchHead + 2ρ/min{ĝ,g̃}`, the offset that charges the black budget once rather than
 once for the infertile levels, once for the blocked windows and twice for the attempts.
-At the Filecoin parameters it is `14.81` against `s₁ = 28.37`. -/
+At the Filecoin parameters it is below `14.82`. -/
 noncomputable def s₂ (S : Setting) (T : Tracking S) : ℝ :=
   searchHead S + jointSlack S T
 
@@ -286,6 +270,80 @@ theorem latency_general_witness {V : Type u}
         ∀ v ∈ Q.nodes, v ∈ P.footprint A := by
   apply P.hasPath_witness A
   exact latency_general G P T GR hn hρ hσapi hDepth hinside A hA hred hweight
+
+/-! ### The potential-ledger latency bound -/
+
+/--
+**Concrete latency lower bound from the potential ledger.**
+
+`latency_general` counts chain links with `zMin`, whose joint entry prices every unit of
+the black budget at the flat rate `1/ĝ` and does so twice — once for the infertile skips
+and once for the levels inside blocked ranges.  `potential_count` counts them against a
+reference trajectory instead, charging the budget once at the certificate's rate `λ/ĝ`.
+This theorem is `latency_general` with that count substituted: the chain system, the
+restart, and the monotonicity of the path length are literally the same, and only the
+accounting differs.
+
+A reference chain is deliberately **not** a hypothesis of `latency_general`.  Unlike
+`Tracking.mid`, which always admits the trivial value `σ`, no chain is admissible for
+every `Setting` — the width condition `x (k+1) - x k ≥ ĝ` fails as soon as the gains do —
+so making one a field or a hypothesis there would be a new assumption.  It enters here as
+an explicit argument, and is exhibited only where its conditions are theorems about the
+curve at hand.
+-/
+theorem latency_potential {V : Type u}
+    {S : Setting} {ℓ n : ℕ} (G : Concrete.LayeredGraph V S ℓ n)
+    (P : Concrete.Pebbling G) (T : Tracking S)
+    {C : RefChain S T} (Cert : LedgerCert S T C)
+    (hn : 0 < n) (hσapi : T.σ < G.αpi)
+    (hDepth : G.DepthRobust G.αpi)
+    (hζmax : S.ζδ ≤ S.αmax) (hentry : S.piBar < S.ζδ - S.ρ)
+    (hnobreak : S.ρ < S.betaD S.pi - T.lam)
+    {z : ℕ} (hz1 : 1 ≤ z)
+    (hz : LedgerCert.potHead C Cert + ((z : ℝ) - 1) * LedgerCert.potSpan C Cert
+      + Cert.lam * S.ρ / T.ghat < (ℓ : ℝ))
+    (A : Finset V) (hA : A ⊆ G.layer 0)
+    (hred : ∀ v ∈ A, v ∉ P.red 0)
+    (hweight : S.ζδ ≤ Concrete.Pebbling.weight n A) :
+    P.HasUnpebbledPathInFootprint A (latencyLength G.αpi T.σ n z) := by
+  classical
+  have hζ : 0 ≤ S.ζδ := by
+    have h1 := S.piBar_pos
+    have h2 := S.ρ_nonneg
+    linarith
+  let CS := P.chainSystem T A hn hσapi.le hDepth
+  let Ch := P.challengeBound_struct hζ
+  have hrestart : ∀ b : ℕ, b < ℓ → S.pi ≤ Ch.f b → Expandable P.budget T.ghat b →
+      ∃ L : CS.Link, CS.depth L = b ∧ CS.count L = 1 := fun b hb hfertScalar hexp =>
+    ⟨Concrete.Pebbling.Link.base hn hσapi.le hDepth hb hexp
+      (P.challenge_fertile hn hζ hA hred hweight hb hfertScalar), rfl, rfl⟩
+  obtain ⟨L, hL⟩ := LedgerCert.ChainSystem.potential_count Cert CS Ch hζmax hentry
+    (fun L => CS.link_floor hnobreak L) (fun L => CS.link_le_αmax L) hrestart hz1 hz
+  refine P.hasPath_mono A ?_ (CS.realizes L)
+  simpa only [Concrete.Pebbling.chainPathLength, latencyLength] using
+    latencyLength_mono (απ := G.αpi) (σ := T.σ) (n := n) hσapi.le hL
+
+/-- The explicit path witness form of the potential-ledger latency theorem. -/
+theorem latency_potential_witness {V : Type u}
+    {S : Setting} {ℓ n : ℕ} (G : Concrete.LayeredGraph V S ℓ n)
+    (P : Concrete.Pebbling G) (T : Tracking S)
+    {C : RefChain S T} (Cert : LedgerCert S T C)
+    (hn : 0 < n) (hσapi : T.σ < G.αpi)
+    (hDepth : G.DepthRobust G.αpi)
+    (hζmax : S.ζδ ≤ S.αmax) (hentry : S.piBar < S.ζδ - S.ρ)
+    (hnobreak : S.ρ < S.betaD S.pi - T.lam)
+    {z : ℕ} (hz1 : 1 ≤ z)
+    (hz : LedgerCert.potHead C Cert + ((z : ℝ) - 1) * LedgerCert.potSpan C Cert
+      + Cert.lam * S.ρ / T.ghat < (ℓ : ℝ))
+    (A : Finset V) (hA : A ⊆ G.layer 0)
+    (hred : ∀ v ∈ A, v ∉ P.red 0)
+    (hweight : S.ζδ ≤ Concrete.Pebbling.weight n A) :
+    ∃ Q : Concrete.Path G.edge P.unpebbled,
+      latencyLength G.αpi T.σ n z ≤ (Q.length : ℝ) ∧
+        ∀ v ∈ Q.nodes, v ∈ P.footprint A := by
+  apply P.hasPath_witness A
+  exact latency_potential G P T Cert hn hσapi hDepth hζmax hentry hnobreak hz1 hz
+    A hA hred hweight
 
 /-- The finite linear form: the certified path length grows linearly in `ℓ` with leading
 slope `(α_π - σ)/((b^max + 1) h_1)`.  All constants are independent of `ℓ`, which is the
@@ -572,9 +630,7 @@ theorem ledgerSlack_bounds (F : FilecoinLatencyParameters S T) :
   · rw [div_lt_iff₀ S.gpi_pos']
     nlinarith [F.gpi_lower]
 
-/-- **The joint offset, evaluated.**  `s₂ < 14.817` against `s₁ > 28.36`: the
-budget `ρ = 0.8` is charged once instead of three times, and the `14` levels of `s`
-shrink to the `0.442` of `searchHead`. -/
+/-- **The joint offset, evaluated:** `14.804 < s₂ < 14.817`. -/
 theorem s₂_bounds (F : FilecoinLatencyParameters S T) :
     (3701 : ℝ) / 250 < s₂ S T ∧ s₂ S T < (14817 : ℝ) / 1000 := by
   rw [s₂, F.searchHead_eq, F.jointSlack_eq]
@@ -591,8 +647,7 @@ theorem s₂_bounds (F : FilecoinLatencyParameters S T) :
     linarith
 
 
-/-- The ledger slope `(α_π - σ)/h_1 ≈ 0.0115`, with a certified rounding interval.
-The development's `0.0100` was computed with the older `h_1 = a + 2`. -/
+/-- The ledger slope `(α_π - σ)/h_1`, with a certified rounding interval. -/
 theorem ledgerSlope_bounds (F : FilecoinLatencyParameters S T) :
     (1368 : ℝ) / 100000 <
         ((1 : ℝ) / 5 - (74 : ℝ) / 625) / h₁ S T ∧
@@ -605,23 +660,8 @@ theorem ledgerSlope_bounds (F : FilecoinLatencyParameters S T) :
   · rw [div_lt_iff₀ h₁_pos]
     nlinarith [hbounds.1]
 
-/-- The old constant-charge slope is exactly `0.0816 / 29`; the ratio between the new
-and old slopes is now the factor `4.07` (it was `3.6` under `h_1 = a + 2`). -/
-theorem slope_comparison (F : FilecoinLatencyParameters S T) :
-    ((1 : ℝ) / 5 - (74 : ℝ) / 625) / 29 = (51 : ℝ) / 18125 ∧
-      (4864 : ℝ) / 1000 < 29 / h₁ S T ∧ 29 / h₁ S T < (487 : ℝ) / 100 := by
-  have hbounds := F.h₁_bounds
-  constructor
-  · norm_num
-  · constructor
-    · rw [lt_div_iff₀ h₁_pos]
-      nlinarith [hbounds.2]
-    · rw [div_lt_iff₀ h₁_pos]
-      nlinarith [hbounds.1]
-
-/-- The exact formula displayed in `cor:filecoin`, now with four entries: the base
-link, the per-link ledger entry of `minimum link-count definition`, the **joint** ledger entry, and the
-constant-charge entry.  The joint entry is the one that binds here. -/
+/-- The explicit Filecoin link count: the base link, per-link ledger entry, joint-ledger
+entry, and constant-charge entry. -/
 noncomputable def filecoinZMin (gpi : ℝ) (ℓ : ℕ) : ℕ :=
   max 1 (max
     ⌈((ℓ : ℝ) - 14 - 2 * ((4 : ℝ) / 5) / gpi) / ((551 : ℝ) / 1250 / gpi + 2)⌉₊
@@ -649,92 +689,6 @@ theorem zMinNoBreak_eq (F : FilecoinLatencyParameters S T) (ℓ : ℕ) :
     F.searchHead_eq, F.jointSlack_eq]
   norm_num
 
-/-- The joint ledger ratio in its cleared form: numerator and denominator both scaled
-by `g_π`. -/
-theorem filecoinJointRatio (_F : FilecoinLatencyParameters S T) (ℓ : ℕ) :
-    (((ℓ : ℝ) - (1 + ((4 : ℝ) / 5 - (4311 : ℝ) / 5000) / S.gpi)
-        - 2 * ((4 : ℝ) / 5) / S.gpi) / ((551 : ℝ) / 1250 / S.gpi + 2))
-      = (((ℓ : ℝ) - 1) * S.gpi - (7689 : ℝ) / 5000)
-          / ((551 : ℝ) / 1250 + 2 * S.gpi) := by
-  have hpos := S.gpi_pos'
-  field_simp
-  ring
-
-theorem filecoinJointDen_pos (_F : FilecoinLatencyParameters S T) :
-    0 < (551 : ℝ) / 1250 + 2 * S.gpi := by
-  nlinarith [S.gpi_pos']
-
-/-- Below the threshold the plain ledger entry certifies nothing: its numerator is
-negative for every `ℓ ≤ 21`, which is exactly the `28.37` levels of overhead the joint
-entry removes. -/
-theorem filecoinLedgerEntry_eq_zero (F : FilecoinLatencyParameters S T) {ℓ : ℕ}
-    (hℓ : ℓ ≤ 21) :
-    ⌈((ℓ : ℝ) - 14 - 2 * ((4 : ℝ) / 5) / S.gpi) / ((551 : ℝ) / 1250 / S.gpi + 2)⌉₊ = 0 := by
-  have hpos := S.gpi_pos'
-  have hℓr : (ℓ : ℝ) ≤ 21 := by exact_mod_cast hℓ
-  have hden : (0 : ℝ) < (551 : ℝ) / 1250 / S.gpi + 2 := by positivity
-  have hnum : (ℓ : ℝ) - 14 - 2 * ((4 : ℝ) / 5) / S.gpi ≤ 0 := by
-    have h : (7 : ℝ) ≤ 2 * ((4 : ℝ) / 5) / S.gpi := by
-      rw [le_div_iff₀ hpos]
-      nlinarith [F.gpi_upper]
-    linarith
-  exact Nat.ceil_eq_zero.mpr (div_nonpos_of_nonpos_of_nonneg hnum hden.le)
-
-/-- At `ℓ = 20` the joint ledger still certifies only the base link. -/
-theorem filecoinZMin_20_eq (F : FilecoinLatencyParameters S T) :
-    filecoinZMin S.gpi 20 = 1 := by
-  have hden := F.filecoinJointDen_pos
-  have hceil :
-      ⌈((((20 : ℕ) : ℝ) - (1 + ((4 : ℝ) / 5 - (4311 : ℝ) / 5000) / S.gpi)
-          - 2 * ((4 : ℝ) / 5) / S.gpi) / ((551 : ℝ) / 1250 / S.gpi + 2))⌉₊ = 1 := by
-    rw [F.filecoinJointRatio 20]
-    apply (Nat.ceil_eq_iff (by norm_num : (1 : ℕ) ≠ 0)).2
-    constructor
-    · rw [lt_div_iff₀ hden]
-      push_cast
-      nlinarith [F.gpi_lower]
-    · rw [div_le_iff₀ hden]
-      push_cast
-      nlinarith [F.gpi_upper]
-  unfold filecoinZMin
-  rw [hceil, F.filecoinLedgerEntry_eq_zero (by norm_num)]
-  norm_num
-
-/-- The first layer count at which the joint ledger certifies a second link. -/
-theorem filecoinZMin_21_eq (F : FilecoinLatencyParameters S T) :
-    filecoinZMin S.gpi 21 = 2 := by
-  have hden := F.filecoinJointDen_pos
-  have hceil :
-      ⌈((((21 : ℕ) : ℝ) - (1 + ((4 : ℝ) / 5 - (4311 : ℝ) / 5000) / S.gpi)
-          - 2 * ((4 : ℝ) / 5) / S.gpi) / ((551 : ℝ) / 1250 / S.gpi + 2))⌉₊ = 2 := by
-    rw [F.filecoinJointRatio 21]
-    apply (Nat.ceil_eq_iff (by norm_num : (2 : ℕ) ≠ 0)).2
-    constructor
-    · rw [lt_div_iff₀ hden]
-      push_cast
-      nlinarith [F.gpi_lower]
-    · rw [div_le_iff₀ hden]
-      push_cast
-      nlinarith [F.gpi_upper]
-  unfold filecoinZMin
-  rw [hceil, F.filecoinLedgerEntry_eq_zero (by norm_num)]
-  norm_num
-
-/-- Layer 21 is exactly the first layer count whose certified link count exceeds one. -/
-theorem one_lt_filecoinZMin_iff (F : FilecoinLatencyParameters S T) (ℓ : ℕ) :
-    1 < filecoinZMin S.gpi ℓ ↔ 21 ≤ ℓ := by
-  constructor
-  · intro h
-    by_contra hnot
-    have hℓ : ℓ ≤ 20 := by omega
-    have hmono := filecoinZMin_mono S.gpi_pos' hℓ
-    rw [F.filecoinZMin_20_eq] at hmono
-    omega
-  · intro hℓ
-    have hmono := filecoinZMin_mono S.gpi_pos' hℓ
-    rw [F.filecoinZMin_21_eq] at hmono
-    omega
-
 /-- The general search overhead is the closed form `s(g_π, g_π)` here. -/
 theorem sCap_eq_sCapOf (F : FilecoinLatencyParameters S T) :
     sCap S T = sCapOf S S.gpi S.gpi := by
@@ -742,17 +696,6 @@ theorem sCap_eq_sCapOf (F : FilecoinLatencyParameters S T) :
 
 theorem sCap_eq (F : FilecoinLatencyParameters S T) : sCap S T = 14 :=
   F.sCap_eq_sCapOf.trans F.sCapOf_eq
-
-/-- **The certified offset saving.**  The joint ledger removes more than `13.5` levels
-of one-time overhead: `s₂ < 14.82` against `s₁ > 28.36`.  The difference is the two
-extra copies of `ρ` that `s = 14` and `2ρ/ĝ` were charging on top of each other. -/
-theorem s₂_lt_s₁ (F : FilecoinLatencyParameters S T) :
-    s₂ S T + (27 : ℝ) / 2 < s₁ S T := by
-  have hj := F.s₂_bounds.2
-  have hl := F.ledgerSlack_bounds.1
-  simp only [s₁, F.sCap_eq, F.bMax_eq, Nat.cast_zero, zero_mul, add_zero]
-  push_cast
-  linarith
 
 /-- With no break to pay for, the whole non-chain overhead of `global constants` is
 the search overhead. -/
@@ -785,28 +728,6 @@ theorem latency_corollary (F : FilecoinLatencyParameters S T)
   have hinside : s₀ S T < ℓ := by rw [F.s₀_eq]; exact hℓ
   have hpath := latency_general G P T GR hn hρ hσapi hDepth hinside A hA hred hweight
   simpa only [latencyLength, hαpi, F.sigma_eq, F.zMin_eq] using hpath
-
-/-- The first strict improvement over the base `0.2 n` depth-robustness payoff:
-at `ℓ = 21`, the joint ledger certifies two links and hence `0.2816 n`.
-
-The threshold was `ℓ = 36` before the budget was charged once instead of three times
-(`s₂` against `s₁`) and the growth phase was priced by the two-piece potential
-(`growthConst`); the payoff at the threshold is the same `0.2816 n`. -/
-theorem latency_21 (F : FilecoinLatencyParameters S T)
-    {V : Type u} {n : ℕ} (G : Concrete.LayeredGraph V S 21 n)
-    (P : Concrete.Pebbling G) (GR : GeneralRegime S)
-    (hn : 0 < n) (hαpi : G.αpi = (1 : ℝ) / 5)
-    (hDepth : G.DepthRobust G.αpi)
-    (A : Finset V) (hA : A ⊆ G.layer 0)
-    (hred : ∀ v ∈ A, v ∉ P.red 0)
-    (hweight : S.ζδ ≤ Concrete.Pebbling.weight n A) :
-    P.HasUnpebbledPathInFootprint A
-      ((1 : ℝ) / 5 * n +
-        ((1 : ℝ) / 5 - (74 : ℝ) / 625) * n) := by
-  have h := F.latency_corollary G P GR hn hαpi (by norm_num) hDepth A hA hred hweight
-  rw [F.filecoinZMin_21_eq] at h
-  norm_num at h ⊢
-  exact h
 
 end FilecoinLatencyParameters
 

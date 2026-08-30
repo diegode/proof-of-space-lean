@@ -219,8 +219,7 @@ more than `β_δ(π) - c`.
 This is `break-charge lemma`: the expansion step at `t1` itself is kept rather than
 discarded, so the charge is `β_δ(π) - c` and not merely `π - c`.  That one step is what
 turns the no-break condition `ρ < β_δ(π) - π̄` into the statement
-that *no* break can be paid for, and hence what lets a single break-aware latency
-theorem subsume the no-break one instead of losing a factor `b^max + 1` to it.
+that no break can be paid for, avoiding a factor `b^max + 1` in that regime.
 
 This is the local, window-charged counterpart of `post_floor`, which draws the same
 conclusion from the whole budget `ρ`.
@@ -271,9 +270,8 @@ spend costs at most `1/ĝ`, while one level of growth advances it by at least `1
 This is the level-counting device behind the sharpened growth window, in the form that needs
 only concavity of `β_δ` — no derivatives, no exchange argument.
 
-One caveat, load-bearing for the comparison with `growth_window`: the window bound
-obtained here is `Φ_{σ̃}(π) + 1 + x/ĝ`, against `a + x/ĝ` for `growth_window` composed with
-`growthSpan_le`.  The `+1` is real — `gain_sum_ge` extracts a *free* level at the source
+The potential window bound is `Φ_{σ̃}(π) + 1 + x/ĝ`; `growth_window` and
+`growthSpan_le` give `a + x/ĝ`. The `+1` is real: `gain_sum_ge` extracts a free level at the source
 from `gain_δ(σ) ≥ 2 ĝ`, whereas the potential spends that same doubling on the halved
 slope of `Φ` below `σ̃`.  The two constants to compare are therefore `Φ_{σ̃}(π) + 1` and
 `a`, and `growthPot_pi_succ_lt_asymptoticGrowth` says exactly when the former wins.
@@ -459,9 +457,7 @@ level count `Φ_{σ̃}(π) + 1` in place of `a = max{1, (π - σ)/ĝ}`.
 This is *not* automatically smaller: `Φ_{σ̃}(π) ≤ (π - σ)/ĝ` always
 (`growthPot_pi_le_div`), but the `+1` has to be paid back, and it is recovered exactly
 when the doubled-gain segment exceeds `2 ĝ` — see
-`growthPot_pi_succ_lt_asymptoticGrowth`.  At the Filecoin Chung-8 parameters with
-`σ̃ = 3/5` the segment is `0.482` against `2 ĝ = 0.223`, and the constant is `4.97`
-against `a = 6.12`; the certified gap is `chung8_growthPot_window_gap`.
+`growthPot_pi_succ_lt_asymptoticGrowth`.
 -/
 theorem growthPot_window {split : ℝ} (hσsplit : T.σ ≤ split)
     (hmid : ∀ x, T.σ ≤ x → x ≤ split → 2 * T.ghat ≤ S.gainD x)
@@ -501,9 +497,8 @@ theorem growthPot_pi_add_gap {split : ℝ} (hsplitπ : split ≤ S.pi) :
 
 /-- The two-piece potential is never worse than the single-constant count `(π-σ)/ĝ`.
 
-Note the right-hand side is the *quotient*, not `asymptoticGrowth S T = max{1, ·}`; see
-`growthPot_pi_le_asymptoticGrowth` for the comparison against the constant that
-`growth_window` actually uses. -/
+The right-hand side is the quotient, while `asymptoticGrowth S T` also takes its maximum
+with `1`. -/
 theorem growthPot_pi_le_div {split : ℝ} (hσsplit : T.σ ≤ split)
     (hsplitπ : split ≤ S.pi) :
     growthPot S T split S.pi ≤ (S.pi - T.σ) / T.ghat := by
@@ -553,10 +548,9 @@ theorem growthPot_pi_succ_lt_asymptoticGrowth {split : ℝ} (hsplitπ : split �
 
 /-! ### The growth constant the ledger charges
 
-`growthConst` is the better of the two window constants at the *tracking mid-point*
-`T.mid`, which every `Tracking` carries.  With `mid = σ` the potential entry degenerates
-to `(π - σ)/ĝ + 1`, one worse than `asymptoticGrowth`, and the `min` picks the old
-constant; with a genuine mid-point it picks the potential.  Either way
+`growthConst` is the minimum of the two certified window constants at the tracking
+mid-point `T.mid`. With `mid = σ`, the potential entry is `(π - σ)/ĝ + 1`; with a
+nontrivial mid-point, its halved initial slope may give the smaller value. In either case,
 `growthConst_window` charges an attempt's growth phase at `growthConst + x/ĝ` levels,
 which is what `Chain.h₁` is built from.
 -/

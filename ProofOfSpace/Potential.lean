@@ -1,14 +1,11 @@
 /-
 # The reference-trajectory potential
 
-`Growth.lean` prices a growth phase with the two-piece potential `growthPot`, which
-charges `2ĝ` per level below a mid-point `σ̃` and `ĝ` above it.  That is the best a
-*single* doubled-gain certificate can do.  This file replaces the two pieces by an
-arbitrary finite **reference chain**
+This file defines a potential from an arbitrary finite **reference chain**
 
   `x 0 ≤ x 1 ≤ … ≤ x m`,   `x (k+1) ≤ β_δ (x k)`,   `x (k+1) - x k ≥ ĝ`,
 
-and the associated piecewise-linear potential `refPot`, normalized so that
+and its piecewise-linear potential `refPot`, normalized so that
 `refPot (x k) = k`.  The natural chain is the `β_δ` orbit of the tracking floor,
 `x 0 = π̂`, `x (k+1) = β_δ (x k)`, run until it passes `π`; its bucket widths are the
 gains `gain_δ (x k)`, which are at least `ĝ` exactly on `[π̂, π]` (`tracking-gain bound`),
@@ -29,7 +26,13 @@ are proved from *concavity of `β_δ` alone* — no derivatives, no mean value t
 
 `refPot_step` factors through `bucket_shift`, the statement that the `k`-th bucket
 coordinate of `v` is dominated by the `(k+1)`-st bucket coordinate of `β_δ v`.  That is
-exactly the chord inequality for a concave function on `[x k, x (k+1)]`.
+exactly the chord inequality for a concave function on `[x k, x (k+1)]`; `betaD_chord`
+is the same inequality with the far endpoint left free, which is what the top bucket
+needs, there being no next chain point above `x m`.
+
+`refPot_eq_zero`, `refPot_eq_m` and `refPot_eq_of_mem` say the obvious thing — the
+potential is `0` below the chain, `m` above it, and affine inside each bucket.  They are
+what turns a `LedgerCert` for a concrete chain into a finite case analysis.
 -/
 import ProofOfSpace.Growth
 
@@ -256,6 +259,48 @@ theorem refPot_lipschitz {u v : ℝ} (huv : v ≤ u) :
     C.refPot u - C.refPot v ≤ (u - v) / T.ghat :=
   C.refPotUpTo_lipschitz C.m le_rfl huv
 
+/-! ### Evaluating the potential
+
+`refPot` is the piecewise-linear interpolation of `x k ↦ k`, and the three lemmas below
+are the three pieces of that description: it is `0` below the chain, `m` above it, and
+affine inside each bucket.  A `LedgerCert` for a concrete chain is discharged by case
+analysis on which bucket a value lies in, and these are what turn each case into an
+inequality between affine expressions.
+-/
+
+/-- Below the chain the potential vanishes. -/
+theorem refPot_eq_zero {v : ℝ} (hv : v ≤ C.x 0) : C.refPot v = 0 := by
+  refine Finset.sum_eq_zero fun k hk => ?_
+  exact C.bucket_eq_zero (Finset.mem_range.mp hk)
+    (hv.trans (C.x_mono (Nat.zero_le k) (le_of_lt (Finset.mem_range.mp hk))))
+
+/-- Above the chain the potential saturates at `m`. -/
+theorem refPot_eq_m {v : ℝ} (hv : C.x C.m ≤ v) : C.refPot v = (C.m : ℝ) :=
+  C.refPotUpTo_eq le_rfl hv
+
+/-- **Inside a bucket the potential is affine.**  This is the normalization
+`refPot (x j) = j` in its local form. -/
+theorem refPot_eq_of_mem {j : ℕ} (hj : j < C.m) {v : ℝ}
+    (hlo : C.x j ≤ v) (hhi : v ≤ C.x (j + 1)) :
+    C.refPot v = (j : ℝ) + (v - C.x j) / (C.x (j + 1) - C.x j) := by
+  have hw := C.width_pos hj
+  have hlow : C.refPotUpTo j v = (j : ℝ) := C.refPotUpTo_eq (by omega) hlo
+  have hhigh : ∀ k ∈ Finset.Ico (j + 1) C.m, C.bucket k v = 0 := by
+    intro k hk
+    rw [Finset.mem_Ico] at hk
+    exact C.bucket_eq_zero hk.2 (hhi.trans (C.x_mono hk.1 (by omega)))
+  have hsplit : C.refPot v
+      = C.refPotUpTo (j + 1) v + ∑ k ∈ Finset.Ico (j + 1) C.m, C.bucket k v := by
+    rw [refPot, refPotUpTo, ← Finset.sum_range_add_sum_Ico _ (by omega : j + 1 ≤ C.m)]
+  have hmid : C.bucket j v = (v - C.x j) / (C.x (j + 1) - C.x j) := by
+    have hr0 : 0 ≤ (v - C.x j) / (C.x (j + 1) - C.x j) :=
+      div_nonneg (by linarith) hw.le
+    have hr1 : (v - C.x j) / (C.x (j + 1) - C.x j) ≤ 1 := by
+      rw [div_le_one hw]; linarith
+    simp only [bucket, min_eq_right hr1, max_eq_right hr0]
+  rw [hsplit, C.refPotUpTo_succ, hlow, hmid, Finset.sum_congr rfl hhigh]
+  simp
+
 end RefChain
 
 /-! ### One free level -/
@@ -272,6 +317,38 @@ theorem betaD_concaveOn (S : Setting) : ConcaveOn ℝ (Icc (0 : ℝ) 1) S.betaD 
 namespace RefChain
 
 variable (C : RefChain S T)
+
+/--
+**The chord bound for one free level.**
+
+On the `k`-th bucket, concavity of `β_δ` prices one free level by the chord through
+`(x k, x (k+1))` and `(x (k+1), xtop)`, for any `xtop` that the step from `x (k+1)` can
+reach.  `bucket_shift` below is the case `xtop = x (k+2)`; the `t1` certificate of
+`PotentialLedger.lean` needs the case `k + 1 = m`, where there is no next chain point and
+`xtop` is supplied numerically.
+-/
+theorem betaD_chord {k : ℕ} (hk : k < C.m) {xtop : ℝ}
+    (htop : xtop ≤ S.betaD (C.x (k + 1))) {v : ℝ}
+    (hlo : C.x k ≤ v) (hhi : v ≤ C.x (k + 1)) :
+    C.x (k + 1) + ((v - C.x k) / (C.x (k + 1) - C.x k)) * (xtop - C.x (k + 1))
+      ≤ S.betaD v := by
+  have hw := C.width_pos hk
+  have hxk : C.x k ∈ Icc (0 : ℝ) 1 := C.mem k (by omega)
+  have hxk1 : C.x (k + 1) ∈ Icc (0 : ℝ) 1 := C.mem (k + 1) (by omega)
+  set t := (v - C.x k) / (C.x (k + 1) - C.x k) with ht
+  have ht0 : 0 ≤ t := div_nonneg (by linarith) hw.le
+  have ht1 : t ≤ 1 := by rw [ht, div_le_one hw]; linarith
+  have hvconv : (1 - t) * C.x k + t * C.x (k + 1) = v := by
+    rw [ht]; field_simp; ring
+  have hconv := (betaD_concaveOn S).2 hxk hxk1
+    (by linarith : (0 : ℝ) ≤ 1 - t) ht0 (by ring)
+  simp only [smul_eq_mul] at hconv
+  rw [hvconv] at hconv
+  have e1 : (1 - t) * C.x (k + 1) ≤ (1 - t) * S.betaD (C.x k) :=
+    mul_le_mul_of_nonneg_left (C.step k hk) (by linarith)
+  have e2 : t * xtop ≤ t * S.betaD (C.x (k + 1)) :=
+    mul_le_mul_of_nonneg_left htop ht0
+  nlinarith
 
 /--
 **The bucket shift.**  One free level moves the `k`-th bucket coordinate into the

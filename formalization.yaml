@@ -4,15 +4,14 @@ version: "v0.4"
 project:
   name: "Formalized latency bounds for stacked proofs of space"
   description: >-
-    A Lean 4 formalization of a conditional latency lower bound for stacked
-    proof-of-space graphs. Given an expansion profile, uniform intra-layer
-    depth robustness, red and black pebbling budgets, and the stated scalar
-    hypotheses, the main theorem constructs a nonempty unpebbled directed
-    path from the challenge footprint whose explicit length grows with the
-    number of layers. The development formalizes and extends the published
-    footprint analyses of Fisch (EUROCRYPT 2019) and Reyzin (FOCS 2024). It
-    also derives concrete Filecoin-shaped constants and records precisely the
-    additional hypotheses required by that specialization.
+    A Lean 4 formalization of the static latency argument for stacked
+    proof-of-space graphs. Under explicit expansion, intra-layer depth
+    robustness, pebbling-budget, and scalar hypotheses, every sufficiently
+    large red-free challenge footprint contains an unpebbled directed path of
+    length Omega(ell*n). Thus the certified non-parallelizable work grows
+    linearly with the number of layers. All constants are explicit, and the
+    conditional degree-eight Filecoin-shaped analysis optimizes the leading
+    coefficient, certifying it between 0.02135 and 0.02136.
   authors:
     - "Diego de Estrada (@diegode)"
   license: "Apache-2.0"
@@ -32,9 +31,9 @@ sources:
     relationship: "adapts"
     note: >-
       The formalization uses Reyzin's footprint recurrence, expansion
-      profile, and chain-growth framework. It adapts the analysis to permit
-      continuation chains to break and restart, with an explicit global
-      ledger and path witness.
+      profile, and chain-growth framework. Its theorem permits continuation
+      chains to break and restart and supplies a global ledger and path
+      witness.
     author_endorsement: "not-contacted"
   - title: "Tight proofs of space and replication"
     authors: ["Ben Fisch"]
@@ -51,16 +50,15 @@ related_formalizations: []
 
 status:
   scope: >-
-    The compared result is the full general conditional latency theorem
-    ProofOfSpaceStatement.latency_general and its explicit path witness. The
-    formalization proves the footprint recurrence, search, continuation,
-    growth, ledger, and latency argument for a static red/black pebbling
-    snapshot. Expansion and intra-layer depth robustness are hypotheses of the
-    theorem, not constructed universally. The concrete Chung-8/Filecoin
-    specialization separately assumes concavity and a unique gain maximizer,
-    and its deployed graph certificate remains conditional. No reduction from
-    the static snapshot statement to a time-indexed cryptographic sequential-
-    time game is claimed.
+    ProofOfSpaceStatement.latency_general is the registered conditional
+    latency theorem and returns an explicit unpebbled path in a static
+    red/black pebbling snapshot. Expansion, intra-layer depth robustness,
+    pebbling budgets, and scalar conditions occur in its signature. The Chung
+    threshold is constructed for every real degree d > 2; the generic
+    typeclass ChungAnalyticHypotheses d states the remaining concavity and
+    unique-maximizer hypotheses in every dependent theorem. The numerical
+    Filecoin-shaped certificates specialize to degree eight. The formalization
+    does not include the reduction to a time-indexed cryptographic game.
   sorry_count: 0
   sorry_in_definitions: 0
   axioms: ["propext", "Classical.choice", "Quot.sound"]
@@ -89,35 +87,29 @@ automation:
       models: ["OpenAI Codex"]
       framework: "Codex"
       tool_setup: >-
-        Used under human direction to prepare the Palomar Challenge/Solution
-        wrapper, diagnose elaboration errors, run the official Comparator,
-        and package submission metadata and CI.
+        Used under human direction for Lean editing, elaboration diagnostics,
+        Comparator verification, submission metadata, and CI configuration.
       cost:
         wall_time: "not tracked"
         spend_usd: "subscription-based; exact amount not tracked"
         hardware: "hosted agent plus local Lean toolchain"
       prompting_notes: >-
-        Iterative requests to audit the existing development and prepare an
-        honest Palomar submission following the public template and Sendov
-        example; a complete transcript was not archived in the repository.
+        Human-directed requests for proof auditing, theorem-interface cleanup,
+        and Palomar packaging; no transcript is included in the repository.
   spend_usd: "not tracked"
   notes: >-
-    The mathematical development was human-directed. Exact historical effort
-    and any automation used before the Palomar packaging pass were not
-    reconstructed; all submitted Lean code is checked by Lean, the axiom
-    audit, and Palomar's statement comparator.
+    The mathematical development is human-directed. Lean, the project axiom
+    audit, and Palomar's statement comparator check the submitted code.
 
 fidelity:
   divergences: >-
-    Relative to Reyzin's published FOCS 2024 analysis, the main theorem allows
-    continuation chains to break and restart and tracks those events in a
-    single global ledger. Lean counts depth forward from the challenge layer,
-    opposite to the published level numbering; README.md explains the
-    translation. The submitted Challenge expands the project's bundled
-    structures into primitive Mathlib-level hypotheses so that the statement
-    is small and independently comparable; Solution.lean proves that this is
-    exactly the public Lean theorem. The result concerns a static pebbling
-    snapshot and does not itself formalize a time-indexed sequential game.
+    The theorem permits continuation chains to break and restart and tracks
+    those events in a global ledger. Lean counts depth forward from the
+    challenge layer, opposite to Reyzin's level numbering. Challenge.lean
+    expands the bundled project structures into primitive Mathlib-level
+    hypotheses, and Solution.lean proves the resulting statement from the
+    public theorem. The result concerns a static pebbling snapshot and does
+    not formalize a time-indexed sequential game.
 
 review:
   status: "self-assessed"

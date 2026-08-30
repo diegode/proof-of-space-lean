@@ -368,6 +368,83 @@ theorem chungBeta_strictMonoOn (d : ℝ) (hd : 2 < d) :
         _ < 0 := hnegMirror
     exact (sec_neg_iff hd hy.1 hy.2 hyβ hβx.2).1 hneg
 
+/-! ### Closed-unit-interval profile and analytic hypotheses -/
+
+/-- The Chung threshold of degree `d` on `(0,1)`, extended by `β(0)=0` and
+`β(1)=1`. Values outside `[0,1]` are irrelevant to the graph setting; this clamped
+extension makes the definition total. -/
+noncomputable def chungBetaProfile (d x : ℝ) : ℝ :=
+  if x ≤ 0 then 0 else if x < 1 then chungBeta d x else 1
+
+@[simp] theorem chungBetaProfile_zero (d : ℝ) : chungBetaProfile d 0 = 0 := by
+  simp [chungBetaProfile]
+
+@[simp] theorem chungBetaProfile_one (d : ℝ) : chungBetaProfile d 1 = 1 := by
+  simp [chungBetaProfile]
+
+theorem chungBetaProfile_eq {d x : ℝ} (hx : x ∈ Ioo (0 : ℝ) 1) :
+    chungBetaProfile d x = chungBeta d x := by
+  simp [chungBetaProfile, not_le.mpr hx.1, hx.2]
+
+theorem chungBetaProfile_maps {d x : ℝ} (hd : 2 < d) (hx : x ∈ Icc (0 : ℝ) 1) :
+    chungBetaProfile d x ∈ Icc (0 : ℝ) 1 := by
+  rcases eq_or_lt_of_le hx.1 with hzero | hx0
+  · subst x
+    simp
+  rcases eq_or_lt_of_le hx.2 with hone | hx1
+  · subst x
+    simp
+  · have hβ := chungBeta_mem hd hx0 hx1
+    rw [chungBetaProfile_eq ⟨hx0, hx1⟩]
+    exact ⟨hx0.le.trans hβ.1.le, hβ.2.le⟩
+
+theorem chungBetaProfile_expands {d x : ℝ} (hd : 2 < d) (hx : x ∈ Ioo (0 : ℝ) 1) :
+    x < chungBetaProfile d x := by
+  rw [chungBetaProfile_eq hx]
+  exact (chungBeta_mem hd hx.1 hx.2).1
+
+theorem chungBetaProfile_reversal {d x : ℝ} (hd : 2 < d) (hx : x ∈ Ioo (0 : ℝ) 1) :
+    chungBetaProfile d (1 - chungBetaProfile d x) = 1 - x := by
+  rw [chungBetaProfile_eq hx]
+  have hβ := chungBeta_mem hd hx.1 hx.2
+  have hm : 1 - chungBeta d x ∈ Ioo (0 : ℝ) 1 :=
+    ⟨by linarith [hβ.2], by linarith [hx.1, hβ.1]⟩
+  rw [chungBetaProfile_eq hm]
+  exact chungBeta_reversal hd hx.1 hx.2
+
+theorem chungBetaProfile_strictMonoOn (d : ℝ) (hd : 2 < d) :
+    StrictMonoOn (chungBetaProfile d) (Icc (0 : ℝ) 1) := by
+  intro x hx y hy hxy
+  rcases eq_or_lt_of_le hx.1 with hzero | hx0
+  · subst x
+    rw [chungBetaProfile_zero]
+    rcases eq_or_lt_of_le hy.2 with hone | hy1
+    · subst y
+      norm_num
+    · exact hxy.trans (chungBetaProfile_expands hd ⟨hxy, hy1⟩)
+  rcases eq_or_lt_of_le hy.2 with hone | hy1
+  · subst y
+    rw [chungBetaProfile_one, chungBetaProfile_eq ⟨hx0, hxy⟩]
+    exact (chungBeta_mem hd hx0 hxy).2
+  · rw [chungBetaProfile_eq ⟨hx0, hxy.trans hy1⟩,
+      chungBetaProfile_eq ⟨hx0.trans hxy, hy1⟩]
+    exact chungBeta_strictMonoOn d hd
+      ⟨hx0, hxy.trans hy1⟩ ⟨hx0.trans hxy, hy1⟩ hxy
+
+/-- The global analytic facts needed from a Chung profile of degree `d`.
+
+The minimum `2 < d` is the same one used by the constructed root and its proved
+mapping, expansion, monotonicity, and reversal properties. Concavity and uniqueness
+of the gain maximizer remain conditional inputs. -/
+class ChungAnalyticHypotheses (d : ℝ) where
+  degree_gt_two : 2 < d
+  /-- Unique maximizer of the unadjusted gain `β(x)-x`. -/
+  αg : ℝ
+  concaveOn : ConcaveOn ℝ (Icc (0 : ℝ) 1) (chungBetaProfile d)
+  αg_mem : αg ∈ Ioo (0 : ℝ) 1
+  αg_max : ∀ ⦃x⦄, x ∈ Icc (0 : ℝ) 1 → x ≠ αg →
+    chungBetaProfile d x - x < chungBetaProfile d αg - αg
+
 /-! ### Numeric bracketing -/
 
 /-- If the exponent is negative at `a`, the threshold is above `a`. -/

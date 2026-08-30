@@ -39,14 +39,10 @@ variable {S : Setting} {B : Budget S} {T : Tracking S}
 The `+1` is exactly the constant of `contSpan`: an attempt spends
 `growthConst + growthSpend/ĝ` levels growing and `2 continuationSpend/ĝ + 1` levels on
 the fertile continuation, so `growthConst + 1 + 2(growthSpend + continuationSpend)/ĝ`
-bounds the whole window.  (An earlier version carried `a + 2`, one level of pure slack
-per link.)
+bounds the whole window.
 
-`growthConst = min{a, Φ_{σ̃}(π) + 1}` is the better of the single-constant growth span
-`a = max{1, (π - σ)/ĝ}` and the two-piece potential count of `Growth.lean`.  A `Tracking`
-whose mid-point is trivial (`mid = σ`) gets `growthConst = a` and the older constant
-back; the Filecoin Chung-8 mid-point `σ̃ = 3/5` gets `Φ + 1 < 4.961` against
-`a > 6.118`. -/
+`growthConst = min{a, Φ_{σ̃}(π) + 1}` selects the strongest of the single-constant
+growth span `a = max{1, (π - σ)/ĝ}` and the two-piece potential count of `Growth.lean`. -/
 noncomputable def h₁ (S : Setting) (T : Tracking S) : ℝ := growthConst S T + 1
 
 /-- `2ρ/ĝ`, the one-time global-budget term of the level offset `s_1` in
@@ -62,22 +58,19 @@ ranges of levels — the searches and the attempts partition the stack — so on
 sum bounds them all.  The constants below are the joint form: a head that no longer
 mentions `ρ`, and a single global charge `2ρ/min{ĝ, g̃}`.
 
-At the Filecoin parameters `ĝ = g̃ = g_π`, and `searchHead + jointSlack < 14.82`
-against `s + 2ρ/ĝ > 28.37`.
+At the Filecoin parameters `ĝ = g̃ = g_π` and `searchHead + jointSlack < 14.82`.
 -/
 
 /-- `min{ĝ, g̃}`: the slower of the two certified gain rates.  Searches are charged at
 `g̃` and attempts at `ĝ`; the joint ledger charges both at the smaller. -/
 noncomputable def gmin (S : Setting) (T : Tracking S) : ℝ := min T.ghat S.gtilde
 
-/-- `2ρ/min{ĝ, g̃}`: the *single* global spend charge of the joint ledger, replacing
-the sum `⌈ρ/g̃⌉ + (⌈ρ/ĝ⌉ - 1) + 2ρ/ĝ` of `s_1`. -/
+/-- `2ρ/min{ĝ, g̃}`: the single global spend charge of the joint ledger. -/
 noncomputable def jointSlack (S : Setting) (T : Tracking S) : ℝ := 2 * S.ρ / gmin S T
 
 /-- `max{0, 1 + (π - ζ_δ)/g̃}`: the spend-free head of the joint ledger.  It is the
 ceiling slack of `infertile-capacity lemma` plus the distance the challenge footprint has
-to climb from its *undiminished* weight `ζ_δ` — the diminution is charged to
-`jointSlack` instead of granted for free. -/
+to climb from its undiminished weight `ζ_δ`; `jointSlack` accounts for the diminution. -/
 noncomputable def searchHead (S : Setting) : ℝ := max 0 (1 + (S.pi - S.ζδ) / S.gtilde)
 
 /-- The head at a restart depth `b`: `searchHead` with the spend already made above `b`
@@ -119,8 +112,8 @@ noncomputable def growthCap (S : Setting) (T : Tracking S) : ℕ := growthSpan S
 constant-charge per-link span. -/
 noncomputable def h₀ (S : Setting) (T : Tracking S) : ℕ := growthCap S T + 2 * spendCap S T
 
-/-- The number of levels an attempt actually consumes when every local charge is
-replaced by the whole budget: the `h_0 - 1` of `attempt-span bound`, whenever `ρ > 0`. -/
+/-- The number of levels an attempt consumes when every local charge is bounded by the
+whole budget: the `h_0 - 1` of `attempt-span bound`, whenever `ρ > 0`. -/
 noncomputable def localSpan (S : Setting) (T : Tracking S) : ℕ :=
   growthCap S T + contSpan T S.ρ
 
@@ -185,16 +178,10 @@ structure ChainSystem (S : Setting) (B : Budget S) (T : Tracking S) (ℓ : ℕ)
 
 /-! ### The accounting
 
-`Ledger.lean` proves the single chain-counting theorem — `ChainSystem.general_ledger`
-and `ChainSystem.exists_many_links_gen` — that both parameter regimes use.  It needs one
-input beyond the fields above, the ability to *restart* a broken chain, and that is why
-it lives in its own file rather than here.
-
-This file previously also carried a second, no-break accounting (`extension_attempt`,
-`ledger`, `exists_many_links`).  It has been removed: the break-aware accounting
-subsumes it exactly, because `Ledger.bMax_eq_zero` turns the no-break condition
-`ρ < β_δ(π) - π̄` into "no break can be paid for" and `Ledger.zMin_eq_zMinNoBreak` then
-reproduces the `zMinNoBreak` below verbatim.  See `Latency.latency_general`.
+`Ledger.lean` proves `ChainSystem.general_ledger` and
+`ChainSystem.exists_many_links_gen`. It adds the ability to restart a broken chain.
+When `ρ < β_δ(π) - π̄`, `Ledger.bMax_eq_zero` rules out paid breaks and
+`Ledger.zMin_eq_zMinNoBreak` gives the specialized count defined above.
 -/
 
 

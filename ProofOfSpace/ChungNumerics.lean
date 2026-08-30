@@ -6,11 +6,8 @@ the source condition `gain_δ(σ) ≥ 2 g_π`,
 
   `gain_δ(σ) ≥ 2 g_π`,   where `gain_δ(t) = β₈(t) - δ - t` and `g_π = gain_δ(0.8)`.
 
-Here that condition is *decided* rather than assumed, for the curve `β₈` constructed in
-`ChungCurve.lean`.  The outcome is that `σ_min` must be rounded up:
-
-* `condB_fails_at_118`  — `σ = 0.118` violates the source condition `gain_δ(σ) ≥ 2 g_π`;
-* `condB_holds_at_1184` — `σ = 0.1184` satisfies it.
+Here that condition is proved for `σ = 0.1184` and the curve `β₈` constructed in
+`ChungCurve.lean`.
 
 Everything reduces, via `lt_chungBeta` / `chungBeta_lt`, to the sign of the exponent at
 four explicit rationals.  Those signs are settled by bracketing the logarithms involved:
@@ -61,24 +58,6 @@ theorem log_74_625 :
 theorem log_551_625 :
     (-0.126016850583 : ℝ) < log ((551 : ℝ)/625) ∧ log ((551 : ℝ)/625) < (-0.126016830583 : ℝ) := by
   have h := Real.abs_log_sub_add_sum_range_le (x := ((74 : ℝ)/625)) (by norm_num) 13
-  rw [abs_le] at h
-  norm_num [Finset.sum_range_succ] at h
-  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
-
-theorem log_59_500 :
-    (-2.137070664516 : ℝ) < log ((59 : ℝ)/500) ∧ log ((59 : ℝ)/500) < (-2.137070644516 : ℝ) := by
-  have h := Real.abs_log_sub_add_sum_range_le (x := ((7 : ℝ)/125)) (by norm_num) 10
-  rw [abs_le] at h
-  norm_num [Finset.sum_range_succ] at h
-  have hsplit : (59 : ℝ)/500 = ((118 : ℝ)/125) / 2^3 := by norm_num
-  have hlog2 : Real.log ((2:ℝ)^3) = 3 * Real.log 2 := by
-    rw [show ((2:ℝ)^3) = (2:ℝ)^(3:ℕ) by norm_num, Real.log_pow]; norm_num
-  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
-  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
-
-theorem log_441_500 :
-    (-0.125563232975 : ℝ) < log ((441 : ℝ)/500) ∧ log ((441 : ℝ)/500) < (-0.125563212975 : ℝ) := by
-  have h := Real.abs_log_sub_add_sum_range_le (x := ((59 : ℝ)/500)) (by norm_num) 13
   rw [abs_le] at h
   norm_num [Finset.sum_range_succ] at h
   constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
@@ -146,42 +125,6 @@ theorem log_10419_40000 :
   rw [abs_le] at h
   norm_num [Finset.sum_range_succ] at h
   have hsplit : (10419 : ℝ)/40000 = ((10419 : ℝ)/10000) / 2^2 := by norm_num
-  have hlog2 : Real.log ((2:ℝ)^2) = 2 * Real.log 2 := by
-    rw [show ((2:ℝ)^2) = (2:ℝ)^(2:ℕ) by norm_num, Real.log_pow]; norm_num
-  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
-  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
-
-theorem log_5907_15625 :
-    (-0.972734117297 : ℝ) < log ((5907 : ℝ)/15625) ∧
-      log ((5907 : ℝ)/15625) < (-0.972734097297 : ℝ) := by
-  have h := Real.abs_log_sub_add_sum_range_le (x := ((3811 : ℝ)/15625)) (by norm_num) 20
-  rw [abs_le] at h
-  norm_num [Finset.sum_range_succ] at h
-  have hsplit : (5907 : ℝ)/15625 = ((11814 : ℝ)/15625) / 2^1 := by norm_num
-  have hlog2 : Real.log ((2:ℝ)^1) = 1 * Real.log 2 := by
-    rw [show ((2:ℝ)^1) = (2:ℝ)^(1:ℕ) by norm_num, Real.log_pow]; norm_num
-  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
-  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
-
-theorem log_9718_15625 :
-    (-0.474892369639 : ℝ) < log ((9718 : ℝ)/15625) ∧
-      log ((9718 : ℝ)/15625) < (-0.474892349639 : ℝ) := by
-  have h := Real.abs_log_sub_add_sum_range_le (x := ((-3811 : ℝ)/15625)) (by norm_num) 20
-  rw [abs_le] at h
-  norm_num [Finset.sum_range_succ] at h
-  have hsplit : (9718 : ℝ)/15625 = ((19436 : ℝ)/15625) / 2^1 := by norm_num
-  have hlog2 : Real.log ((2:ℝ)^1) = 1 * Real.log 2 := by
-    rw [show ((2:ℝ)^1) = (2:ℝ)^(1:ℕ) by norm_num, Real.log_pow]; norm_num
-  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
-  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
-
-theorem log_16253_62500 :
-    (-1.346889059621 : ℝ) < log ((16253 : ℝ)/62500) ∧
-      log ((16253 : ℝ)/62500) < (-1.346889039621 : ℝ) := by
-  have h := Real.abs_log_sub_add_sum_range_le (x := ((-628 : ℝ)/15625)) (by norm_num) 9
-  rw [abs_le] at h
-  norm_num [Finset.sum_range_succ] at h
-  have hsplit : (16253 : ℝ)/62500 = ((16253 : ℝ)/15625) / 2^2 := by norm_num
   have hlog2 : Real.log ((2:ℝ)^2) = 2 * Real.log 2 := by
     rw [show ((2:ℝ)^2) = (2:ℝ)^(2:ℕ) by norm_num, Real.log_pow]; norm_num
   rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
@@ -338,13 +281,6 @@ theorem sec_neg_1184_lower : sec 8 (74/625) (3031/8000) < 0 := by
   norm_num
   linarith [e1.1, e1.2, e2.1, e2.2, e3.1, e3.2, e4.1, e4.2, e5.1, e5.2]
 
-theorem sec_pos_118_upper : 0 < sec 8 (59/500) (5907/15625) := by
-  have e1 := log_59_500; have e2 := log_441_500
-  have e3 := log_5907_15625; have e4 := log_9718_15625; have e5 := log_16253_62500
-  simp only [sec, binEntropy_eq_neg]
-  norm_num
-  linarith [e1.1, e1.2, e2.1, e2.2, e3.1, e3.2, e4.1, e4.2, e5.1, e5.2]
-
 /-! ### Brackets for the threshold curve -/
 
 theorem beta_08_lower : (94911 : ℝ)/100000 < chungBeta 8 (4/5) :=
@@ -359,10 +295,6 @@ theorem beta_1184_lower : (3031 : ℝ)/8000 < chungBeta 8 (74/625) :=
   lt_chungBeta (by norm_num) (by norm_num) (by norm_num) (by norm_num) (by norm_num)
     sec_neg_1184_lower
 
-theorem beta_118_upper : chungBeta 8 (59/500) < (5907 : ℝ)/15625 :=
-  chungBeta_lt (by norm_num) (by norm_num) (by norm_num) (by norm_num) (by norm_num)
-    sec_pos_118_upper
-
 /-! ### the source condition, decided -/
 
 /-- The adjusted gain of the Chung-8 curve at `δ = 0.0378`. -/
@@ -376,26 +308,12 @@ theorem condB_holds_at_1184 : 2 * gpi8 ≤ gainD8 (74/625) := by
   simp only [gainD8, gpi8]
   linarith [beta_08_upper, beta_1184_lower]
 
-/-- **`σ = 0.118` violates the source condition `gain_δ(σ) ≥ 2 g_π`.**  This is why `σ_min` must be rounded up:
-the development's earlier value `0.118` lies just below `σ_min = 0.1183474…`. -/
-theorem condB_fails_at_118 : gainD8 (59/500) < 2 * gpi8 := by
-  simp only [gainD8, gpi8]
-  linarith [beta_08_lower, beta_118_upper]
-
 /-- `g_π ∈ (0.1113, 0.1114)`: the bracket asserted by `FilecoinLatencyParameters`,
 here derived from the construction. -/
 theorem gpi8_bounds : (1113 : ℝ)/10000 < gpi8 ∧ gpi8 < (557 : ℝ)/5000 := by
   constructor
   · simp only [gpi8, gainD8]; linarith [beta_08_lower]
   · simp only [gpi8, gainD8]; linarith [beta_08_upper]
-
-/-- **The rounding direction of `σ_min`, decided.**  the source condition separates the two
-four-digit candidates: the development's original `σ = 0.118` is inadmissible, and `0.1184`
-is admissible.  Both halves are theorems about the constructed curve `β₈`; no numerical
-value is taken on trust. -/
-theorem sigmaMin_rounds_up :
-    gainD8 (59/500) < 2 * gpi8 ∧ 2 * gpi8 ≤ gainD8 (74/625) :=
-  ⟨condB_fails_at_118, condB_holds_at_1184⟩
 
 /-! ### The left root of `gain_δ`
 
@@ -451,6 +369,302 @@ theorem two_gpi_le_gainD8_06 : 2 * gpi8 ≤ gainD8 (3/5) := by
   have h2 := beta_08_upper
   simp only [gainD8, gpi8]
   linarith
+
+
+/-! ### Brackets for the reference-chain steps
+
+The potential ledger of `PotentialLedger.lean` needs a reference chain: a finite
+increasing sequence each of whose steps one free level of the footprint recurrence can
+achieve.  For the Chung-8 Filecoin parameters that chain is the `β_δ` orbit of the
+tracking floor, rationalized downwards, and certifying it means four more `β₈` lower
+brackets.  Each needs the five logarithms `log x`, `log (1-x)`, `log y`, `log (1-y)` and
+`log (y-x)`, produced by the same Mercator-plus-`log 2` recipe as above. -/
+
+/-! #### Chain point `x_1 = 0.1622` -/
+
+theorem log_811_5000 :
+    (-1.818925138021 : ℝ) < log ((811 : ℝ)/5000) ∧
+      log ((811 : ℝ)/5000) < (-1.818925136520 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((-186 : ℝ)/625)) (by norm_num) 26
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  have hsplit : (811 : ℝ)/5000 = ((811 : ℝ)/625) / 2^3 := by norm_num
+  have hlog2 : Real.log ((2:ℝ)^3) = 3 * Real.log 2 := by
+    rw [show ((2:ℝ)^3) = (2:ℝ)^(3:ℕ) by norm_num, Real.log_pow]; norm_num
+  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+theorem log_4189_5000 :
+    (-0.176975870470 : ℝ) < log ((4189 : ℝ)/5000) ∧
+      log ((4189 : ℝ)/5000) < (-0.176975870469 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((811 : ℝ)/5000)) (by norm_num) 17
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+theorem log_4663_10000 :
+    (-0.762926075408 : ℝ) < log ((4663 : ℝ)/10000) ∧
+      log ((4663 : ℝ)/10000) < (-0.762926074907 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((337 : ℝ)/5000)) (by norm_num) 11
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  have hsplit : (4663 : ℝ)/10000 = ((4663 : ℝ)/5000) / 2^1 := by norm_num
+  have hlog2 : Real.log ((2:ℝ)^1) = 1 * Real.log 2 := by
+    rw [show ((2:ℝ)^1) = (2:ℝ)^(1:ℕ) by norm_num, Real.log_pow]; norm_num
+  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+theorem log_5337_10000 :
+    (-0.627921395883 : ℝ) < log ((5337 : ℝ)/10000) ∧
+      log ((5337 : ℝ)/10000) < (-0.627921395382 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((-337 : ℝ)/5000)) (by norm_num) 11
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  have hsplit : (5337 : ℝ)/10000 = ((5337 : ℝ)/5000) / 2^1 := by norm_num
+  have hlog2 : Real.log ((2:ℝ)^1) = 1 * Real.log 2 := by
+    rw [show ((2:ℝ)^1) = (2:ℝ)^(1:ℕ) by norm_num, Real.log_pow]; norm_num
+  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+theorem log_3041_10000 :
+    (-1.190398684779 : ℝ) < log ((3041 : ℝ)/10000) ∧
+      log ((3041 : ℝ)/10000) < (-1.190398683778 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((-541 : ℝ)/2500)) (by norm_num) 21
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  have hsplit : (3041 : ℝ)/10000 = ((3041 : ℝ)/2500) / 2^2 := by norm_num
+  have hlog2 : Real.log ((2:ℝ)^2) = 2 * Real.log 2 := by
+    rw [show ((2:ℝ)^2) = (2:ℝ)^(2:ℕ) by norm_num, Real.log_pow]; norm_num
+  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+/-! #### Chain point `x_2 = 0.4285` -/
+
+theorem log_857_2000 :
+    (-0.847464541185 : ℝ) < log ((857 : ℝ)/2000) ∧
+      log ((857 : ℝ)/2000) < (-0.847464540684 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((143 : ℝ)/1000)) (by norm_num) 16
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  have hsplit : (857 : ℝ)/2000 = ((857 : ℝ)/1000) / 2^1 := by norm_num
+  have hlog2 : Real.log ((2:ℝ)^1) = 1 * Real.log 2 := by
+    rw [show ((2:ℝ)^1) = (2:ℝ)^(1:ℕ) by norm_num, Real.log_pow]; norm_num
+  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+theorem log_1143_2000 :
+    (-0.559490795988 : ℝ) < log ((1143 : ℝ)/2000) ∧
+      log ((1143 : ℝ)/2000) < (-0.559490795487 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((-143 : ℝ)/1000)) (by norm_num) 16
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  have hsplit : (1143 : ℝ)/2000 = ((1143 : ℝ)/1000) / 2^1 := by norm_num
+  have hlog2 : Real.log ((2:ℝ)^1) = 1 * Real.log 2 := by
+    rw [show ((2:ℝ)^1) = (2:ℝ)^(1:ℕ) by norm_num, Real.log_pow]; norm_num
+  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+theorem log_1929_2500 :
+    (-0.259288997951 : ℝ) < log ((1929 : ℝ)/2500) ∧
+      log ((1929 : ℝ)/2500) < (-0.259288997950 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((571 : ℝ)/2500)) (by norm_num) 22
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+theorem log_571_2500 :
+    (-1.476656801681 : ℝ) < log ((571 : ℝ)/2500) ∧
+      log ((571 : ℝ)/2500) < (-1.476656800680 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((54 : ℝ)/625)) (by norm_num) 13
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  have hsplit : (571 : ℝ)/2500 = ((571 : ℝ)/625) / 2^2 := by norm_num
+  have hlog2 : Real.log ((2:ℝ)^2) = 2 * Real.log 2 := by
+    rw [show ((2:ℝ)^2) = (2:ℝ)^(2:ℕ) by norm_num, Real.log_pow]; norm_num
+  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+theorem log_3431_10000 :
+    (-1.069733329358 : ℝ) < log ((3431 : ℝ)/10000) ∧
+      log ((3431 : ℝ)/10000) < (-1.069733328857 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((1569 : ℝ)/5000)) (by norm_num) 28
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  have hsplit : (3431 : ℝ)/10000 = ((3431 : ℝ)/5000) / 2^1 := by norm_num
+  have hlog2 : Real.log ((2:ℝ)^1) = 1 * Real.log 2 := by
+    rw [show ((2:ℝ)^1) = (2:ℝ)^(1:ℕ) by norm_num, Real.log_pow]; norm_num
+  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+/-! #### Chain point `x_3 = 0.7338` -/
+
+theorem log_3669_5000 :
+    (-0.309518767061 : ℝ) < log ((3669 : ℝ)/5000) ∧
+      log ((3669 : ℝ)/5000) < (-0.309518767060 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((1331 : ℝ)/5000)) (by norm_num) 24
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+theorem log_1331_5000 :
+    (-1.323507373502 : ℝ) < log ((1331 : ℝ)/5000) ∧
+      log ((1331 : ℝ)/5000) < (-1.323507372501 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((-81 : ℝ)/1250)) (by norm_num) 11
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  have hsplit : (1331 : ℝ)/5000 = ((1331 : ℝ)/1250) / 2^2 := by norm_num
+  have hlog2 : Real.log ((2:ℝ)^2) = 2 * Real.log 2 := by
+    rw [show ((2:ℝ)^2) = (2:ℝ)^(2:ℕ) by norm_num, Real.log_pow]; norm_num
+  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+theorem log_579_625 :
+    (-0.076449172164 : ℝ) < log ((579 : ℝ)/625) ∧
+      log ((579 : ℝ)/625) < (-0.076449172163 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((46 : ℝ)/625)) (by norm_num) 12
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+theorem log_46_625 :
+    (-2.609110254208 : ℝ) < log ((46 : ℝ)/625) ∧
+      log ((46 : ℝ)/625) < (-2.609110252207 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((-111 : ℝ)/625)) (by norm_num) 18
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  have hsplit : (46 : ℝ)/625 = ((736 : ℝ)/625) / 2^4 := by norm_num
+  have hlog2 : Real.log ((2:ℝ)^4) = 4 * Real.log 2 := by
+    rw [show ((2:ℝ)^4) = (2:ℝ)^(4:ℕ) by norm_num, Real.log_pow]; norm_num
+  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+theorem log_963_5000 :
+    (-1.647139780099 : ℝ) < log ((963 : ℝ)/5000) ∧
+      log ((963 : ℝ)/5000) < (-1.647139779098 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((287 : ℝ)/1250)) (by norm_num) 22
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  have hsplit : (963 : ℝ)/5000 = ((963 : ℝ)/1250) / 2^2 := by norm_num
+  have hlog2 : Real.log ((2:ℝ)^2) = 2 * Real.log 2 := by
+    rw [show ((2:ℝ)^2) = (2:ℝ)^(2:ℕ) by norm_num, Real.log_pow]; norm_num
+  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+/-! #### Chain point `x_4 = 0.8886` -/
+
+theorem log_4443_5000 :
+    (-0.118108088481 : ℝ) < log ((4443 : ℝ)/5000) ∧
+      log ((4443 : ℝ)/5000) < (-0.118108088480 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((557 : ℝ)/5000)) (by norm_num) 14
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+theorem log_557_5000 :
+    (-2.194627952210 : ℝ) < log ((557 : ℝ)/5000) ∧
+      log ((557 : ℝ)/5000) < (-2.194627950709 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((68 : ℝ)/625)) (by norm_num) 14
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  have hsplit : (557 : ℝ)/5000 = ((557 : ℝ)/625) / 2^3 := by norm_num
+  have hlog2 : Real.log ((2:ℝ)^3) = 3 * Real.log 2 := by
+    rw [show ((2:ℝ)^3) = (2:ℝ)^(3:ℕ) by norm_num, Real.log_pow]; norm_num
+  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+theorem log_9711_10000 :
+    (-0.029325829382 : ℝ) < log ((9711 : ℝ)/10000) ∧
+      log ((9711 : ℝ)/10000) < (-0.029325829381 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((289 : ℝ)/10000)) (by norm_num) 9
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+theorem log_289_10000 :
+    (-3.543913685065 : ℝ) < log ((289 : ℝ)/10000) ∧
+      log ((289 : ℝ)/10000) < (-3.543913682564 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((47 : ℝ)/625)) (by norm_num) 12
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  have hsplit : (289 : ℝ)/10000 = ((578 : ℝ)/625) / 2^5 := by norm_num
+  have hlog2 : Real.log ((2:ℝ)^5) = 5 * Real.log 2 := by
+    rw [show ((2:ℝ)^5) = (2:ℝ)^(5:ℕ) by norm_num, Real.log_pow]; norm_num
+  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+theorem log_33_400 :
+    (-2.494956986602 : ℝ) < log ((33 : ℝ)/400) ∧
+      log ((33 : ℝ)/400) < (-2.494956984601 : ℝ) := by
+  have h := Real.abs_log_sub_add_sum_range_le (x := ((-8 : ℝ)/25)) (by norm_num) 28
+  rw [abs_le] at h
+  norm_num [Finset.sum_range_succ] at h
+  have hsplit : (33 : ℝ)/400 = ((33 : ℝ)/25) / 2^4 := by norm_num
+  have hlog2 : Real.log ((2:ℝ)^4) = 4 * Real.log 2 := by
+    rw [show ((2:ℝ)^4) = (2:ℝ)^(4:ℕ) by norm_num, Real.log_pow]; norm_num
+  rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
+  constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
+
+
+/-! ### The four chain-step certificates of the potential ledger
+
+`Potential.lean`'s reference chain for the Chung-8 Filecoin parameters is the `β_δ`
+orbit of the tracking floor `π̂`, rationalized downwards:
+
+  `x₀ = π̄`, `x₁ = 0.1622`, `x₂ = 0.4285`, `x₃ = 0.7338`, `x₄ = 0.8886`,
+
+together with the chord extension point `x_top = 0.9333` used by the `t1` certificate.
+The first step `x₁ = β_δ(π̄)` is exact — the mirror law gives `β(π̄) = 1 - π`, so
+`β_δ(π̄) = 1 - π - δ = 811/5000` on the nose — and needs no numerics.  The remaining
+four steps `x_{k+1} + δ ≤ β₈(x_k)` are the brackets below, each with `3·10⁻⁴` or more
+of room. -/
+
+theorem sec_neg_1622_lower : sec 8 (811/5000) (4663/10000) < 0 := by
+  have e1 := log_811_5000; have e2 := log_4189_5000
+  have e3 := log_4663_10000; have e4 := log_5337_10000; have e5 := log_3041_10000
+  simp only [sec, binEntropy_eq_neg]
+  norm_num
+  linarith [e1.1, e1.2, e2.1, e2.2, e3.1, e3.2, e4.1, e4.2, e5.1, e5.2]
+
+theorem sec_neg_4285_lower : sec 8 (857/2000) (1929/2500) < 0 := by
+  have e1 := log_857_2000; have e2 := log_1143_2000
+  have e3 := log_1929_2500; have e4 := log_571_2500; have e5 := log_3431_10000
+  simp only [sec, binEntropy_eq_neg]
+  norm_num
+  linarith [e1.1, e1.2, e2.1, e2.2, e3.1, e3.2, e4.1, e4.2, e5.1, e5.2]
+
+theorem sec_neg_7338_lower : sec 8 (3669/5000) (579/625) < 0 := by
+  have e1 := log_3669_5000; have e2 := log_1331_5000
+  have e3 := log_579_625; have e4 := log_46_625; have e5 := log_963_5000
+  simp only [sec, binEntropy_eq_neg]
+  norm_num
+  linarith [e1.1, e1.2, e2.1, e2.2, e3.1, e3.2, e4.1, e4.2, e5.1, e5.2]
+
+theorem sec_neg_8886_lower : sec 8 (4443/5000) (9711/10000) < 0 := by
+  have e1 := log_4443_5000; have e2 := log_557_5000
+  have e3 := log_9711_10000; have e4 := log_289_10000; have e5 := log_33_400
+  simp only [sec, binEntropy_eq_neg]
+  norm_num
+  linarith [e1.1, e1.2, e2.1, e2.2, e3.1, e3.2, e4.1, e4.2, e5.1, e5.2]
+
+/-- `β₈(x₁) > x₂ + δ`: the second chain step. -/
+theorem beta_1622_lower : (4663 : ℝ)/10000 < chungBeta 8 (811/5000) :=
+  lt_chungBeta (by norm_num) (by norm_num) (by norm_num) (by norm_num) (by norm_num)
+    sec_neg_1622_lower
+
+/-- `β₈(x₂) > x₃ + δ`: the third chain step. -/
+theorem beta_4285_lower : (1929 : ℝ)/2500 < chungBeta 8 (857/2000) :=
+  lt_chungBeta (by norm_num) (by norm_num) (by norm_num) (by norm_num) (by norm_num)
+    sec_neg_4285_lower
+
+/-- `β₈(x₃) > x₄ + δ`: the fourth chain step. -/
+theorem beta_7338_lower : (579 : ℝ)/625 < chungBeta 8 (3669/5000) :=
+  lt_chungBeta (by norm_num) (by norm_num) (by norm_num) (by norm_num) (by norm_num)
+    sec_neg_7338_lower
+
+/-- `β₈(x₄) > x_top + δ`: the chord extension point of the `t1` certificate. -/
+theorem beta_8886_lower : (9711 : ℝ)/10000 < chungBeta 8 (4443/5000) :=
+  lt_chungBeta (by norm_num) (by norm_num) (by norm_num) (by norm_num) (by norm_num)
+    sec_neg_8886_lower
 
 end ChungCurve
 end ProofOfSpace

@@ -919,7 +919,7 @@ noncomputable def base (hn : 0 < n) (hσapi : T.σ ≤ G.αpi)
 
 /-- Extend a concrete chain at a later fertile, expandable depth.  The connector from
 the new local path to the previous source is obtained from the *actual* footprint;
-the old `tail` certificate then supplies all previously accumulated links. -/
+the stored `tail` certificate supplies all accumulated links. -/
 noncomputable def extend (hn : 0 < n) (hσapi : T.σ ≤ G.αpi)
     (hDepthRobust : G.DepthRobust G.αpi)
     (L : Link P T A) {b : ℕ} (hdepth : L.depth < b) (hb : b < ℓ)

@@ -16,8 +16,8 @@ the member `((k+1)x)/(1+kx)` of the Möbius family at `k = 2291/625`, and proves
 field of `Setting`, `GeneralRegime`, and `FilecoinLatencyParameters` for it at
 `σ = 0.1184`, ending in `wSetting`, `wGeneralRegime`, and `wFilecoin`.  Strict
 concavity and the unique gain maximizer are theorems here, which is exactly why the
-model closes: on the Chung curve those two facts are assumptions
-(`Chung8AnalyticAssumptions`), so that specialization cannot play this role.
+model closes. For a Chung curve, those two facts are represented by the explicit
+degree-parametric hypothesis class `ChungAnalyticHypotheses d`.
 
 The Möbius family is the natural place to look for a model because the reversal law
 `reversal identity` `β(1 - β x) = 1 - x` says exactly that `x ↦ 1 - β x` is an involution,
@@ -362,23 +362,6 @@ theorem mobius_latency_corollary
           ((1 : ℝ) / 5 - (74 : ℝ) / 625) * n) :=
   wFilecoin.latency_corollary G P wGeneralRegime
     hn hαpi hℓ hDepth A hA hred hweight
-
-/-- At `ℓ = 21` the Möbius profile certifies the first strict improvement, from
-`0.2 n` to `0.2816 n`. -/
-theorem mobius_latency_21
-    {V : Type u} {n : ℕ}
-    (G : Concrete.LayeredGraph V wSetting 21 n)
-    (P : Concrete.Pebbling G)
-    (hn : 0 < n) (hαpi : G.αpi = (1 : ℝ) / 5)
-    (hDepth : G.DepthRobust G.αpi)
-    (A : Finset V) (hA : A ⊆ G.layer 0)
-    (hred : ∀ v ∈ A, v ∉ P.red 0)
-    (hweight : wSetting.ζδ ≤ Concrete.Pebbling.weight n A) :
-    P.HasUnpebbledPathInFootprint A
-      ((1 : ℝ) / 5 * n +
-        ((1 : ℝ) / 5 - (74 : ℝ) / 625) * n) :=
-  wFilecoin.latency_21 G P wGeneralRegime
-    hn hαpi hDepth A hA hred hweight
 
 end Witness
 

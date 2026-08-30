@@ -1,30 +1,19 @@
 /-
 # The chain ledger: one latency accounting for both parameter regimes
 
-This file proves the *only* chain-counting theorem in the development.  It formalizes
-`latency analysis` of this development — chain breaks, restarts, and `latency_general` — in a form
-strong enough that `latency_general` is a corollary rather than a parallel proof.
+This file proves the chain-counting theorem used by `latency_general`. Infertile
+challenge levels are charged at the rate `g̃` from `challenge-floor lemma`. An attempt
+may break when concentrated spending pushes its tracked footprint below `π̂`; the
+construction then restarts from the challenge footprint.
 
-Two things change once breaks are possible, and nothing else does:
-
-* infertile challenge levels are charged at the coarser rate `g̃` of
-  `challenge-floor lemma` (`Footprint.lean`) instead of `g_π`, which moves the search
-  overhead from `s(g_π, g_π)` to `s(ĝ, g̃)`;
-* an attempt can *break* — concentrated spending pushes the tracked footprint below
-  `π̂` and the chain must restart from the challenge footprint.
-
-Both collapse at the Filecoin parameters.  `gtilde_eq_gpi` shows the first costs
-nothing there, and `bMax_eq_zero` shows the second cannot happen: a break costs more
-than `β_δ(π) - π̂` of black pebbles (`Growth.break_charge`), and the verified
-`ρ < β_δ(π) - π̄` says exactly that `ρ` is below that.  `zMin_eq_zMinNoBreak` then turns
-the chain length into the closed form the numerical corollary evaluates, which is why
-`Chain.lean` carries no second accounting.
+At the Filecoin parameters, `gtilde_eq_gpi` identifies `g̃` with `g_π`, and
+`bMax_eq_zero` rules out breaks because the black-pebble budget is smaller than the
+charge `β_δ(π) - π̂` required by `Growth.break_charge`.
 
 Contents:
 
 * `GeneralRegime` — `general scalar conditions`.
-* `bMax`, `sCap`, `s₀`, `zMin` — the constants, together with the
-  three lemmas above that collapse them onto `zMinNoBreak`.
+* `bMax`, `sCap`, `s₀`, `zMin` — the link-count constants.
 * `search_stops` — the search of `Search.lean` run to completion, in the positive
   form the restart searches need.
 * `ChainSystem.extension_attempt_gen` — `extension-attempt lemma`: an attempt ends at the bottom
@@ -47,17 +36,12 @@ on *disjoint* ranges of levels — a search and an attempt never share a level, 
 construction moves strictly downward — so a single interval sum bounds all of them, and
 `Budget.sum_Ico_le` caps that sum by `ρ`.
 
-`jointEntry` is that accounting.  It needs two things the per-charge version does not:
-`ChallengeBound.infertile_card_charge`, which prices infertile challenge levels against
-the spend in *their own window* rather than against `ρ`, and the window bookkeeping in
-`GenLedger`'s joint clause, which carries the window start (`b` for a search, `b + 1`
-for a link) and the head (`restartHead`, `0`) that each of the two induction statements
-needs.  The clause is claimed only when no break was charged, because a restart search
-runs below levels already charged to attempts; `b^max = 0` rules breaks out entirely,
-which is where the entry is wanted.
+`jointEntry` uses `ChallengeBound.infertile_card_charge` to price each infertile level
+against spending in its own window. `GenLedger` carries the window start (`b` for a
+search, `b + 1` for a link) and its head (`restartHead` or `0`). The joint clause applies
+when no break is charged, so search and attempt windows remain disjoint.
 
-At the Filecoin parameters the offset falls from `s_1 > 28.36` to
-`s₂ < 14.82` (`FilecoinLatencyParameters.s₂_lt_s₁`).
+At the Filecoin parameters this offset is below `14.82`.
 -/
 import ProofOfSpace.Chain
 
@@ -137,21 +121,13 @@ noncomputable def jointEntry (S : Setting) (T : Tracking S) (ℓ : ℕ) : ℕ :=
 
 It is the maximum of the base entry `1` and three substantive bounds: the global
 `h_1` ledger entry, the no-break joint-ledger entry, and the constant-charge `h_0`
-entry.  When breaks are possible, `b^max + 1` chain segments share the graph, so the
+entry. When breaks are possible, `b^max + 1` chain segments share the graph, so the
 best of them gets a `(b^max + 1)`-th of the links, and the `b^max` broken attempts cost
 one link span each.
 
-`zMin_eq_zMinNoBreak` is the point of the definition: when `b^max = 0` — which
-`bMax_eq_zero` derives from the budget inequality — every weakening disappears and this
-is *literally* `zMinNoBreak`.  So the single break-aware latency theorem gives away
-nothing at the Filecoin parameters.
-
-The ledger entry — the `⌈(ℓ - s_1)/((b^max+1) h_1)⌉_+` of `minimum link-count definition` — is what keeps the
-slope at `1/h_1` instead of `1/h_0 = 1/29`, and the *joint* ledger entry beside it
-replaces the offset `s + 2ρ/ĝ` by `searchHead + 2ρ/min{ĝ,g̃}`, which charges the budget
-once instead of three times.  Both are kept: neither dominates the other for every
-parameter choice, and a maximum of valid lower bounds is a valid lower bound.  At the
-Filecoin parameters the joint entry wins by `13.6` levels. -/
+When `b^max = 0`, `zMin_eq_zMinNoBreak` identifies this definition with
+`zMinNoBreak`. The maximum combines valid lower bounds that can dominate for different
+parameter choices. -/
 noncomputable def zMin (S : Setting) (T : Tracking S) (ℓ : ℕ) : ℕ :=
   max 1 (max
     ⌈((ℓ : ℝ) - sCap S T - ledgerSlack S T - bMax S T * h₁ S T) /
@@ -357,10 +333,8 @@ falling below `π̂`.  In the break case the levels traversed carry total spend 
 than `π - π̂`, which is the second conclusion of `fertile-continuation lemma` and the
 charge that `break-charge lemma` uses.
 
-This is `extension_attempt` with the post-fertile floor `post_floor` and the no-break condition
-removed.  In the no-break regime those two rule out the third outcome altogether; here
-nothing does, and
-the break charge is the only thing bounding how often it can happen.
+The three outcomes are reaching the bottom, producing another link, or breaking the
+tracked chain. The break charge bounds how often the third outcome can occur.
 -/
 theorem extension_attempt_gen (L : CS.Link) :
     ∃ b', CS.depth L < b' ∧
