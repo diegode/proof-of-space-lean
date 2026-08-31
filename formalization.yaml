@@ -81,7 +81,7 @@ automation:
       framework: "n/a"
       tool_setup: >-
         Human-directed Lean development using Mathlib, editor feedback, and
-        the project's mechanical axiom audit.
+        the project's pinned Comparator and NanoDa verification toolchain.
       cost:
         wall_time: "not tracked"
         spend_usd: "not tracked"
@@ -102,18 +102,19 @@ automation:
         and Palomar packaging; no transcript is included in the repository.
   spend_usd: "not tracked"
   notes: >-
-    The mathematical development is human-directed. Lean, the project axiom
-    audit, and Palomar's statement comparator check the submitted code.
+    The mathematical development is human-directed. Lean and the pinned
+    Palomar Comparator and NanoDa toolchain check the submitted result.
 
 fidelity:
   divergences: >-
     The theorem permits continuation chains to break and restart and tracks
     those events in a global ledger. Lean counts depth forward from the
     challenge layer, opposite to Reyzin's level numbering. Challenge.lean
-    expands the bundled project structures into primitive Mathlib-level
-    hypotheses, and Solution.lean proves the resulting statement from the
-    public theorem. The result concerns a static pebbling snapshot and does
-    not formalize a time-indexed sequential game.
+    packages the raw graph and parameter data in LatencyData and the conditional
+    assumptions in the explicit LiteratureHypotheses typeclass. Solution.lean
+    proves the resulting statement from the public theorem. The result concerns
+    a static pebbling snapshot and does not formalize a time-indexed sequential
+    game.
 
 review:
   status: "self-assessed"
@@ -121,9 +122,9 @@ review:
     - "Diego de Estrada"
   notes: >-
     No independent mathematical review is recorded. The full project builds
-    with Lean 4, an environment-level audit rejects nonstandard axioms and
-    sorryAx throughout the ProofOfSpace namespace, and Palomar Comparator
-    checks the submitted Challenge theorem against Solution.lean.
+    with Lean 4, and the pinned Palomar Comparator toolchain checks the submitted
+    Challenge theorem against Solution.lean, rejects nonstandard axioms and
+    sorryAx in its proof, and replays it through NanoDa.
 
 alignment:
   namespace: "ProofOfSpaceStatement"

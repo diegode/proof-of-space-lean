@@ -112,19 +112,21 @@ layer realizes the polygon with probability at least `5/6`. That does not cover 
 deployed wiring, which selects parents with a Feistel network rather than a uniform tuple
 of permutations.
 
-## Build and trust audit
+## Build and submission verification
 
-With Lean 4 installed, run:
+With Lean 4 installed, run the project build. On Linux with Git, Go, Rust/Cargo, and
+Python 3 available, also run the pinned Palomar verification toolchain:
 
 ```bash
 lake build
-lake env lean scripts/AxiomAudit.lean
+./scripts/verify-comparator.sh
 ```
 
-The first command builds the public dependency graph, Challenge, and Solution. The
-second checks every declaration in the `ProofOfSpace` namespace and rejects dependencies
-other than `propext`, `Classical.choice`, and `Quot.sound`, including `sorryAx`. Both
-checks run in `.github/workflows/lean_action_ci.yml`.
+The first command builds the public dependency graph, Challenge, and Solution. The second
+uses [`comparator.json`](comparator.json) to check that the proved Solution declaration
+has the same name and type as the Challenge declaration, depends only on `propext`,
+`Classical.choice`, and `Quot.sound`, and replays through the NanoDa kernel. Both checks
+run in `.github/workflows/lean_action_ci.yml`.
 
 ## Published literature
 
