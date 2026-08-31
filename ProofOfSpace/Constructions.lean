@@ -64,6 +64,13 @@ def Expands {n d : ℕ} (P : PermutationInterlayer n d) (S : Setting) : Prop :=
   ∀ T : Finset (Fin n),
     S.β ((T.card : ℝ) / n) * n ≤ (P.neighborhood T).card
 
+/-- Expansion measured against an integer *failure profile* rather than a real-valued
+`β`: no nonempty source set has a neighbourhood as small as `m` allows.  This is the form
+the union bound needs, and it refers to no expansion function at all.  The empty set is
+excluded because it can never be expanded. -/
+def ExpandsProfile {n d : ℕ} (P : PermutationInterlayer n d) (m : ℕ → ℕ) : Prop :=
+  ∀ T : Finset (Fin n), T.Nonempty → m T.card < (P.neighborhood T).card
+
 end PermutationInterlayer
 
 /-- A genuine bounded-interdegree stack.  Consecutive layers are connected by a union
@@ -251,15 +258,6 @@ equivalently `d` independent uniform permutations. -/
 noncomputable def PermutationInterlayer.uniformLaw (n d : ℕ) :
     PMF (PermutationInterlayer n d) :=
   PMF.uniformOfFintype (PermutationInterlayer n d)
-
-/-- Probability-facing form of the expansion claim required by a stack: that a sampled
-`d`-tuple of permutations *realizes* `β` in the sense of `permutation-stack construction`.
-
-`UnionBound.lean` proves this claim with an explicit finite union bound, uniformly in
-the layer width and degree. -/
-def PermutationExpansionWhpClaim (S : Setting) (n d : ℕ) (δ : ℝ≥0∞) : Prop :=
-  HoldsWithFailureAtMost (PermutationInterlayer.uniformLaw n d)
-    (fun P => P.Expands S) δ
 
 end Concrete
 

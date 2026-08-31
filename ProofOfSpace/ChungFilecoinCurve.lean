@@ -1,11 +1,20 @@
-import Mathlib.Analysis.SpecialFunctions.BinaryEntropy
+import ProofOfSpace.ChungShifted
 import Mathlib.Analysis.Convex.Function
 
 /-!
 # The rational Chung-8 profile
 
 The probabilistic theorem uses the rational polygon below as its exact finite expansion
-requirement. Its right half is the anti-diagonal reflection of its left half.
+requirement. Its right half is the anti-diagonal reflection of its left half, so it
+satisfies the reversal identity exactly rather than to numerical tolerance.
+
+The polygon is not a posited profile. `ChungRegion.lean` proves that the whole of it —
+not merely its vertices — lies strictly inside the finite-size Chung region
+`E₈(x, y) < -2⁻²²` on `[2⁻²⁵, 1 - 2⁻²³]`, so the expansion it demands is the expansion
+Reyzin's own union-bound exponent certifies.  The polygon is used in place of the exact
+shifted root because that root is not defined near `0` and `1`, where its sublevel set
+is empty, and because concavity and the unique gain maximizer are free for a minimum of
+affine functions and unproved for the root.
 
 Writing the polygon as the minimum of its supporting affine lines makes its global
 concavity a short theorem.  The strictly decreasing positive slopes give strict
@@ -16,6 +25,9 @@ namespace ProofOfSpace
 namespace ChungCurve
 
 open Set
+
+/-- The finite-size failure exponent used in the Filecoin calculation. -/
+noncomputable def filecoinEpsilon : ℝ := 1 / 2 ^ (22 : ℕ)
 
 /-- The affine line through `(a,u)` and `(b,v)`. -/
 noncomputable def chord (a u b v x : ℝ) : ℝ := u + (v - u) / (b - a) * (x - a)
@@ -497,6 +509,83 @@ theorem filecoinBeta_reversal {x : ℝ} (hx : x ∈ Ioo (0 : ℝ) 1) :
     norm_num [L0, L11, chord]
     ring
 
+/-! ### The twelve segments in affine form
+
+`filecoinBeta` is a `min` of chords; on each segment it agrees with one of them, and the
+`p x + q` presentation is what `ChungChord.lean` consumes. -/
+
+theorem filecoinBeta_affine_0 {x : ℝ} (_h0 : (0 : ℝ) ≤ x) (h1 : x ≤ 5089 / 100000) :
+    filecoinBeta x = 20000 / 5089 * x + 0 := by
+  rw [filecoinBeta_eq_L0 _h0 h1]
+  simp only [L0, chord]
+  ring
+
+theorem filecoinBeta_affine_1 {x : ℝ} (h0 : 5089 / 100000 ≤ x) (h1 : x ≤ 46 / 625) :
+    filecoinBeta x = 6620 / 2271 * x + 586541 / 11355000 := by
+  rw [filecoinBeta_eq_L1 h0 h1]
+  simp only [L1, chord]
+  ring
+
+theorem filecoinBeta_affine_2 {x : ℝ} (h0 : 46 / 625 ≤ x) (h1 : x ≤ 74 / 625) :
+    filecoinBeta x = 4507 / 1792 * x + 45411 / 560000 := by
+  rw [filecoinBeta_eq_L2 h0 h1]
+  simp only [L2, chord]
+  ring
+
+theorem filecoinBeta_affine_3 {x : ℝ} (h0 : 74 / 625 ≤ x) (h1 : x ≤ 811 / 5000) :
+    filecoinBeta x = 3497 / 1752 * x + 1248721 / 8760000 := by
+  rw [filecoinBeta_eq_L3 h0 h1]
+  simp only [L3, chord]
+  ring
+
+theorem filecoinBeta_affine_4 {x : ℝ} (h0 : 811 / 5000 ≤ x) (h1 : x ≤ 571 / 2500) :
+    filecoinBeta x = 526 / 331 * x + 690281 / 3310000 := by
+  rw [filecoinBeta_eq_L4 h0 h1]
+  simp only [L4, chord]
+  ring
+
+theorem filecoinBeta_affine_5 {x : ℝ} (h0 : 571 / 2500 ≤ x) (h1 : x ≤ 3201 / 10000) :
+    filecoinBeta x = 1084 / 917 * x + 2764799 / 9170000 := by
+  rw [filecoinBeta_eq_L5 h0 h1]
+  simp only [L5, chord]
+  ring
+
+theorem filecoinBeta_affine_6 {x : ℝ} (h0 : 3201 / 10000 ≤ x) (h1 : x ≤ 857 / 2000) :
+    filecoinBeta x = 917 / 1084 * x + 4434799 / 10840000 := by
+  rw [filecoinBeta_eq_L6 h0 h1]
+  simp only [L6, chord]
+  ring
+
+theorem filecoinBeta_affine_7 {x : ℝ} (h0 : 857 / 2000 ≤ x) (h1 : x ≤ 5337 / 10000) :
+    filecoinBeta x = 331 / 526 * x + 2640281 / 5260000 := by
+  rw [filecoinBeta_eq_L7 h0 h1]
+  simp only [L7, chord]
+  ring
+
+theorem filecoinBeta_affine_8 {x : ℝ} (h0 : 5337 / 10000 ≤ x) (h1 : x ≤ 4969 / 8000) :
+    filecoinBeta x = 1752 / 3497 * x + 9973721 / 17485000 := by
+  rw [filecoinBeta_eq_L8 h0 h1]
+  simp only [L8, chord]
+  ring
+
+theorem filecoinBeta_affine_9 {x : ℝ} (h0 : 4969 / 8000 ≤ x) (h1 : x ≤ 3669 / 5000) :
+    filecoinBeta x = 1792 / 4507 * x + 1787697 / 2816875 := by
+  rw [filecoinBeta_eq_L9 h0 h1]
+  simp only [L9, chord]
+  ring
+
+theorem filecoinBeta_affine_10 {x : ℝ} (h0 : 3669 / 5000 ≤ x) (h1 : x ≤ 4 / 5) :
+    filecoinBeta x = 2271 / 6620 * x + 22331541 / 33100000 := by
+  rw [filecoinBeta_eq_L10 h0 h1]
+  simp only [L10, chord]
+  ring
+
+theorem filecoinBeta_affine_11 {x : ℝ} (h0 : 4 / 5 ≤ x) (_h1 : x ≤ (1 : ℝ)) :
+    filecoinBeta x = 5089 / 20000 * x + 14911 / 20000 := by
+  rw [filecoinBeta_eq_L11 h0 _h1]
+  simp only [L11, chord]
+  ring
+
 /-- The unique maximizer of the polygon's unadjusted gain. -/
 noncomputable def filecoinAlphaG : ℝ := 3201 / 10000
 
@@ -581,8 +670,6 @@ theorem filecoinAlphaG_max {x : ℝ} (hx : x ∈ Icc (0 : ℝ) 1)
 @[simp] theorem filecoinBeta_7338 : filecoinBeta (3669 / 5000) = 579 / 625 := by
   rw [filecoinBeta_eq_L9 (by norm_num) (by norm_num)]
   norm_num [L9, chord]
-
-
 @[simp] theorem filecoinBeta_8886 : filecoinBeta (4443 / 5000) = 97165427 / 100000000 := by
   rw [filecoinBeta_eq_L11 (by norm_num) (by norm_num)]
   norm_num [L11, chord]
@@ -591,8 +678,6 @@ theorem filecoinAlphaG_max {x : ℝ} (hx : x ∈ Icc (0 : ℝ) 1)
     filecoinBeta (3 / 5) = 1171517 / 1345000 := by
   rw [filecoinBeta_eq_L8 (by norm_num) (by norm_num)]
   norm_num [L8, chord]
-
-
 /-- The two exact intersections with the `δ = 0.0378` gain line. -/
 noncomputable def filecoinAlphaMin : ℝ := 961821 / 74555000
 noncomputable def filecoinAlphaMax : ℝ := 14155 / 14911

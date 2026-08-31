@@ -1,3 +1,4 @@
+import Mathlib.Analysis.SpecialFunctions.BinaryEntropy
 import Mathlib.Algebra.Order.Archimedean.Real.Basic
 import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Mathlib.Algebra.Order.Floor.Ring
@@ -54,26 +55,30 @@ def HoldsWithFailureAtMost {A : Type*} (p : PMF A) (Q : A → Prop)
     (δ : ℝ≥0∞) : Prop :=
   1 - δ ≤ probabilityOf p Q
 
-/-! ### The finite-size Chung-8 expansion profile and exact failure bound -/
+/-! ### Reyzin's union-bound exponent, and the profile it defines -/
 
-/-- The affine line through `(a,u)` and `(b,v)`. -/
-noncomputable def chord (a u b v x : ℝ) : ℝ :=
-  u + (v - u) / (b - a) * (x - a)
+/-- **Reyzin's union-bound exponent** for a random degree-eight Chung interlayer,
+`E₈(x, y) = H(x) + H(y) + 8 (y H(x/y) - H(x))`, in nats.  It is the rate at which the
+count of eight-tuples of permutations crushing a density-`x` set into a density-`y` set is
+weighed against `(n!)^8`. -/
+noncomputable def chungExponent8 (x y : ℝ) : ℝ :=
+  Real.binEntropy x + Real.binEntropy y +
+    8 * (y * Real.binEntropy (x / y) - Real.binEntropy x)
 
-/-- The rational degree-eight expansion polygon used by the Filecoin specialization. -/
-noncomputable def chung8Beta (x : ℝ) : ℝ :=
-  min (chord 0 0 (5089 / 100000) (1 / 5) x)
-    (min (chord (5089 / 100000) (1 / 5) (46 / 625) (1331 / 5000) x)
-    (min (chord (46 / 625) (1331 / 5000) (74 / 625) (3031 / 8000) x)
-    (min (chord (74 / 625) (3031 / 8000) (811 / 5000) (4663 / 10000) x)
-    (min (chord (811 / 5000) (4663 / 10000) (571 / 2500) (1143 / 2000) x)
-    (min (chord (571 / 2500) (1143 / 2000) (3201 / 10000) (6799 / 10000) x)
-    (min (chord (3201 / 10000) (6799 / 10000) (857 / 2000) (1929 / 2500) x)
-    (min (chord (857 / 2000) (1929 / 2500) (5337 / 10000) (4189 / 5000) x)
-    (min (chord (5337 / 10000) (4189 / 5000) (4969 / 8000) (551 / 625) x)
-    (min (chord (4969 / 8000) (551 / 625) (3669 / 5000) (579 / 625) x)
-    (min (chord (3669 / 5000) (579 / 625) (4 / 5) (94911 / 100000) x)
-      (chord (4 / 5) (94911 / 100000) 1 1 x)))))))))))
+/-- The level at which the exponent is required to close.  It is *relative* — a fixed
+multiple of `H(x)` rather than a fixed constant — and that is what makes the theorem
+uniform in the layer width.  Since `E₈(x, x) = -6 H(x)`, a fixed negative level cuts out
+an empty region once `H(x)` drops below it; at Filecoin's `n ≈ 10⁹` even the source size
+`k = 1` would land in that dead zone.  A relative level never degenerates. -/
+noncomputable def chung8Level (x : ℝ) : ℝ := Real.binEntropy x / 2 ^ 23
+
+/-- **The Chung threshold**, defined by the exponent alone: the largest neighbourhood
+density that Chung's own union bound still certifies at source density `x`.  This is the
+root of `E₈(x, ·) = -chung8Level x`, and no expansion profile is posited anywhere in this
+file — what the theorem demands of a sampled interlayer is exactly what the union-bound
+exponent certifies. -/
+noncomputable def chung8Threshold (x : ℝ) : ℝ :=
+  sSup {y | y ∈ Set.Ioo x 1 ∧ chungExponent8 x y < -chung8Level x}
 
 namespace ChungInterlayer
 
@@ -82,16 +87,22 @@ def neighborhood {n : ℕ} (P : ChungInterlayer n) (T : Finset (Fin n)) :
     Finset (Fin n) :=
   T.biUnion fun v => Finset.univ.image fun j : Fin 8 => P.perm j v
 
-/-- The deterministic Chung-8 expansion event. -/
-def Expands {n : ℕ} (P : ChungInterlayer n) : Prop :=
-  ∀ T : Finset (Fin n),
-    chung8Beta ((T.card : ℝ) / n) * n ≤ (P.neighborhood T).card
-
 end ChungInterlayer
 
-/-- The largest neighbourhood size still counted as a failure for a `k`-set. -/
+/-- The largest neighbourhood size still counted as a failure for a `k`-set: one below the
+integer the Chung threshold demands. -/
 noncomputable def chung8FailureProfile (n k : ℕ) : ℕ :=
-  if k ≤ n then Nat.ceil (chung8Beta ((k : ℝ) / n) * n) - 1 else 0
+  if k ≤ n then Nat.ceil (chung8Threshold ((k : ℝ) / n) * n) - 1 else 0
+
+namespace ChungInterlayer
+
+/-- The deterministic Chung-8 expansion event: no nonempty source set is crushed to a size
+the exponent still certifies as a failure. -/
+def Expands {n : ℕ} (P : ChungInterlayer n) : Prop :=
+  ∀ T : Finset (Fin n), T.Nonempty →
+    chung8FailureProfile n T.card < (P.neighborhood T).card
+
+end ChungInterlayer
 
 /-- The exact union-bound failure probability for a random Chung-8 interlayer. -/
 noncomputable def chung8FailureBound (n : ℕ) : ℝ≥0∞ :=

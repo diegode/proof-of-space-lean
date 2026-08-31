@@ -57,8 +57,15 @@ status:
     uniformly sampled permutations; its expansion is proved with failure at
     most an exact finite union-bound expression. Intra-layer depth robustness
     and pebbling budgets remain in the signature. The rational degree-eight
-    profile is certified in its entirety at finite-size level E = -2^-22, and
-    its analytic and scalar properties are theorems rather than hypotheses.
+    profile is certified in its entirety inside the Chung region, at a level
+    proportional to H(x), on all of (0,1). No expansion profile is posited in
+    the statement: the expansion demanded of a sampled interlayer is the root
+    of Reyzin's union-bound exponent E_8(x,.) = -H(x)/2^23, written out in
+    Challenge.lean, and the rational polygon appears only in the proof, as the
+    under-approximation that discharges the deterministic argument's
+    hypothesis. The level is relative rather than fixed because E_8(x,x) =
+    -6 H(x): a fixed level empties the region near the endpoints and would cap
+    the theorem below deployed layer widths.
     The generic union-bound layer is uniform in width, degree, and expansion
     setting. The formalization does not include the reduction to a time-indexed
     cryptographic game, nor identify Filecoin's Feistel wiring with a uniform

@@ -1,3 +1,4 @@
+import ProofOfSpace.ChungRelative
 import ProofOfSpace.ChungFilecoin
 import ProofOfSpace.UnionBound
 
@@ -58,22 +59,14 @@ private theorem probabilityOf_interlayerEquiv (Q : ChungInterlayer n → Prop) :
   rw [Fintype.card_congr (interlayerEquiv n)]
   rfl
 
-noncomputable def chord (a u b v x : ℝ) : ℝ :=
-  u + (v - u) / (b - a) * (x - a)
+noncomputable def chungExponent8 (x y : ℝ) : ℝ :=
+  Real.binEntropy x + Real.binEntropy y +
+    8 * (y * Real.binEntropy (x / y) - Real.binEntropy x)
 
-noncomputable def chung8Beta (x : ℝ) : ℝ :=
-  min (chord 0 0 (5089 / 100000) (1 / 5) x)
-    (min (chord (5089 / 100000) (1 / 5) (46 / 625) (1331 / 5000) x)
-    (min (chord (46 / 625) (1331 / 5000) (74 / 625) (3031 / 8000) x)
-    (min (chord (74 / 625) (3031 / 8000) (811 / 5000) (4663 / 10000) x)
-    (min (chord (811 / 5000) (4663 / 10000) (571 / 2500) (1143 / 2000) x)
-    (min (chord (571 / 2500) (1143 / 2000) (3201 / 10000) (6799 / 10000) x)
-    (min (chord (3201 / 10000) (6799 / 10000) (857 / 2000) (1929 / 2500) x)
-    (min (chord (857 / 2000) (1929 / 2500) (5337 / 10000) (4189 / 5000) x)
-    (min (chord (5337 / 10000) (4189 / 5000) (4969 / 8000) (551 / 625) x)
-    (min (chord (4969 / 8000) (551 / 625) (3669 / 5000) (579 / 625) x)
-    (min (chord (3669 / 5000) (579 / 625) (4 / 5) (94911 / 100000) x)
-      (chord (4 / 5) (94911 / 100000) 1 1 x)))))))))))
+noncomputable def chung8Level (x : ℝ) : ℝ := Real.binEntropy x / 2 ^ 23
+
+noncomputable def chung8Threshold (x : ℝ) : ℝ :=
+  sSup {y | y ∈ Set.Ioo x 1 ∧ chungExponent8 x y < -chung8Level x}
 
 namespace ChungInterlayer
 
@@ -81,14 +74,18 @@ def neighborhood {n : ℕ} (P : ChungInterlayer n) (T : Finset (Fin n)) :
     Finset (Fin n) :=
   T.biUnion fun v => Finset.univ.image fun j : Fin 8 => P.perm j v
 
-def Expands {n : ℕ} (P : ChungInterlayer n) : Prop :=
-  ∀ T : Finset (Fin n),
-    chung8Beta ((T.card : ℝ) / n) * n ≤ (P.neighborhood T).card
-
 end ChungInterlayer
 
 noncomputable def chung8FailureProfile (n k : ℕ) : ℕ :=
-  if k ≤ n then Nat.ceil (chung8Beta ((k : ℝ) / n) * n) - 1 else 0
+  if k ≤ n then Nat.ceil (chung8Threshold ((k : ℝ) / n) * n) - 1 else 0
+
+namespace ChungInterlayer
+
+def Expands {n : ℕ} (P : ChungInterlayer n) : Prop :=
+  ∀ T : Finset (Fin n), T.Nonempty →
+    chung8FailureProfile n T.card < (P.neighborhood T).card
+
+end ChungInterlayer
 
 noncomputable def chung8FailureBound (n : ℕ) : ℝ≥0∞ :=
   ((∑ k ∈ Finset.Ico 1 (n + 1), n.choose k *
@@ -96,7 +93,6 @@ noncomputable def chung8FailureBound (n : ℕ) : ℝ≥0∞ :=
           ((chung8FailureProfile n k).descFactorial k * Nat.factorial (n - k)) ^ 8) : ℕ) :
       ℝ≥0∞) /
     ((Nat.factorial n ^ 8 : ℕ) : ℝ≥0∞)
-
 
 structure LatencyData (ℓ : ℕ) where
   n : ℕ
@@ -154,9 +150,64 @@ def LatencyEvent {ℓ : ℕ} (M : LatencyData ℓ) (A : Finset (ℕ × Fin M.n))
     Q.head? = some u ∧ Q.getLast? = some a ∧
     L ≤ (Q.length : ℝ)
 
+/-! ### Connecting the exponent-defined profile to the certified polygon -/
+
+/-- The threshold defined here by the exponent is the shifted Chung root of
+`ChungShifted.lean` at the relative level. -/
+private theorem threshold_eq {x : ℝ} (h0 : 0 < x) (h1 : x < 1) :
+    chung8Threshold x = ChungCurve.shiftedBeta 8 (ChungCurve.chungLevel x) x := by
+  unfold chung8Threshold ChungCurve.shiftedBeta
+  congr 1
+  ext y
+  simp only [Set.mem_setOf_eq, ChungCurve.shiftedSec]
+  constructor
+  · rintro ⟨hy, hlt⟩
+    refine ⟨hy, ?_⟩
+    rw [← ChungCurve.chungExponent_eq_sec h0 hy.1 hy.2]
+    have : chungExponent8 x y = ProofOfSpace.chungExponent 8 x y := rfl
+    rw [← this]
+    have hlvl : ChungCurve.chungLevel x = chung8Level x := rfl
+    rw [hlvl]; linarith
+  · rintro ⟨hy, hlt⟩
+    refine ⟨hy, ?_⟩
+    rw [← ChungCurve.chungExponent_eq_sec h0 hy.1 hy.2] at hlt
+    have : chungExponent8 x y = ProofOfSpace.chungExponent 8 x y := rfl
+    rw [this]
+    have hlvl : ChungCurve.chungLevel x = chung8Level x := rfl
+    rw [hlvl] at hlt; linarith
+
+/-- **The bridge.**  The polygon of `ChungFilecoinCurve.lean` — which is what the
+deterministic latency argument consumes — lies strictly below the exponent-defined
+threshold everywhere on `(0,1)`.  This is the only place the polygon appears. -/
+private theorem filecoinBeta_lt_threshold {x : ℝ} (h0 : 0 < x) (h1 : x < 1) :
+    ChungCurve.filecoinBeta x < chung8Threshold x := by
+  rw [threshold_eq h0 h1]
+  exact ChungCurve.filecoinBeta_lt_shiftedBeta_level h0 h1
+
+private theorem threshold_le_one (x : ℝ) : chung8Threshold x ≤ 1 := by
+  classical
+  rcases Set.eq_empty_or_nonempty {y | y ∈ Set.Ioo x 1 ∧ chungExponent8 x y < -chung8Level x}
+    with he | hne
+  · rw [chung8Threshold, he, Real.sSup_empty]; norm_num
+  · exact csSup_le hne fun y hy => hy.1.2.le
+
+theorem chung8FailureProfile_le (n k : ℕ) : chung8FailureProfile n k ≤ n := by
+  rw [chung8FailureProfile]
+  split_ifs with hk
+  · rcases Nat.eq_zero_or_pos n with rfl | hn
+    · simp
+    · have hnR : (0 : ℝ) < n := by exact_mod_cast hn
+      have hmul : chung8Threshold ((k : ℝ) / n) * n ≤ n := by
+        simpa only [one_mul] using
+          mul_le_mul_of_nonneg_right (threshold_le_one ((k : ℝ) / n)) hnR.le
+      have : Nat.ceil (chung8Threshold ((k : ℝ) / n) * n) ≤ n := Nat.ceil_le.mpr hmul
+      omega
+  · exact Nat.zero_le _
+
+/-- The failure bound of the statement is the union-bound certificate of this profile. -/
 private theorem failure_bound_eq (n : ℕ) :
     chung8FailureBound n =
-      Concrete.permutationExpansionFailureBound ChungCurve.chung8Setting n 8 := by
+      Concrete.profileFailureBound n 8 (chung8FailureProfile n) := by
   rfl
 
 theorem latency_chung8_whp
@@ -165,19 +216,14 @@ theorem latency_chung8_whp
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw M.n)
       (LatencyEvent M A L) (chung8FailureBound M.n) := by
   classical
-  have hprofile :
-      Concrete.PermutationExpansionWhpClaim ChungCurve.chung8Setting M.n 8
-        (Concrete.permutationExpansionFailureBound ChungCurve.chung8Setting M.n 8) :=
-    Concrete.permutationExpansion_canonical_whp ChungCurve.chung8Setting M.n 8
-  rw [Concrete.PermutationExpansionWhpClaim, Concrete.HoldsWithFailureAtMost] at hprofile
+  have hprofile := Concrete.permutationExpansion_profile_whp M.n 8
+    (chung8FailureProfile M.n) (chung8FailureProfile_le M.n)
+  rw [Concrete.HoldsWithFailureAtMost] at hprofile
   rw [HoldsWithFailureAtMost, failure_bound_eq, probabilityOf_interlayerEquiv]
   refine hprofile.trans ?_
   apply Concrete.probabilityOf_mono
   intro P hP
-  let P' : ChungInterlayer M.n := (interlayerEquiv M.n).symm P
-  apply hdet P'
-  intro T
-  exact hP T
+  exact hdet ((interlayerEquiv M.n).symm P) fun T hT => hP T hT
 
 /-- The Filecoin 15-layer specialization. Unlike `latency_chung8_whp`, this is where the
 Filecoin values `π = 4/5`, `α_π = 1/5`, `δ = 189/5000`, `ρ = 4/5`, the source weight
@@ -199,9 +245,52 @@ theorem chung8_latency_15
   apply latency_chung8_whp M A
   intro P hP
   let Pc : Concrete.PermutationInterlayer M.n 8 := interlayerEquiv M.n P
+  have hn : 0 < M.n := H.n_pos
+  have hnR : (0 : ℝ) < M.n := by exact_mod_cast hn
   have hPc : Pc.Expands ChungCurve.chung8Setting := by
     intro T
-    exact hP T
+    have hβ : ChungCurve.chung8Setting.β = ChungCurve.filecoinBeta := rfl
+    rw [hβ]
+    have hTn : T.card ≤ M.n := by simpa using Finset.card_le_univ T
+    rcases T.eq_empty_or_nonempty with rfl | hTne
+    · simp
+    rcases eq_or_lt_of_le hTn with hfull | hlt
+    · -- the whole layer: a union of permutations is onto, so nothing is lost
+      have hTu : T = Finset.univ := Finset.eq_univ_of_card T (by simpa using hfull)
+      have hNu : Pc.neighborhood T = Finset.univ := by
+        refine Finset.eq_univ_of_forall fun w => ?_
+        refine Finset.mem_biUnion.2 ⟨(Pc.perm 0).symm w, by rw [hTu]; exact Finset.mem_univ _, ?_⟩
+        exact Finset.mem_image.2 ⟨0, Finset.mem_univ _, by simp⟩
+      rw [hNu, hTu]
+      simp only [Finset.card_univ, Fintype.card_fin]
+      rw [div_self (ne_of_gt hnR), ChungCurve.filecoinBeta_one, one_mul]
+    · -- a proper nonempty set: the exponent-defined profile dominates the polygon
+      set x : ℝ := (T.card : ℝ) / M.n with hx
+      have hx0 : 0 < x := by
+        rw [hx]; exact div_pos (by exact_mod_cast Finset.card_pos.2 hTne) hnR
+      have hx1 : x < 1 := by
+        rw [hx, div_lt_one hnR]; exact_mod_cast hlt
+      have hbelow := filecoinBeta_lt_threshold hx0 hx1
+      have hthr : 0 < chung8Threshold x :=
+        lt_trans (lt_trans hx0 (ChungCurve.filecoinBeta_expands ⟨hx0, hx1⟩)) hbelow
+      have hceil : 1 ≤ Nat.ceil (chung8Threshold x * M.n) :=
+        Nat.one_le_ceil_iff.mpr (mul_pos hthr hnR)
+      have hprof : chung8FailureProfile M.n T.card
+          = Nat.ceil (chung8Threshold x * M.n) - 1 := by
+        rw [chung8FailureProfile, if_pos hTn]
+      have hstep : (chung8FailureProfile M.n T.card : ℝ) + 1
+          = (Nat.ceil (chung8Threshold x * M.n) : ℝ) := by
+        rw [hprof, Nat.cast_sub hceil]; norm_num
+      have hgot := hP T hTne
+      have hgotR : (chung8FailureProfile M.n T.card : ℝ) + 1
+          ≤ ((Pc.neighborhood T).card : ℝ) := by
+        have : (chung8FailureProfile M.n T.card) + 1 ≤ (Pc.neighborhood T).card := hgot
+        exact_mod_cast this
+      have hle : chung8Threshold x * M.n ≤ (Nat.ceil (chung8Threshold x * M.n) : ℝ) :=
+        Nat.le_ceil _
+      have hmul : ChungCurve.filecoinBeta x * M.n < chung8Threshold x * M.n :=
+        mul_lt_mul_of_pos_right hbelow hnR
+      linarith [hstep ▸ hgotR]
   let standalone : Concrete.StandaloneGraph M.n :=
     { edge := M.intra, edge_lt := fun {_ _} h => H.intra_rank h }
   let G := Concrete.permutationStack standalone ChungCurve.chung8Setting 15 8 M.αpi H.n_pos

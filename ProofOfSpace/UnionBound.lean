@@ -3,8 +3,14 @@ import ProofOfSpace.Constructions
 /-!
 # The union bound for permutation-interlayer expansion
 
-`Constructions.lean` defines `PermutationExpansionWhpClaim` and records that the
-development does not prove it.  This file proves it, by the union bound.
+A uniformly sampled `d`-tuple of permutations beats a given integer failure profile
+`m` — no nonempty source set is crushed to a size `m` allows — except with an explicit
+probability.  This file proves that by the union bound.
+
+Expansion is stated here against the integer profile (`ExpandsProfile`), not against a
+real-valued `β`.  That keeps the union bound independent of any expansion function: which
+profile is worth demanding is settled elsewhere, and only the arithmetic is settled
+here.
 
 The chain is entirely elementary once the probability space is recognised for what it
 is: `uniformLaw n d` is the uniform measure on the finite type of `d`-tuples of
@@ -15,7 +21,7 @@ permutations, so every probability here is a ratio of cardinalities.
   at most `(m)_k (n-k)!` of them.
 * `hitProb_le` turns that into the probability `(m)_k / (n)_k` for one permutation, and
   the product structure of a tuple raises it to the `d`-th power.
-* `permutationExpansion_whp` assembles the three into the claim.
+* `permutationExpansion_profile_whp` assembles the three into the claim.
 -/
 
 namespace ProofOfSpace
@@ -27,13 +33,6 @@ open scoped ENNReal
 /-! ### Probabilities of a finite uniform law -/
 
 variable {A : Type*}
-
-theorem probabilityOf_congr (p : PMF A) {Q R : A → Prop} (h : ∀ a, Q a ↔ R a) :
-    probabilityOf p Q = probabilityOf p R := by
-  classical
-  unfold probabilityOf
-  exact tsum_congr fun a => by simp only [h a]
-
 theorem probabilityOf_mono (p : PMF A) {Q R : A → Prop} (h : ∀ a, Q a → R a) :
     probabilityOf p Q ≤ probabilityOf p R := by
   classical
@@ -339,80 +338,19 @@ neighbourhood misses the expansion requirement has that neighbourhood inside a s
 size `m k`.  The sharpest choice is `⌈β(k/n) n⌉ - 1`; larger admissible values are also
 allowed and are easier to certify. -/
 
-/-- The canonical failure profile: one less than the least integer meeting the expansion
-requirement.  Values above `n` are irrelevant to the union bound and are set to zero. -/
-noncomputable def canonicalFailureProfile (S : Setting) (n k : ℕ) : ℕ :=
-  if k ≤ n then Nat.ceil (S.β ((k : ℝ) / n) * n) - 1 else 0
-
-/-- The canonical profile meets the real-valued expansion threshold. -/
-theorem canonicalFailureProfile_spec (S : Setting) (n k : ℕ) (hk : k ≤ n) :
-    S.β ((k : ℝ) / n) * n ≤ (canonicalFailureProfile S n k : ℝ) + 1 := by
-  rw [canonicalFailureProfile, if_pos hk]
-  by_cases hz : Nat.ceil (S.β ((k : ℝ) / n) * n) = 0
-  · have hceil := Nat.le_ceil (S.β ((k : ℝ) / n) * n)
-    rw [hz] at hceil
-    simp only [Nat.cast_zero] at hceil
-    simp only [hz, Nat.zero_sub, Nat.cast_zero, zero_add]
-    exact hceil.trans (by norm_num)
-  · have hceil := Nat.le_ceil (S.β ((k : ℝ) / n) * n)
-    have hpos : 0 < Nat.ceil (S.β ((k : ℝ) / n) * n) := Nat.pos_of_ne_zero hz
-    rw [Nat.cast_sub (by omega : 1 ≤ Nat.ceil (S.β ((k : ℝ) / n) * n))]
-    norm_num
-    exact hceil
-
-/-- The canonical failure size never exceeds the layer width. -/
-theorem canonicalFailureProfile_le (S : Setting) (n k : ℕ) :
-    canonicalFailureProfile S n k ≤ n := by
-  rw [canonicalFailureProfile]
-  split_ifs with hk
-  · by_cases hn : n = 0
-    · subst n
-      simp
-    · have hnreal : (0 : ℝ) < n := by exact_mod_cast Nat.pos_of_ne_zero hn
-      have hk0 : (0 : ℝ) ≤ (k : ℝ) / n := div_nonneg (Nat.cast_nonneg k) hnreal.le
-      have hk1 : (k : ℝ) / n ≤ 1 := by
-        rw [div_le_one hnreal]
-        exact_mod_cast hk
-      have hβ := (S.β_maps ⟨hk0, hk1⟩).2
-      have hmul : S.β ((k : ℝ) / n) * n ≤ n := by
-        simpa only [one_mul] using
-          mul_le_mul_of_nonneg_right hβ (Nat.cast_nonneg n)
-      have hceil : Nat.ceil (S.β ((k : ℝ) / n) * n) ≤ n :=
-        Nat.ceil_le.mpr hmul
-      omega
-  · exact Nat.zero_le _
-
-/-- A failing interlayer crushes some *nonempty* source set into a set of the failure
-size.  The empty set is excluded because `β 0 = 0` makes its requirement vacuous, and it
-would otherwise contribute the useless term `1` to every union bound. -/
-theorem exists_cover_of_not_expands {n d : ℕ} {S : Setting} {m : ℕ → ℕ}
-    (hm : ∀ k ≤ n, S.β (k / n) * n ≤ (m k : ℝ) + 1) (hmn : ∀ k, m k ≤ n)
-    (P : PermutationInterlayer n d) (hP : ¬ P.Expands S) :
+/-- **A failing interlayer crushes some nonempty source set.**  With expansion stated
+against an integer profile this is immediate: the witness `T` is the set that fails, and
+its neighbourhood is padded up to exactly `m T.card`. -/
+theorem exists_cover_of_not_expandsProfile {n d : ℕ} {m : ℕ → ℕ} (hmn : ∀ k, m k ≤ n)
+    (P : PermutationInterlayer n d) (hP : ¬ P.ExpandsProfile m) :
     ∃ T : Finset (Fin n), T.Nonempty ∧
       ∃ U ∈ Finset.univ.powersetCard (m T.card), P.neighborhood T ⊆ U := by
   classical
-  rw [PermutationInterlayer.Expands] at hP
+  rw [PermutationInterlayer.ExpandsProfile] at hP
   push Not at hP
-  obtain ⟨T, hT⟩ := hP
-  have hTn : T.card ≤ n := by
-    have h := Finset.card_le_univ T
-    simpa using h
-  have hTne : T.Nonempty := by
-    rcases T.eq_empty_or_nonempty with rfl | h
-    · exfalso
-      rw [Finset.card_empty] at hT
-      simp only [Nat.cast_zero, zero_div, S.β_zero, zero_mul,
-        PermutationInterlayer.neighborhood, Finset.biUnion_empty, Finset.card_empty,
-        Nat.cast_zero] at hT
-      exact lt_irrefl 0 hT
-    · exact h
-  have hlt : ((P.neighborhood T).card : ℝ) < (m T.card : ℝ) + 1 :=
-    lt_of_lt_of_le hT (hm T.card hTn)
-  have hle : (P.neighborhood T).card ≤ m T.card := by
-    have : ((P.neighborhood T).card : ℝ) < ((m T.card + 1 : ℕ) : ℝ) := by push_cast; linarith
-    exact Nat.lt_succ_iff.1 (by exact_mod_cast this)
+  obtain ⟨T, hTne, hT⟩ := hP
   obtain ⟨U, hU1, hU2, hU3⟩ := Finset.exists_subsuperset_card_eq
-    (Finset.subset_univ (P.neighborhood T)) hle (by simpa using hmn T.card)
+    (Finset.subset_univ (P.neighborhood T)) hT (by simpa using hmn T.card)
   exact ⟨T, hTne, U, Finset.mem_powersetCard.2 ⟨hU2, hU3⟩, hU1⟩
 
 /-- Regrouping a sum over the nonempty source sets by cardinality. -/
@@ -449,20 +387,19 @@ theorem sum_over_nonempty_finsets {n : ℕ} (g : ℕ → ℝ≥0∞) :
 /-- **The union bound for interlayer expansion.**  The probability that a uniformly
 sampled `d`-tuple of permutations fails the expansion requirement of `S` is at most an
 explicit sum of binomial terms. -/
-theorem permutationExpansion_failure_le (S : Setting) (n d : ℕ) (m : ℕ → ℕ)
-    (hm : ∀ k ≤ n, S.β (k / n) * n ≤ (m k : ℝ) + 1) (hmn : ∀ k, m k ≤ n) :
-    probabilityOf (PermutationInterlayer.uniformLaw n d) (fun P => ¬ P.Expands S)
+theorem permutationExpansion_failure_le (n d : ℕ) (m : ℕ → ℕ) (hmn : ∀ k, m k ≤ n) :
+    probabilityOf (PermutationInterlayer.uniformLaw n d) (fun P => ¬ P.ExpandsProfile m)
       ≤ ∑ k ∈ Finset.Ico 1 (n + 1),
           (n.choose k : ℝ≥0∞) * ((n.choose (m k) : ℝ≥0∞) * hitProb n k (m k) ^ d) := by
   classical
   set p := PermutationInterlayer.uniformLaw n d with hp
   set R : Finset (Fin n) → PermutationInterlayer n d → Prop := fun T P =>
     ∃ U ∈ Finset.univ.powersetCard (m T.card), P.neighborhood T ⊆ U with hR
-  have hstage1 : probabilityOf p (fun P => ¬ P.Expands S)
+  have hstage1 : probabilityOf p (fun P => ¬ P.ExpandsProfile m)
       ≤ ∑ T ∈ (Finset.univ.filter fun T : Finset (Fin n) => T.Nonempty),
           probabilityOf p (R T) :=
     probabilityOf_le_sum p _ _ R fun P hP => by
-      obtain ⟨T, hTne, U, hU, hsub⟩ := exists_cover_of_not_expands hm hmn P hP
+      obtain ⟨T, hTne, U, hU, hsub⟩ := exists_cover_of_not_expandsProfile hmn P hP
       exact ⟨T, Finset.mem_filter.2 ⟨Finset.mem_univ _, hTne⟩, U, hU, hsub⟩
   have hstage2 : ∀ T : Finset (Fin n), probabilityOf p (R T)
       ≤ (n.choose (m T.card) : ℝ≥0∞) * hitProb n T.card (m T.card) ^ d := by
@@ -516,13 +453,12 @@ theorem term_eq_div {n k mm d : ℕ} (hk : k ≤ n) :
 
 /-- **The union bound as one fraction.**  Everything is now a natural number
 comparison. -/
-theorem permutationExpansion_failure_le_ratio (S : Setting) (n d : ℕ) (m : ℕ → ℕ)
-    (hm : ∀ k ≤ n, S.β (k / n) * n ≤ (m k : ℝ) + 1) (hmn : ∀ k, m k ≤ n) :
-    probabilityOf (PermutationInterlayer.uniformLaw n d) (fun P => ¬ P.Expands S)
+theorem permutationExpansion_failure_le_ratio (n d : ℕ) (m : ℕ → ℕ) (hmn : ∀ k, m k ≤ n) :
+    probabilityOf (PermutationInterlayer.uniformLaw n d) (fun P => ¬ P.ExpandsProfile m)
       ≤ ((∑ k ∈ Finset.Ico 1 (n + 1), n.choose k * (n.choose (m k)
             * ((m k).descFactorial k * Nat.factorial (n - k)) ^ d) : ℕ) : ℝ≥0∞)
         / ((Nat.factorial n ^ d : ℕ) : ℝ≥0∞) := by
-  refine (permutationExpansion_failure_le S n d m hm hmn).trans (le_of_eq ?_)
+  refine (permutationExpansion_failure_le n d m hmn).trans (le_of_eq ?_)
   rw [Nat.cast_sum]
   have hsumdiv : (∑ k ∈ Finset.Ico 1 (n + 1),
       ((n.choose k * (n.choose (m k)
@@ -540,28 +476,21 @@ theorem permutationExpansion_failure_le_ratio (S : Setting) (n d : ℕ) (m : ℕ
     omega
   exact term_eq_div hkn
 
-/-- The exact finite union-bound certificate obtained from the canonical failure profile. -/
-noncomputable def permutationExpansionFailureBound (S : Setting) (n d : ℕ) : ℝ≥0∞ :=
+/-- The exact finite union-bound certificate of a failure profile. -/
+noncomputable def profileFailureBound (n d : ℕ) (m : ℕ → ℕ) : ℝ≥0∞ :=
   ((∑ k ∈ Finset.Ico 1 (n + 1), n.choose k *
-        (n.choose (canonicalFailureProfile S n k) *
-          ((canonicalFailureProfile S n k).descFactorial k * Nat.factorial (n - k)) ^ d) : ℕ) :
+        (n.choose (m k) *
+          ((m k).descFactorial k * Nat.factorial (n - k)) ^ d) : ℕ) :
       ℝ≥0∞) /
     ((Nat.factorial n ^ d : ℕ) : ℝ≥0∞)
 
-/-- A random permutation interlayer fails expansion with probability at most the exact
-canonical union-bound expression.  This theorem is uniform in both width and degree. -/
-theorem permutationExpansion_failure_le_canonical (S : Setting) (n d : ℕ) :
-    probabilityOf (PermutationInterlayer.uniformLaw n d) (fun P => ¬ P.Expands S) ≤
-      permutationExpansionFailureBound S n d := by
-  exact permutationExpansion_failure_le_ratio S n d (canonicalFailureProfile S n)
-    (canonicalFailureProfile_spec S n) (canonicalFailureProfile_le S n)
-
-/-- Consequently, a random permutation interlayer realizes the setting with failure at
-most the canonical finite union bound. -/
-theorem permutationExpansion_canonical_whp (S : Setting) (n d : ℕ) :
-    PermutationExpansionWhpClaim S n d (permutationExpansionFailureBound S n d) := by
-  exact holdsWithFailureAtMost_of_compl_le _ _
-    (permutationExpansion_failure_le_canonical S n d)
+/-- **A random permutation interlayer beats its failure profile with high probability.**
+Uniform in the layer width, the degree, and the profile. -/
+theorem permutationExpansion_profile_whp (n d : ℕ) (m : ℕ → ℕ) (hmn : ∀ k, m k ≤ n) :
+    HoldsWithFailureAtMost (PermutationInterlayer.uniformLaw n d)
+      (fun P => P.ExpandsProfile m) (profileFailureBound n d m) :=
+  holdsWithFailureAtMost_of_compl_le _ _
+    (permutationExpansion_failure_le_ratio n d m hmn)
 
 end Concrete
 end ProofOfSpace

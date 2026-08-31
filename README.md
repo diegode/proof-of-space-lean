@@ -36,6 +36,21 @@ Chung-8 profile and constructs the vertical graph from eight uniform permutation
 failure probability is the exact finite union bound `chung8FailureBound n`; only the
 independent within-layer depth-robustness and pebbling conditions remain as hypotheses.
 
+No expansion profile is posited. `Challenge.lean` writes out Reyzin's union-bound
+exponent `E₈(x, y) = H(x) + H(y) + 8(y H(x/y) - H(x))` and defines the expansion the
+theorem demands as the root of `E₈(x, ·) = -H(x)/2²³` — so what a sampled interlayer must
+achieve is exactly what Chung's own union bound certifies. The level is *relative*, a
+multiple of `H(x)` rather than a constant, and that is what keeps the statement uniform in
+the layer width: since `E₈(x, x) = -6 H(x)`, a fixed level cuts out an empty region once
+`H(x)` falls below it, and at Filecoin's `n ≈ 10⁹` even `k = 1` would land in that dead
+zone.
+
+The rational polygon lives entirely in the proof. `chung8_latency_15` needs the
+deterministic latency argument's expansion hypothesis, and the polygon supplies it:
+`ChungRelative.lean` proves the polygon lies strictly below that threshold on all of
+`(0,1)`, so the profile the statement defines from the exponent alone already demands
+everything the deterministic argument consumes.
+
 ## Palomar submission surface
 
 The Palomar statement of record is
@@ -65,9 +80,14 @@ SHA at the [Palomar submission form](https://submit.palomar-registry.org/).
   abstract expansion interface.
 - `ChungFilecoinCurve.lean`, `ChungChord.lean`, and `ChungRegion.lean` define the
   rational degree-eight profile used by the Filecoin specialization, prove its shape
-  laws, and certify it inside the finite-size Chung region.
-- `UnionBound.lean` proves the interlayer expansion claim by the union bound, and
-  `ChungExpansion.lean` evaluates its certificate for the degree-eight profile.
+  laws, and certify it inside the Chung region at the fixed level `-2⁻²²`, on
+  `[2⁻²⁵, 1 - 2⁻²³]`.
+- `ChungRelative.lean` moves to a level proportional to `H(x)` and extends the
+  certificate to all of `(0,1)`, covering the two corners the fixed level cannot reach
+  with a ray estimate along the polygon's opening chord and its mirror. Its
+  `filecoinBeta_lt_shiftedBeta_level` is the bridge `chung8_latency_15` consumes.
+- `UnionBound.lean` proves, by the union bound, that a sampled tuple of permutations
+  beats a given integer failure profile. It refers to no expansion function at all.
 - `Footprint.lean` develops normalized pebble budgets and the footprint recurrence.
 - `Tracking.lean`, `Search.lean`, and `Continuation.lean` construct fertile and
   expandable searches through the layers.
@@ -76,8 +96,7 @@ SHA at the [Palomar submission form](https://submit.palomar-registry.org/).
   trajectory.
 - `PotentialLedger.lean` prices search steps with that potential and derives the global
   link count.
-- `Chain.lean` and `Ledger.lean` organize continuation links and global budget
-  accounting.
+- `Chain.lean` organizes continuation links and global budget accounting.
 - `Concrete.lean` instantiates the abstract analysis for finite layered graphs and
   splices the links into a directed path.
 - `Latency.lean` states the public latency theorems.
@@ -85,8 +104,6 @@ SHA at the [Palomar submission form](https://submit.palomar-registry.org/).
   certificates and the optimized asymptotic coefficient.
 - `Constructions.lean` states the bounded-indegree graph certificates required by the
   concrete specialization.
-- `Witness.lean` gives an unconditional model of the abstract scalar hypothesis stack;
-  it is not claimed as a deployed graph profile.
 
 `ProofOfSpace.lean` imports the complete public development.
 
@@ -107,14 +124,16 @@ only remaining graph hypothesis is:
 1. `LayeredGraph.DepthRobust`: each intra-layer graph has the required deletion-set
    depth robustness.
 
-The expansion profile itself is fully proved: a conservative rational polygon, used
-because the exact finite-size root cannot serve as a global `Setting.β`, certified over
-`[2⁻²⁵, 1 - 2⁻²³]`, below which no profile at all is certifiable at this `ε`.
+The expansion the statement demands is the Chung threshold itself, defined from the
+exponent. The rational polygon appears only in the proof, where it discharges the
+deterministic argument's hypothesis: it is a conservative under-approximation of that
+threshold, certified over all of `(0,1)`, and it is used rather than the root because
+concavity and a unique gain maximiser — both required of a `Setting.β` — are free for a
+minimum of affine functions and unproved for the root.
 
 `UnionBound.lean` proves the exact canonical failure bound uniformly in the layer width,
 degree, and abstract expansion setting. `latency_chung8_whp` transports that result to
-the explicit path event. At `n = 20`, the separately evaluated certificate
-`chung8_permutationExpansion_whp` gives success probability at least `5/6`.
+the explicit path event.
 
 This sampling model does not identify Filecoin's deployed Feistel wiring with a uniform
 tuple of permutations. Reyzin's concrete Appendix C estimate `1 - 2⁻²⁴⁹` is for the
