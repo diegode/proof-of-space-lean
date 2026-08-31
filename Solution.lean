@@ -1,367 +1,246 @@
-import ProofOfSpace.Latency
+import ProofOfSpace.ChungFilecoin
+import ProofOfSpace.UnionBound
 
 /-!
-# Proved latency solution
+# Proved probabilistic Chung-8 latency theorem
 
-This is the proved counterpart of `Challenge.lean`. It constructs the bundled model
-used by the substantive library, invokes `ProofOfSpace.latency_general`, and exposes its
-path witness in the Mathlib-only form used by the Challenge.
+This is the proved counterpart of `Challenge.lean`. It transports the statement's
+eight-permutation sample to the construction library, applies the exact finite union
+bound, constructs the repeated-interlayer stack, and invokes the deterministic latency
+theorem whenever the sampled interlayer realizes the Chung-8 profile.
 -/
 
 namespace ProofOfSpaceStatement
 
 open Finset Set
+open scoped ENNReal
 open ProofOfSpace
 
-universe u
+structure ChungInterlayer (n : ℕ) where
+  perm : Fin 8 → Equiv.Perm (Fin n)
+deriving Fintype
 
-/--
-The data occurring in the latency statement, separated from the assumptions made about
-it. `s₀` is the non-chain overhead and `z` is the certified segment count.
--/
-structure LatencyData (V : Type u) where
-  ℓ : ℕ
+instance (n : ℕ) : Nonempty (ChungInterlayer n) :=
+  ⟨⟨fun _ => Equiv.refl (Fin n)⟩⟩
+
+namespace ChungInterlayer
+
+noncomputable def uniformLaw (n : ℕ) : PMF (ChungInterlayer n) :=
+  PMF.uniformOfFintype (ChungInterlayer n)
+
+end ChungInterlayer
+
+def interlayerEquiv (n : ℕ) :
+    ChungInterlayer n ≃ Concrete.PermutationInterlayer n 8 where
+  toFun P := ⟨P.perm⟩
+  invFun P := ⟨P.perm⟩
+  left_inv P := by cases P; rfl
+  right_inv P := by cases P; rfl
+
+noncomputable def probabilityOf {A : Type*} (p : PMF A) (Q : A → Prop) : ℝ≥0∞ :=
+  by classical exact ∑' a, if Q a then p a else 0
+
+def HoldsWithFailureAtMost {A : Type*} (p : PMF A) (Q : A → Prop)
+    (δ : ℝ≥0∞) : Prop :=
+  1 - δ ≤ probabilityOf p Q
+
+private theorem probabilityOf_interlayerEquiv (Q : ChungInterlayer n → Prop) :
+    probabilityOf (ChungInterlayer.uniformLaw n) Q =
+      Concrete.probabilityOf (Concrete.PermutationInterlayer.uniformLaw n 8)
+        (fun P => Q ((interlayerEquiv n).symm P)) := by
+  classical
+  unfold probabilityOf Concrete.probabilityOf ChungInterlayer.uniformLaw
+    Concrete.PermutationInterlayer.uniformLaw
+  rw [← (interlayerEquiv n).tsum_eq]
+  apply tsum_congr
+  intro P
+  simp only [PMF.uniformOfFintype_apply]
+  rw [Fintype.card_congr (interlayerEquiv n)]
+  rfl
+
+noncomputable def chord (a u b v x : ℝ) : ℝ :=
+  u + (v - u) / (b - a) * (x - a)
+
+noncomputable def chung8Beta (x : ℝ) : ℝ :=
+  min (chord 0 0 (5089 / 100000) (1 / 5) x)
+    (min (chord (5089 / 100000) (1 / 5) (46 / 625) (1331 / 5000) x)
+    (min (chord (46 / 625) (1331 / 5000) (74 / 625) (3031 / 8000) x)
+    (min (chord (74 / 625) (3031 / 8000) (811 / 5000) (4663 / 10000) x)
+    (min (chord (811 / 5000) (4663 / 10000) (571 / 2500) (1143 / 2000) x)
+    (min (chord (571 / 2500) (1143 / 2000) (3201 / 10000) (6799 / 10000) x)
+    (min (chord (3201 / 10000) (6799 / 10000) (857 / 2000) (1929 / 2500) x)
+    (min (chord (857 / 2000) (1929 / 2500) (5337 / 10000) (4189 / 5000) x)
+    (min (chord (5337 / 10000) (4189 / 5000) (4969 / 8000) (551 / 625) x)
+    (min (chord (4969 / 8000) (551 / 625) (3669 / 5000) (579 / 625) x)
+    (min (chord (3669 / 5000) (579 / 625) (4 / 5) (94911 / 100000) x)
+      (chord (4 / 5) (94911 / 100000) 1 1 x)))))))))))
+
+namespace ChungInterlayer
+
+def neighborhood {n : ℕ} (P : ChungInterlayer n) (T : Finset (Fin n)) :
+    Finset (Fin n) :=
+  T.biUnion fun v => Finset.univ.image fun j : Fin 8 => P.perm j v
+
+def Expands {n : ℕ} (P : ChungInterlayer n) : Prop :=
+  ∀ T : Finset (Fin n),
+    chung8Beta ((T.card : ℝ) / n) * n ≤ (P.neighborhood T).card
+
+end ChungInterlayer
+
+noncomputable def chung8FailureProfile (n k : ℕ) : ℕ :=
+  if k ≤ n then Nat.ceil (chung8Beta ((k : ℝ) / n) * n) - 1 else 0
+
+noncomputable def chung8FailureBound (n : ℕ) : ℝ≥0∞ :=
+  ((∑ k ∈ Finset.Ico 1 (n + 1), n.choose k *
+        (n.choose (chung8FailureProfile n k) *
+          ((chung8FailureProfile n k).descFactorial k * Nat.factorial (n - k)) ^ 8) : ℕ) :
+      ℝ≥0∞) /
+    ((Nat.factorial n ^ 8 : ℕ) : ℝ≥0∞)
+
+
+structure LatencyData (ℓ : ℕ) where
   n : ℕ
-  β : ℝ → ℝ
-  αg : ℝ
-  δ : ℝ
-  pi : ℝ
-  ρ : ℝ
-  ζδ : ℝ
-  αmin : ℝ
-  αmax : ℝ
-  σ : ℝ
-  mid : ℝ
+  /-- The path fraction `α_π` produced by within-layer depth robustness. -/
   αpi : ℝ
-  layer : ℕ → Finset V
-  depth : V → ℕ
-  rank : V → ℕ
-  intra : ℕ → V → V → Prop
-  inter : ℕ → V → V → Prop
-  pred : ℕ → Finset V → Finset V
-  black : ℕ → Finset V
-  red : ℕ → Finset V
-  s₀ : ℕ
-  z : ℕ
+  /-- The per-layer red-pebble budget `δ`, as a fraction of the layer width. -/
+  δ : ℝ
+  /-- The within-layer robustness threshold `π`: deleting at most `(1 - π) n` nodes of a
+  layer still leaves an intra-layer path on `α_π n` surviving nodes. -/
+  pi : ℝ
+  /-- The total black-pebble budget `ρ = 1 - ε_space`, as a fraction of the layer width. -/
+  ρ : ℝ
+  intra : Fin n → Fin n → Prop
+  black : ℕ → Finset (ℕ × Fin n)
+  red : ℕ → Finset (ℕ × Fin n)
 
-/-- The explicit conditional assumptions of the latency theorem. -/
-class LiteratureHypotheses {V : Type u} (M : LatencyData V) : Prop where
-  β_maps : ∀ {x : ℝ}, x ∈ Icc (0 : ℝ) 1 → M.β x ∈ Icc (0 : ℝ) 1
-  β_zero : M.β 0 = 0
-  β_mono : StrictMonoOn M.β (Icc (0 : ℝ) 1)
-  β_concave : ConcaveOn ℝ (Icc (0 : ℝ) 1) M.β
-  β_expands : ∀ {x : ℝ}, x ∈ Ioo (0 : ℝ) 1 → x < M.β x
-  β_reversal : ∀ {x : ℝ}, x ∈ Ioo (0 : ℝ) 1 → M.β (1 - M.β x) = 1 - x
-  αg_mem : M.αg ∈ Ioo (0 : ℝ) 1
-  αg_max : ∀ {x : ℝ}, x ∈ Icc (0 : ℝ) 1 → x ≠ M.αg →
-    M.β x - x < M.β M.αg - M.αg
-  δ_nonneg : 0 ≤ M.δ
-  ρ_nonneg : 0 ≤ M.ρ
-  pi_mem : M.pi ∈ Ioo (0 : ℝ) 1
-  αg_lt_pi : M.αg < M.pi
-  gpi_pos : 0 < M.β M.pi - M.δ - M.pi
-  αmin_mem : M.αmin ∈ Icc (0 : ℝ) M.αg
-  αmax_mem : M.αmax ∈ Icc M.αg 1
-  gain_min : M.β M.αmin - M.δ - M.αmin = 0
-  gain_max : M.β M.αmax - M.δ - M.αmax = 0
-  σ_gt : M.αmin < M.σ
-  σ_lt : M.σ < M.pi
-  mid_ge : M.σ ≤ M.mid
-  mid_le : M.mid ≤ M.pi
-  mid_gain : 2 * min (M.β M.pi - M.δ - M.pi)
-      ((M.β M.σ - M.δ - M.σ) / 2) ≤ M.β M.mid - M.δ - M.mid
-  entry : M.αmin < M.ζδ - M.ρ
-  ζδ_le : M.ζδ ≤ M.αmax
-  layer_mem : ∀ {d : ℕ} {v : V},
-    v ∈ M.layer d ↔ M.depth v = d ∧ d < M.ℓ
-  layer_card : ∀ {d : ℕ}, d < M.ℓ → (M.layer d).card = M.n
-  intra_mem : ∀ {d : ℕ} {u v : V},
-    M.intra d u v → u ∈ M.layer d ∧ v ∈ M.layer d
-  inter_mem : ∀ {d : ℕ} {u v : V},
-    M.inter d u v → u ∈ M.layer (d + 1) ∧ v ∈ M.layer d
-  intra_rank : ∀ {d : ℕ} {u v : V}, M.intra d u v → M.rank u < M.rank v
-  inter_rank : ∀ {d : ℕ} {u v : V}, M.inter d u v → M.rank u < M.rank v
-  pred_subset : ∀ {d : ℕ} {T : Finset V}, M.pred d T ⊆ M.layer (d + 1)
-  pred_edge : ∀ {d : ℕ} {T : Finset V} {u : V},
-    u ∈ M.pred d T → ∃ v ∈ T, M.inter d u v
-  expansion : ∀ {d : ℕ} {T : Finset V}, d + 1 < M.ℓ → T ⊆ M.layer d →
-    M.β ((T.card : ℝ) / M.n) * M.n ≤ (M.pred d T).card
-  depth_robust : ∀ {d : ℕ}, d < M.ℓ → ∀ F : Finset V, F ⊆ M.layer d →
-    M.pi * M.n ≤ (F.card : ℝ) → ∃ p : List V,
-      p ≠ [] ∧ p.IsChain (M.intra d) ∧
-        (∀ v ∈ p, v ∈ F) ∧ M.αpi * M.n ≤ (p.length : ℝ)
+def LatencyData.layer {ℓ : ℕ} (M : LatencyData ℓ) (d : ℕ) :
+    Finset (ℕ × Fin M.n) :=
+  if d < ℓ then Finset.univ.image (fun i : Fin M.n => (d, i)) else ∅
+
+def LatencyData.depth {ℓ : ℕ} (M : LatencyData ℓ) (v : ℕ × Fin M.n) : ℕ := v.1
+
+def LatencyData.intraEdge {ℓ : ℕ} (M : LatencyData ℓ) (d : ℕ)
+    (u v : ℕ × Fin M.n) : Prop :=
+  u.1 = d ∧ v.1 = d ∧ d < ℓ ∧ M.intra u.2 v.2
+
+def LatencyData.interEdge {ℓ : ℕ} (M : LatencyData ℓ)
+    (P : ChungInterlayer M.n) (d : ℕ)
+    (u v : ℕ × Fin M.n) : Prop :=
+  u.1 = d + 1 ∧ v.1 = d ∧ d + 1 < ℓ ∧
+    ∃ j : Fin 8, u.2 = P.perm j v.2
+
+def LatencyData.edge {ℓ : ℕ} (M : LatencyData ℓ) (P : ChungInterlayer M.n)
+    (u v : ℕ × Fin M.n) : Prop :=
+  (∃ d, M.intraEdge d u v) ∨ (∃ d, M.interEdge P d u v)
+
+class LiteratureHypotheses {ℓ : ℕ} (M : LatencyData ℓ) : Prop where
+  intra_rank : ∀ {u v}, M.intra u v → u.val < v.val
+  depth_robust : ∀ X : Finset (Fin M.n),
+    ((X.card : ℝ) ≤ (1 - M.pi) * M.n) →
+    ∃ p : List (Fin M.n), p ≠ [] ∧ p.IsChain M.intra ∧
+      (∀ v ∈ p, v ∉ X) ∧ M.αpi * M.n ≤ (p.length : ℝ)
   black_subset : ∀ d, M.black d ⊆ M.layer d
   red_subset : ∀ d, M.red d ⊆ M.layer d
   black_total : ∀ m,
     ∑ d ∈ Finset.range m, ((M.black d).card : ℝ) / M.n ≤ M.ρ
   red_bound : ∀ d, ((M.red d).card : ℝ) ≤ M.δ * M.n
   n_pos : 0 < M.n
-  ρ_pos : 0 < M.ρ
-  σ_lt_αpi : M.σ < M.αpi
-  constants : (M.s₀, M.z) =
-    let gainD := fun x ↦ M.β x - M.δ - x
-    let betaD := fun x ↦ M.β x - M.δ
-    let gpi := gainD M.pi
-    let piBar := 1 - M.β M.pi
-    let zetaFloor := M.ζδ - M.ρ
-    let gtilde := min (gainD zetaFloor) gpi
-    let sigmaHat := min M.σ (1 - M.β M.σ)
-    let lam := min piBar sigmaHat
-    let ghat := min gpi (gainD M.σ / 2)
-    let infertileCap := fun h ↦ Nat.ceil ((M.ρ - (M.ζδ - M.pi)) / h)
-    let blockedCap := fun g ↦ Nat.ceil (M.ρ / g) - 1
-    let sCap := infertileCap gtilde + blockedCap ghat
-    let growthSpan := fun x ↦ max 1 ⌊(M.pi - M.σ + x) / ghat⌋₊
-    let asymptoticGrowth := max 1 ((M.pi - M.σ) / ghat)
-    let growthPot := fun split v ↦
-      (min v split - M.σ) / (2 * ghat) + (max v split - split) / ghat
-    let growthConst := min asymptoticGrowth (growthPot M.mid M.pi + 1)
-    let h₁ := growthConst + 1
-    let ledgerSlack := 2 * M.ρ / ghat
-    let gmin := min ghat gtilde
-    let jointSlack := 2 * M.ρ / gmin
-    let searchHead := max 0 (1 + (M.pi - M.ζδ) / gtilde)
-    let spendCap := ⌈M.ρ / ghat⌉₊
-    let growthCap := growthSpan M.ρ
-    let h₀ := growthCap + 2 * spendCap
-    let bMax := blockedCap (betaD M.pi - lam)
-    let s₀' := sCap + bMax * h₀
-    let jointEntry :=
-      if bMax = 0 then ⌈((M.ℓ : ℝ) - searchHead - jointSlack) / h₁⌉₊ else 0
-    let z' := max 1 (max
-      ⌈((M.ℓ : ℝ) - sCap - ledgerSlack - bMax * h₁) / (((bMax : ℝ) + 1) * h₁)⌉₊
-      (max jointEntry ((M.ℓ - s₀') / ((bMax + 1) * h₀) + 1)))
-    (s₀', z')
-  inside : M.s₀ < M.ℓ
 
+def LatencyEvent {ℓ : ℕ} (M : LatencyData ℓ) (A : Finset (ℕ × Fin M.n))
+    (L : ℝ) (P : ChungInterlayer M.n) : Prop :=
+  ∃ u a, a ∈ A ∧ ∃ Q : List (ℕ × Fin M.n),
+    Q ≠ [] ∧ Q.IsChain (M.edge P) ∧
+    (∀ v ∈ Q, v ∉ M.black (M.depth v) ∧ v ∉ M.red (M.depth v)) ∧
+    Q.head? = some u ∧ Q.getLast? = some a ∧
+    L ≤ (Q.length : ℝ)
 
-/-- Internal adapter from the unbundled statement to `ProofOfSpace.Latency`. -/
-private theorem latency_general_flat
-    {V : Type u} {ℓ n : ℕ}
-    (β : ℝ → ℝ) (αg δ pi ρ ζδ αmin αmax : ℝ)
-    (hβmaps : ∀ {x : ℝ}, x ∈ Icc (0 : ℝ) 1 → β x ∈ Icc (0 : ℝ) 1)
-    (hβzero : β 0 = 0)
-    (hβmono : StrictMonoOn β (Icc (0 : ℝ) 1))
-    (hβconcave : ConcaveOn ℝ (Icc (0 : ℝ) 1) β)
-    (hβexpands : ∀ {x : ℝ}, x ∈ Ioo (0 : ℝ) 1 → x < β x)
-    (hβreversal : ∀ {x : ℝ}, x ∈ Ioo (0 : ℝ) 1 → β (1 - β x) = 1 - x)
-    (hαgmem : αg ∈ Ioo (0 : ℝ) 1)
-    (hαgmax : ∀ {x : ℝ}, x ∈ Icc (0 : ℝ) 1 → x ≠ αg → β x - x < β αg - αg)
-    (hδ : 0 ≤ δ) (hρnonneg : 0 ≤ ρ)
-    (hpimem : pi ∈ Ioo (0 : ℝ) 1) (hαgpi : αg < pi)
-    (hgpi : 0 < β pi - δ - pi)
-    (hαminmem : αmin ∈ Icc (0 : ℝ) αg)
-    (hαmaxmem : αmax ∈ Icc αg 1)
-    (hgainmin : β αmin - δ - αmin = 0)
-    (hgainmax : β αmax - δ - αmax = 0)
-    (σ mid : ℝ) (hσmin : αmin < σ) (hσpi : σ < pi)
-    (hσmid : σ ≤ mid) (hmidpi : mid ≤ pi)
-    (hmidgain : 2 * min (β pi - δ - pi) ((β σ - δ - σ) / 2) ≤ β mid - δ - mid)
-    (hentry : αmin < ζδ - ρ) (hζmax : ζδ ≤ αmax)
-    (αpi : ℝ) (layer : ℕ → Finset V) (depth rank : V → ℕ)
-    (intra inter : ℕ → V → V → Prop) (pred : ℕ → Finset V → Finset V)
-    (hlayer : ∀ {d : ℕ} {v : V}, v ∈ layer d ↔ depth v = d ∧ d < ℓ)
-    (hlayercard : ∀ {d : ℕ}, d < ℓ → (layer d).card = n)
-    (hintramem : ∀ {d : ℕ} {u v : V}, intra d u v → u ∈ layer d ∧ v ∈ layer d)
-    (hintermem : ∀ {d : ℕ} {u v : V}, inter d u v → u ∈ layer (d + 1) ∧ v ∈ layer d)
-    (hintrarank : ∀ {d : ℕ} {u v : V}, intra d u v → rank u < rank v)
-    (hinterrank : ∀ {d : ℕ} {u v : V}, inter d u v → rank u < rank v)
-    (hpredsubset : ∀ {d : ℕ} {T : Finset V}, pred d T ⊆ layer (d + 1))
-    (hprededge : ∀ {d : ℕ} {T : Finset V} {u : V},
-      u ∈ pred d T → ∃ v ∈ T, inter d u v)
-    (hexpansion : ∀ {d : ℕ} {T : Finset V}, d + 1 < ℓ → T ⊆ layer d →
-      β ((T.card : ℝ) / n) * n ≤ (pred d T).card)
-    (hdepth : ∀ {d : ℕ}, d < ℓ → ∀ F : Finset V, F ⊆ layer d →
-      pi * n ≤ (F.card : ℝ) → ∃ p : List V, p ≠ [] ∧ p.IsChain (intra d) ∧
-        (∀ v ∈ p, v ∈ F) ∧ αpi * n ≤ (p.length : ℝ))
-    (black red : ℕ → Finset V)
-    (hblacksubset : ∀ d, black d ⊆ layer d) (hredsubset : ∀ d, red d ⊆ layer d)
-    (hblacktotal : ∀ m, ∑ d ∈ Finset.range m, ((black d).card : ℝ) / n ≤ ρ)
-    (hredbound : ∀ d, ((red d).card : ℝ) ≤ δ * n)
-    (hn : 0 < n) (hρ : 0 < ρ) (hσapi : σ < αpi)
-    (s₀ z : ℕ)
-    (hconstants : (s₀, z) =
-      let gainD := fun x ↦ β x - δ - x
-      let betaD := fun x ↦ β x - δ
-      let gpi := gainD pi
-      let piBar := 1 - β pi
-      let zetaFloor := ζδ - ρ
-      let gtilde := min (gainD zetaFloor) gpi
-      let sigmaHat := min σ (1 - β σ)
-      let lam := min piBar sigmaHat
-      let ghat := min gpi (gainD σ / 2)
-      let infertileCap := fun h ↦ Nat.ceil ((ρ - (ζδ - pi)) / h)
-      let blockedCap := fun g ↦ Nat.ceil (ρ / g) - 1
-      let sCap := infertileCap gtilde + blockedCap ghat
-      let growthSpan := fun x ↦ max 1 ⌊(pi - σ + x) / ghat⌋₊
-      let asymptoticGrowth := max 1 ((pi - σ) / ghat)
-      let growthPot := fun split v ↦
-        (min v split - σ) / (2 * ghat) + (max v split - split) / ghat
-      let growthConst := min asymptoticGrowth (growthPot mid pi + 1)
-      let h₁ := growthConst + 1
-      let ledgerSlack := 2 * ρ / ghat
-      let gmin := min ghat gtilde
-      let jointSlack := 2 * ρ / gmin
-      let searchHead := max 0 (1 + (pi - ζδ) / gtilde)
-      let spendCap := ⌈ρ / ghat⌉₊
-      let growthCap := growthSpan ρ
-      let h₀ := growthCap + 2 * spendCap
-      let bMax := blockedCap (betaD pi - lam)
-      let s₀' := sCap + bMax * h₀
-      let jointEntry :=
-        if bMax = 0 then ⌈((ℓ : ℝ) - searchHead - jointSlack) / h₁⌉₊ else 0
-      let z' := max 1 (max
-        ⌈((ℓ : ℝ) - sCap - ledgerSlack - bMax * h₁) / (((bMax : ℝ) + 1) * h₁)⌉₊
-        (max jointEntry ((ℓ - s₀') / ((bMax + 1) * h₀) + 1)))
-      (s₀', z'))
-    (hinside : s₀ < ℓ)
-    (A : Finset V) (hA : A ⊆ layer 0)
-    (hred : ∀ v ∈ A, v ∉ red 0)
-    (hweight : ζδ ≤ (A.card : ℝ) / n) :
-    ∃ u a, a ∈ A ∧ ∃ Q : List V,
-      Q ≠ [] ∧
-      Q.IsChain (fun x y ↦ (∃ d, intra d x y) ∨ (∃ d, inter d x y)) ∧
-      (∀ v ∈ Q, v ∉ black (depth v) ∧ v ∉ red (depth v)) ∧
-      Q.head? = some u ∧ Q.getLast? = some a ∧
-      αpi * n + ((z : ℝ) - 1) * (αpi - σ) * n ≤ (Q.length : ℝ) := by
-  let S : Setting := {
-    β := β
-    αg := αg
-    δ := δ
-    pi := pi
-    ρ := ρ
-    ζδ := ζδ
-    αmin := αmin
-    αmax := αmax
-    β_maps := by
-      intro x hx
-      exact hβmaps hx
-    β_zero := hβzero
-    β_strictMonoOn := hβmono
-    β_concaveOn := hβconcave
-    β_expands := by
-      intro x hx
-      exact hβexpands hx
-    β_reversal := by
-      intro x hx
-      exact hβreversal hx
-    αg_mem := hαgmem
-    αg_max := by
-      intro x hx hne
-      exact hαgmax hx hne
-    δ_nonneg := hδ
-    ρ_nonneg := hρnonneg
-    pi_mem := hpimem
-    αg_lt_pi := hαgpi
-    gpi_pos := hgpi
-    αmin_mem := hαminmem
-    αmax_mem := hαmaxmem
-    gainD_αmin := hgainmin
-    gainD_αmax := hgainmax
-  }
-  let T : Tracking S := {
-    σ := σ
-    σ_gt := hσmin
-    σ_lt := hσpi
-    mid := mid
-    mid_ge := hσmid
-    mid_le := hmidpi
-    mid_gain := hmidgain
-  }
-  let G : Concrete.LayeredGraph V S ℓ n := {
-    αpi := αpi
-    layer := layer
-    depth := depth
-    rank := rank
-    intra := intra
-    inter := inter
-    pred := pred
-    layer_mem := hlayer
-    layer_card := hlayercard
-    intra_mem := hintramem
-    inter_mem := hintermem
-    intra_rank := hintrarank
-    inter_rank := hinterrank
-    pred_subset := by
-      intro d T v hv
-      exact hpredsubset hv
-    pred_edge := hprededge
-    expands := hexpansion
-  }
-  let P : Concrete.Pebbling G := {
-    black := black
-    red := red
+private theorem failure_bound_eq (n : ℕ) :
+    chung8FailureBound n =
+      Concrete.permutationExpansionFailureBound ChungCurve.chung8Setting n 8 := by
+  rfl
+
+theorem latency_chung8_whp
+    {ℓ : ℕ} (M : LatencyData ℓ) (A : Finset (ℕ × Fin M.n)) (L : ℝ)
+    (hdet : ∀ P : ChungInterlayer M.n, P.Expands → LatencyEvent M A L P) :
+    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw M.n)
+      (LatencyEvent M A L) (chung8FailureBound M.n) := by
+  classical
+  have hprofile :
+      Concrete.PermutationExpansionWhpClaim ChungCurve.chung8Setting M.n 8
+        (Concrete.permutationExpansionFailureBound ChungCurve.chung8Setting M.n 8) :=
+    Concrete.permutationExpansion_canonical_whp ChungCurve.chung8Setting M.n 8
+  rw [Concrete.PermutationExpansionWhpClaim, Concrete.HoldsWithFailureAtMost] at hprofile
+  rw [HoldsWithFailureAtMost, failure_bound_eq, probabilityOf_interlayerEquiv]
+  refine hprofile.trans ?_
+  apply Concrete.probabilityOf_mono
+  intro P hP
+  let P' : ChungInterlayer M.n := (interlayerEquiv M.n).symm P
+  apply hdet P'
+  intro T
+  exact hP T
+
+/-- The Filecoin 15-layer specialization. Unlike `latency_chung8_whp`, this is where the
+Filecoin values `π = 4/5`, `α_π = 1/5`, `δ = 189/5000`, `ρ = 4/5`, the source weight
+`4311/5000`,
+the within-layer robustness assumptions, and the concrete latency length enter. -/
+theorem chung8_latency_15
+    (M : LatencyData 15) [H : LiteratureHypotheses M]
+    (A : Finset (ℕ × Fin M.n)) (hA : A ⊆ M.layer 0)
+    (hred : ∀ v ∈ A, v ∉ M.red 0)
+    (hαpi : M.αpi = (1 : ℝ) / 5)
+    (hδ : M.δ = (189 : ℝ) / 5000)
+    (hpi : M.pi = (4 : ℝ) / 5)
+    (hρ : M.ρ = (4 : ℝ) / 5)
+    (hweight : (4311 : ℝ) / 5000 ≤ (A.card : ℝ) / M.n) :
+    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw M.n)
+      (LatencyEvent M A
+        ((1 : ℝ) / 5 * M.n + ((1 : ℝ) / 5 - (74 : ℝ) / 625) * M.n))
+      (chung8FailureBound M.n) := by
+  apply latency_chung8_whp M A
+  intro P hP
+  let Pc : Concrete.PermutationInterlayer M.n 8 := interlayerEquiv M.n P
+  have hPc : Pc.Expands ChungCurve.chung8Setting := by
+    intro T
+    exact hP T
+  let standalone : Concrete.StandaloneGraph M.n :=
+    { edge := M.intra, edge_lt := fun {_ _} h => H.intra_rank h }
+  let G := Concrete.permutationStack standalone ChungCurve.chung8Setting 15 8 M.αpi H.n_pos
+    (fun _ => Pc) (fun _ _ => hPc)
+  let pebbling : Concrete.Pebbling G := {
+    black := M.black
+    red := M.red
     black_subset := by
       intro d v hv
-      exact hblacksubset d hv
+      exact H.black_subset d hv
     red_subset := by
       intro d v hv
-      exact hredsubset d hv
-    black_total := hblacktotal
-    red_bound := hredbound
+      exact H.red_subset d hv
+    black_total := by
+      intro m
+      simpa only [ChungCurve.chung8Setting_rho, hρ] using H.black_total m
+    red_bound := by
+      intro d
+      simpa only [ChungCurve.chung8Setting_delta, hδ] using H.red_bound d
   }
-  let GR : GeneralRegime S := {
-    entry := hentry
-    zeta_le := hζmax
-  }
-  change (s₀, z) = (ProofOfSpace.s₀ S T, ProofOfSpace.zMin S T ℓ) at hconstants
-  have hs₀ : s₀ = ProofOfSpace.s₀ S T := congrArg Prod.fst hconstants
-  have hz : z = ProofOfSpace.zMin S T ℓ := congrArg Prod.snd hconstants
-  subst s₀
-  subst z
-  have hσapi' : T.σ < G.αpi := by
-    exact hσapi
-  have hdepth' : G.DepthRobust G.αpi := by
-    intro d hd F hF hcard
-    exact hdepth hd F hF hcard
-  have hinside' : ProofOfSpace.s₀ S T < ℓ := by
-    exact hinside
-  have hA' : A ⊆ G.layer 0 := by
-    exact hA
-  have hred' : ∀ v ∈ A, v ∉ P.red 0 := by
-    exact hred
-  have hweight' : S.ζδ ≤ Concrete.Pebbling.weight n A := by
-    exact hweight
-  have hpath := ProofOfSpace.latency_general G P T GR hn hρ hσapi' hdepth' hinside'
-    A hA' hred' hweight'
+  have hDepth : G.DepthRobust G.αpi := by
+    apply Concrete.permutationStack_depthRobust_of_nodeDR
+    intro X hX
+    apply H.depth_robust X
+    have heq : (1 - ChungCurve.chung8Setting.pi) * (M.n : ℝ) =
+        (1 - M.pi) * M.n := by
+      rw [ChungCurve.chung8Setting_pi, hpi]
+    rwa [heq] at hX
+  have hA' : A ⊆ G.layer 0 := hA
+  have hweight' : ChungCurve.chung8Setting.ζδ ≤ Concrete.Pebbling.weight M.n A := by
+    simpa only [ChungCurve.chung8Setting_zetaDelta, Concrete.Pebbling.weight] using hweight
+  have hpath := ProofOfSpace.ChungCurve.chung8_latency_15_deterministic G pebbling H.n_pos
+    hαpi hDepth A hA' hred hweight'
   rcases hpath with ⟨u, a, ha, Q, hfirst, hlast, hlength⟩
-  refine ⟨u, a, ha, Q.nodes, Q.nonempty, Q.chain, Q.unpebbled', ?_, ?_, ?_⟩
+  refine ⟨u, a, ha, Q.nodes, Q.nonempty, ?_, Q.unpebbled', ?_, ?_, hlength⟩
+  · exact Q.chain
   · rw [List.head?_eq_some_head Q.nonempty]
     exact congrArg some hfirst
   · rw [List.getLast?_eq_some_getLast Q.nonempty]
     exact congrArg some hlast
-  · change
-      αpi * n + ((ProofOfSpace.zMin S T ℓ : ℝ) - 1) * (αpi - σ) * n ≤
-        (Q.nodes.length : ℝ) at hlength
-    exact hlength
-
-/-- The concrete latency theorem, with all conditional assumptions bundled explicitly. -/
-theorem latency_general {V : Type u}
-    (M : LatencyData V) [H : LiteratureHypotheses M]
-    (A : Finset V) (hA : A ⊆ M.layer 0)
-    (hred : ∀ v ∈ A, v ∉ M.red 0)
-    (hweight : M.ζδ ≤ (A.card : ℝ) / M.n) :
-    ∃ u a, a ∈ A ∧ ∃ Q : List V,
-      Q ≠ [] ∧
-      Q.IsChain (fun x y ↦ (∃ d, M.intra d x y) ∨ (∃ d, M.inter d x y)) ∧
-      (∀ v ∈ Q, v ∉ M.black (M.depth v) ∧ v ∉ M.red (M.depth v)) ∧
-      Q.head? = some u ∧ Q.getLast? = some a ∧
-      M.αpi * M.n + ((M.z : ℝ) - 1) * (M.αpi - M.σ) * M.n ≤
-        (Q.length : ℝ) := by
-  exact latency_general_flat (ℓ := M.ℓ) (n := M.n)
-    M.β M.αg M.δ M.pi M.ρ M.ζδ M.αmin M.αmax
-    H.β_maps H.β_zero H.β_mono H.β_concave H.β_expands H.β_reversal
-    H.αg_mem H.αg_max H.δ_nonneg H.ρ_nonneg H.pi_mem H.αg_lt_pi H.gpi_pos
-    H.αmin_mem H.αmax_mem H.gain_min H.gain_max
-    M.σ M.mid H.σ_gt H.σ_lt H.mid_ge H.mid_le H.mid_gain
-    H.entry H.ζδ_le M.αpi M.layer M.depth M.rank M.intra M.inter M.pred
-    H.layer_mem H.layer_card H.intra_mem H.inter_mem H.intra_rank H.inter_rank
-    (by
-      intro d T v hv
-      exact H.pred_subset hv)
-    H.pred_edge H.expansion H.depth_robust
-    M.black M.red H.black_subset H.red_subset H.black_total H.red_bound
-    H.n_pos H.ρ_pos H.σ_lt_αpi M.s₀ M.z H.constants H.inside
-    A hA hred hweight
 
 end ProofOfSpaceStatement

@@ -339,6 +339,49 @@ neighbourhood misses the expansion requirement has that neighbourhood inside a s
 size `m k`.  The sharpest choice is `⌈β(k/n) n⌉ - 1`; larger admissible values are also
 allowed and are easier to certify. -/
 
+/-- The canonical failure profile: one less than the least integer meeting the expansion
+requirement.  Values above `n` are irrelevant to the union bound and are set to zero. -/
+noncomputable def canonicalFailureProfile (S : Setting) (n k : ℕ) : ℕ :=
+  if k ≤ n then Nat.ceil (S.β ((k : ℝ) / n) * n) - 1 else 0
+
+/-- The canonical profile meets the real-valued expansion threshold. -/
+theorem canonicalFailureProfile_spec (S : Setting) (n k : ℕ) (hk : k ≤ n) :
+    S.β ((k : ℝ) / n) * n ≤ (canonicalFailureProfile S n k : ℝ) + 1 := by
+  rw [canonicalFailureProfile, if_pos hk]
+  by_cases hz : Nat.ceil (S.β ((k : ℝ) / n) * n) = 0
+  · have hceil := Nat.le_ceil (S.β ((k : ℝ) / n) * n)
+    rw [hz] at hceil
+    simp only [Nat.cast_zero] at hceil
+    simp only [hz, Nat.zero_sub, Nat.cast_zero, zero_add]
+    exact hceil.trans (by norm_num)
+  · have hceil := Nat.le_ceil (S.β ((k : ℝ) / n) * n)
+    have hpos : 0 < Nat.ceil (S.β ((k : ℝ) / n) * n) := Nat.pos_of_ne_zero hz
+    rw [Nat.cast_sub (by omega : 1 ≤ Nat.ceil (S.β ((k : ℝ) / n) * n))]
+    norm_num
+    exact hceil
+
+/-- The canonical failure size never exceeds the layer width. -/
+theorem canonicalFailureProfile_le (S : Setting) (n k : ℕ) :
+    canonicalFailureProfile S n k ≤ n := by
+  rw [canonicalFailureProfile]
+  split_ifs with hk
+  · by_cases hn : n = 0
+    · subst n
+      simp
+    · have hnreal : (0 : ℝ) < n := by exact_mod_cast Nat.pos_of_ne_zero hn
+      have hk0 : (0 : ℝ) ≤ (k : ℝ) / n := div_nonneg (Nat.cast_nonneg k) hnreal.le
+      have hk1 : (k : ℝ) / n ≤ 1 := by
+        rw [div_le_one hnreal]
+        exact_mod_cast hk
+      have hβ := (S.β_maps ⟨hk0, hk1⟩).2
+      have hmul : S.β ((k : ℝ) / n) * n ≤ n := by
+        simpa only [one_mul] using
+          mul_le_mul_of_nonneg_right hβ (Nat.cast_nonneg n)
+      have hceil : Nat.ceil (S.β ((k : ℝ) / n) * n) ≤ n :=
+        Nat.ceil_le.mpr hmul
+      omega
+  · exact Nat.zero_le _
+
 /-- A failing interlayer crushes some *nonempty* source set into a set of the failure
 size.  The empty set is excluded because `β 0 = 0` makes its requirement vacuous, and it
 would otherwise contribute the useless term `1` to every union bound. -/
@@ -497,34 +540,28 @@ theorem permutationExpansion_failure_le_ratio (S : Setting) (n d : ℕ) (m : ℕ
     omega
   exact term_eq_div hkn
 
-/-- **`PermutationExpansionWhpClaim` is a theorem.**  The named gap of
-`Constructions.lean` is closed: the claim holds whenever an explicit inequality between
-two natural numbers does. -/
-theorem permutationExpansion_whp (S : Setting) (n d : ℕ) (m : ℕ → ℕ)
-    (hm : ∀ k ≤ n, S.β (k / n) * n ≤ (m k : ℝ) + 1) (hmn : ∀ k, m k ≤ n)
-    {a b : ℕ} (hb : b ≠ 0)
-    (hcert : b * (∑ k ∈ Finset.Ico 1 (n + 1), n.choose k * (n.choose (m k)
-        * ((m k).descFactorial k * Nat.factorial (n - k)) ^ d))
-      ≤ a * Nat.factorial n ^ d) :
-    PermutationExpansionWhpClaim S n d ((a : ℝ≥0∞) / (b : ℝ≥0∞)) := by
-  refine holdsWithFailureAtMost_of_compl_le _ _
-    ((permutationExpansion_failure_le_ratio S n d m hm hmn).trans ?_)
-  have hD0 : ((Nat.factorial n ^ d : ℕ) : ℝ≥0∞) ≠ 0 := by
-    simp [Nat.factorial_ne_zero]
-  have hDt : ((Nat.factorial n ^ d : ℕ) : ℝ≥0∞) ≠ ⊤ := by simp
-  have hb0 : ((b : ℕ) : ℝ≥0∞) ≠ 0 := by simpa using hb
-  have hbt : ((b : ℕ) : ℝ≥0∞) ≠ ⊤ := by simp
-  rw [ENNReal.div_le_iff hD0 hDt,
-    show ((a : ℝ≥0∞) / (b : ℝ≥0∞)) * ((Nat.factorial n ^ d : ℕ) : ℝ≥0∞)
-      = ((a : ℝ≥0∞) * ((Nat.factorial n ^ d : ℕ) : ℝ≥0∞)) / (b : ℝ≥0∞) by
-      rw [div_eq_mul_inv, div_eq_mul_inv, mul_right_comm],
-    ENNReal.le_div_iff_mul_le (Or.inl hb0) (Or.inl hbt)]
-  have hnat : ((∑ k ∈ Finset.Ico 1 (n + 1), n.choose k * (n.choose (m k)
-      * ((m k).descFactorial k * Nat.factorial (n - k)) ^ d)) * b : ℕ)
-      ≤ (a * Nat.factorial n ^ d : ℕ) := by
-    rw [Nat.mul_comm]
-    exact hcert
-  exact_mod_cast hnat
+/-- The exact finite union-bound certificate obtained from the canonical failure profile. -/
+noncomputable def permutationExpansionFailureBound (S : Setting) (n d : ℕ) : ℝ≥0∞ :=
+  ((∑ k ∈ Finset.Ico 1 (n + 1), n.choose k *
+        (n.choose (canonicalFailureProfile S n k) *
+          ((canonicalFailureProfile S n k).descFactorial k * Nat.factorial (n - k)) ^ d) : ℕ) :
+      ℝ≥0∞) /
+    ((Nat.factorial n ^ d : ℕ) : ℝ≥0∞)
+
+/-- A random permutation interlayer fails expansion with probability at most the exact
+canonical union-bound expression.  This theorem is uniform in both width and degree. -/
+theorem permutationExpansion_failure_le_canonical (S : Setting) (n d : ℕ) :
+    probabilityOf (PermutationInterlayer.uniformLaw n d) (fun P => ¬ P.Expands S) ≤
+      permutationExpansionFailureBound S n d := by
+  exact permutationExpansion_failure_le_ratio S n d (canonicalFailureProfile S n)
+    (canonicalFailureProfile_spec S n) (canonicalFailureProfile_le S n)
+
+/-- Consequently, a random permutation interlayer realizes the setting with failure at
+most the canonical finite union bound. -/
+theorem permutationExpansion_canonical_whp (S : Setting) (n d : ℕ) :
+    PermutationExpansionWhpClaim S n d (permutationExpansionFailureBound S n d) := by
+  exact holdsWithFailureAtMost_of_compl_le _ _
+    (permutationExpansion_failure_le_canonical S n d)
 
 end Concrete
 end ProofOfSpace

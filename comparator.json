@@ -1,7 +1,7 @@
 {
   "challenge_module": "Challenge",
   "solution_module": "Solution",
-  "theorem_names": ["ProofOfSpaceStatement.latency_general"],
+  "theorem_names": ["ProofOfSpaceStatement.chung8_latency_15"],
   "definition_names": [],
   "permitted_axioms": ["propext", "Quot.sound", "Classical.choice"],
   "enable_nanoda": true

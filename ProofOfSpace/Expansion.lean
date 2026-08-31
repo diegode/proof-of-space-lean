@@ -2,8 +2,8 @@
 # Expansion profiles, the gain function, and the mirror corollary
 
 This file sets up the analytic framework of this development and proves
-the mirror consequences of `reversal identity` from the
-reversal law of `Chung.lean`.
+the mirror consequences of `reversal identity` from the reversal law bundled in
+`Setting`.
 
 * `Setting` bundles the expansion function `β` together with the parameters
   `δ, π, ρ, ζδ` and the endpoints `αmin, αmax` of the interval where `gainδ ≥ 0`.
@@ -15,7 +15,7 @@ reversal law of `Chung.lean`.
 * `Setting.gpi_le_gainD` is the concavity consequence used everywhere downstream:
   `gainδ ≥ g_π` on the mirror interval `[pī, pi]`.
 -/
-import ProofOfSpace.Chung
+import Mathlib.Analysis.SpecialFunctions.BinaryEntropy
 import Mathlib.Analysis.Convex.Jensen
 import Mathlib.Analysis.Convex.Function
 

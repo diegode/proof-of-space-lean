@@ -1,15 +1,11 @@
-import ProofOfSpace.ChungShifted
+import Mathlib.Analysis.SpecialFunctions.BinaryEntropy
 import Mathlib.Analysis.Convex.Function
 
 /-!
-# A finite-size Chung profile for Filecoin
+# The rational Chung-8 profile
 
-The probability calculation in Reyzin's Filecoin analysis uses the shifted level
-`E₈(x,y) = -2⁻²²`, not the asymptotic zero level.  The exact shifted root is not
-defined near `0` and `1`, because its sublevel set is empty there.  For the abstract
-expansion setting we therefore use the rational polygon below.  Its nontrivial
-vertices lie strictly inside the shifted Chung region and its right half is the
-anti-diagonal reflection of its left half.
+The probabilistic theorem uses the rational polygon below as its exact finite expansion
+requirement. Its right half is the anti-diagonal reflection of its left half.
 
 Writing the polygon as the minimum of its supporting affine lines makes its global
 concavity a short theorem.  The strictly decreasing positive slopes give strict
@@ -20,9 +16,6 @@ namespace ProofOfSpace
 namespace ChungCurve
 
 open Set
-
-/-- The finite-size failure exponent used in the Filecoin calculation. -/
-noncomputable def filecoinEpsilon : ℝ := 1 / 2 ^ (22 : ℕ)
 
 /-- The affine line through `(a,u)` and `(b,v)`. -/
 noncomputable def chord (a u b v x : ℝ) : ℝ := u + (v - u) / (b - a) * (x - a)
@@ -504,160 +497,6 @@ theorem filecoinBeta_reversal {x : ℝ} (hx : x ∈ Ioo (0 : ℝ) 1) :
     norm_num [L0, L11, chord]
     ring
 
-/-! ### Upper bounds valid everywhere
-
-`filecoinBeta` is a `min`, so each supporting line bounds it from above on all of `ℝ`.
-These are what a numerical evaluation of the profile actually needs. -/
-
-theorem filecoinBeta_le_affine_0 (x : ℝ) :
-    filecoinBeta x ≤ 20000 / 5089 * x + 0 := by
-  have h : filecoinBeta x ≤ L0 x := by simp [filecoinBeta]
-  simp only [L0, chord] at h
-  linarith
-
-theorem filecoinBeta_le_affine_1 (x : ℝ) :
-    filecoinBeta x ≤ 6620 / 2271 * x + 586541 / 11355000 := by
-  have h : filecoinBeta x ≤ L1 x := by simp [filecoinBeta]
-  simp only [L1, chord] at h
-  linarith
-
-theorem filecoinBeta_le_affine_2 (x : ℝ) :
-    filecoinBeta x ≤ 4507 / 1792 * x + 45411 / 560000 := by
-  have h : filecoinBeta x ≤ L2 x := by simp [filecoinBeta]
-  simp only [L2, chord] at h
-  linarith
-
-theorem filecoinBeta_le_affine_3 (x : ℝ) :
-    filecoinBeta x ≤ 3497 / 1752 * x + 1248721 / 8760000 := by
-  have h : filecoinBeta x ≤ L3 x := by simp [filecoinBeta]
-  simp only [L3, chord] at h
-  linarith
-
-theorem filecoinBeta_le_affine_4 (x : ℝ) :
-    filecoinBeta x ≤ 526 / 331 * x + 690281 / 3310000 := by
-  have h : filecoinBeta x ≤ L4 x := by simp [filecoinBeta]
-  simp only [L4, chord] at h
-  linarith
-
-theorem filecoinBeta_le_affine_5 (x : ℝ) :
-    filecoinBeta x ≤ 1084 / 917 * x + 2764799 / 9170000 := by
-  have h : filecoinBeta x ≤ L5 x := by simp [filecoinBeta]
-  simp only [L5, chord] at h
-  linarith
-
-theorem filecoinBeta_le_affine_6 (x : ℝ) :
-    filecoinBeta x ≤ 917 / 1084 * x + 4434799 / 10840000 := by
-  have h : filecoinBeta x ≤ L6 x := by simp [filecoinBeta]
-  simp only [L6, chord] at h
-  linarith
-
-theorem filecoinBeta_le_affine_7 (x : ℝ) :
-    filecoinBeta x ≤ 331 / 526 * x + 2640281 / 5260000 := by
-  have h : filecoinBeta x ≤ L7 x := by simp [filecoinBeta]
-  simp only [L7, chord] at h
-  linarith
-
-theorem filecoinBeta_le_affine_8 (x : ℝ) :
-    filecoinBeta x ≤ 1752 / 3497 * x + 9973721 / 17485000 := by
-  have h : filecoinBeta x ≤ L8 x := by simp [filecoinBeta]
-  simp only [L8, chord] at h
-  linarith
-
-theorem filecoinBeta_le_affine_9 (x : ℝ) :
-    filecoinBeta x ≤ 1792 / 4507 * x + 1787697 / 2816875 := by
-  have h : filecoinBeta x ≤ L9 x := by simp [filecoinBeta]
-  simp only [L9, chord] at h
-  linarith
-
-theorem filecoinBeta_le_affine_10 (x : ℝ) :
-    filecoinBeta x ≤ 2271 / 6620 * x + 22331541 / 33100000 := by
-  have h : filecoinBeta x ≤ L10 x := by simp [filecoinBeta]
-  simp only [L10, chord] at h
-  linarith
-
-theorem filecoinBeta_le_affine_11 (x : ℝ) :
-    filecoinBeta x ≤ 5089 / 20000 * x + 14911 / 20000 := by
-  have h : filecoinBeta x ≤ L11 x := by simp [filecoinBeta]
-  simp only [L11, chord] at h
-  linarith
-
-/-! ### The twelve segments in affine form
-
-`filecoinBeta` is a `min` of chords; on each segment it agrees with one of them, and the
-`p x + q` presentation is what `ChungChord.lean` consumes. -/
-
-theorem filecoinBeta_affine_0 {x : ℝ} (_h0 : (0 : ℝ) ≤ x) (h1 : x ≤ 5089 / 100000) :
-    filecoinBeta x = 20000 / 5089 * x + 0 := by
-  rw [filecoinBeta_eq_L0 _h0 h1]
-  simp only [L0, chord]
-  ring
-
-theorem filecoinBeta_affine_1 {x : ℝ} (h0 : 5089 / 100000 ≤ x) (h1 : x ≤ 46 / 625) :
-    filecoinBeta x = 6620 / 2271 * x + 586541 / 11355000 := by
-  rw [filecoinBeta_eq_L1 h0 h1]
-  simp only [L1, chord]
-  ring
-
-theorem filecoinBeta_affine_2 {x : ℝ} (h0 : 46 / 625 ≤ x) (h1 : x ≤ 74 / 625) :
-    filecoinBeta x = 4507 / 1792 * x + 45411 / 560000 := by
-  rw [filecoinBeta_eq_L2 h0 h1]
-  simp only [L2, chord]
-  ring
-
-theorem filecoinBeta_affine_3 {x : ℝ} (h0 : 74 / 625 ≤ x) (h1 : x ≤ 811 / 5000) :
-    filecoinBeta x = 3497 / 1752 * x + 1248721 / 8760000 := by
-  rw [filecoinBeta_eq_L3 h0 h1]
-  simp only [L3, chord]
-  ring
-
-theorem filecoinBeta_affine_4 {x : ℝ} (h0 : 811 / 5000 ≤ x) (h1 : x ≤ 571 / 2500) :
-    filecoinBeta x = 526 / 331 * x + 690281 / 3310000 := by
-  rw [filecoinBeta_eq_L4 h0 h1]
-  simp only [L4, chord]
-  ring
-
-theorem filecoinBeta_affine_5 {x : ℝ} (h0 : 571 / 2500 ≤ x) (h1 : x ≤ 3201 / 10000) :
-    filecoinBeta x = 1084 / 917 * x + 2764799 / 9170000 := by
-  rw [filecoinBeta_eq_L5 h0 h1]
-  simp only [L5, chord]
-  ring
-
-theorem filecoinBeta_affine_6 {x : ℝ} (h0 : 3201 / 10000 ≤ x) (h1 : x ≤ 857 / 2000) :
-    filecoinBeta x = 917 / 1084 * x + 4434799 / 10840000 := by
-  rw [filecoinBeta_eq_L6 h0 h1]
-  simp only [L6, chord]
-  ring
-
-theorem filecoinBeta_affine_7 {x : ℝ} (h0 : 857 / 2000 ≤ x) (h1 : x ≤ 5337 / 10000) :
-    filecoinBeta x = 331 / 526 * x + 2640281 / 5260000 := by
-  rw [filecoinBeta_eq_L7 h0 h1]
-  simp only [L7, chord]
-  ring
-
-theorem filecoinBeta_affine_8 {x : ℝ} (h0 : 5337 / 10000 ≤ x) (h1 : x ≤ 4969 / 8000) :
-    filecoinBeta x = 1752 / 3497 * x + 9973721 / 17485000 := by
-  rw [filecoinBeta_eq_L8 h0 h1]
-  simp only [L8, chord]
-  ring
-
-theorem filecoinBeta_affine_9 {x : ℝ} (h0 : 4969 / 8000 ≤ x) (h1 : x ≤ 3669 / 5000) :
-    filecoinBeta x = 1792 / 4507 * x + 1787697 / 2816875 := by
-  rw [filecoinBeta_eq_L9 h0 h1]
-  simp only [L9, chord]
-  ring
-
-theorem filecoinBeta_affine_10 {x : ℝ} (h0 : 3669 / 5000 ≤ x) (h1 : x ≤ 4 / 5) :
-    filecoinBeta x = 2271 / 6620 * x + 22331541 / 33100000 := by
-  rw [filecoinBeta_eq_L10 h0 h1]
-  simp only [L10, chord]
-  ring
-
-theorem filecoinBeta_affine_11 {x : ℝ} (h0 : 4 / 5 ≤ x) (_h1 : x ≤ (1 : ℝ)) :
-    filecoinBeta x = 5089 / 20000 * x + 14911 / 20000 := by
-  rw [filecoinBeta_eq_L11 h0 _h1]
-  simp only [L11, chord]
-  ring
-
 /-- The unique maximizer of the polygon's unadjusted gain. -/
 noncomputable def filecoinAlphaG : ℝ := 3201 / 10000
 
@@ -743,9 +582,6 @@ theorem filecoinAlphaG_max {x : ℝ} (hx : x ∈ Icc (0 : ℝ) 1)
   rw [filecoinBeta_eq_L9 (by norm_num) (by norm_num)]
   norm_num [L9, chord]
 
-@[simp] theorem filecoinBeta_8622 : filecoinBeta (4311 / 5000) = 96493679 / 100000000 := by
-  rw [filecoinBeta_eq_L11 (by norm_num) (by norm_num)]
-  norm_num [L11, chord]
 
 @[simp] theorem filecoinBeta_8886 : filecoinBeta (4443 / 5000) = 97165427 / 100000000 := by
   rw [filecoinBeta_eq_L11 (by norm_num) (by norm_num)]
@@ -756,9 +592,6 @@ theorem filecoinAlphaG_max {x : ℝ} (hx : x ∈ Icc (0 : ℝ) 1)
   rw [filecoinBeta_eq_L8 (by norm_num) (by norm_num)]
   norm_num [L8, chord]
 
-@[simp] theorem filecoinBeta_1_256 : filecoinBeta (1 / 256) = 625 / 40712 := by
-  rw [filecoinBeta_eq_L0 (by norm_num) (by norm_num)]
-  norm_num [L0, chord]
 
 /-- The two exact intersections with the `δ = 0.0378` gain line. -/
 noncomputable def filecoinAlphaMin : ℝ := 961821 / 74555000

@@ -2,8 +2,9 @@
 
 This repository contains a Lean 4 formalization of latency lower bounds for stacked
 proof-of-space graphs. The construction stores data across `ℓ` layers of `n` nodes.
-Under explicit expansion, depth-robustness, pebbling-budget, and scalar hypotheses, the
-formalization constructs an unpebbled directed path of length `Ω(ℓ n)` in every
+For a uniformly sampled degree-eight Chung interlayer, and under explicit
+depth-robustness and pebbling-budget hypotheses, the Palomar theorem constructs with
+quantified high probability an unpebbled directed path of length `Ω(ℓ n)` in every
 sufficiently large red-free challenge footprint. This is the static combinatorial core
 of the statement that a cheating prover must perform non-parallelizable work growing
 linearly with the number of layers.
@@ -15,7 +16,7 @@ that the asymptotic coefficient lies strictly between `0.02135` and `0.02136`.
 
 ## The theorem and its scope
 
-The general theorem assumes:
+The reusable general theorem in `ProofOfSpace/Latency.lean` assumes:
 
 - a concave, strictly increasing expansion profile with the stated reversal and gain
   properties;
@@ -28,23 +29,30 @@ The general theorem assumes:
 It returns a nonempty directed path whose nodes carry neither black nor red pebbles,
 together with an explicit lower bound on its length. The proof concerns a static
 pebbling snapshot. It does not formalize a time-indexed cryptographic game or the final
-reduction from path length to sequential running time. Expansion and depth robustness
-are hypotheses, not universal construction theorems.
+reduction from path length to sequential running time.
+
+The Palomar-facing theorem specializes the analytic data to the proved finite-size
+Chung-8 profile and constructs the vertical graph from eight uniform permutations. Its
+failure probability is the exact finite union bound `chung8FailureBound n`; only the
+independent within-layer depth-robustness and pebbling conditions remain as hypotheses.
 
 ## Palomar submission surface
 
 The Palomar statement of record is
-[`ProofOfSpaceStatement.latency_general`](Challenge.lean). `Challenge.lean` imports
-only allowlisted Mathlib modules and contains the one deliberate `sorry` permitted in a
+[`ProofOfSpaceStatement.latency_chung8_whp`](Challenge.lean). `Challenge.lean` imports
+only allowlisted Mathlib modules and contains only the deliberate `sorry`s permitted in a
 challenge statement. [`Solution.lean`](Solution.lean) proves that statement using
 [`ProofOfSpace.latency_general`](ProofOfSpace/Latency.lean).
 [`comparator.json`](comparator.json) checks that the statements agree and permits only
 `propext`, `Classical.choice`, and `Quot.sound`.
 
-The statement separates its raw graph and parameter data into `LatencyData` and exposes
-every conditional assumption through the explicit typeclass parameter
-`[LiteratureHypotheses M]`; no hypothesis instance is declared globally. The Chung-8
-Filecoin specialization is a concrete `Setting` and depends on no global analytic axiom.
+The statement separates its within-layer graph and pebbling data into `LatencyData` and
+exposes every remaining conditional assumption through the explicit typeclass parameter
+`[LiteratureHypotheses M]`; no hypothesis instance is declared globally. That class
+carries no numerals: the parameters it quantifies over (`αpi`, `δ`, `pi`, `ρ`) are
+`LatencyData` fields, and their Filecoin values are pinned by equation hypotheses in
+`chung8_latency_15`. The Chung-8 profile, vertical permutation construction, and its
+expansion probability are theorem data rather than fields of that class.
 
 Submission metadata is in [`formalization.yaml`](formalization.yaml), and the project is
 licensed under Apache-2.0. A public submission should use the full 40-character commit
@@ -91,26 +99,27 @@ toward the challenge.
 
 ## Filecoin construction and open graph hypotheses
 
-The specialization targets the deployed Filecoin SDR graph — the degree-eight
-Chung/Feistel predecessor graph — at Reyzin's Appendix C level `ε_chung = 2⁻²²`. It
-requires two graph conditions, both of which occur in theorem types rather than as
-project axioms:
+The specialization uses the degree-eight profile at Reyzin's Appendix C exponent level
+`ε_chung = 2⁻²²`. In the Palomar theorem the vertical graph is an eight-tuple of uniform
+permutations, sampled once and reused between all consecutive layers. Consequently the
+only remaining graph hypothesis is:
 
-1. `LayeredGraph.expands`: the sampled permutation interlayers realize the required
-   degree-eight expansion profile.
-2. `LayeredGraph.DepthRobust`: each intra-layer graph has the required deletion-set
+1. `LayeredGraph.DepthRobust`: each intra-layer graph has the required deletion-set
    depth robustness.
 
 The expansion profile itself is fully proved: a conservative rational polygon, used
 because the exact finite-size root cannot serve as a global `Setting.β`, certified over
 `[2⁻²⁵, 1 - 2⁻²³]`, below which no profile at all is certifiable at this `ε`.
 
-`UnionBound.lean` and `ChungExpansion.lean` go further and discharge condition 1 for the
-development's own sampling model: `chung8_permutationExpansion_whp` states
-unconditionally that a uniformly sampled eight-tuple of permutations of a twenty-element
-layer realizes the polygon with probability at least `5/6`. That does not cover the
-deployed wiring, which selects parents with a Feistel network rather than a uniform tuple
-of permutations.
+`UnionBound.lean` proves the exact canonical failure bound uniformly in the layer width,
+degree, and abstract expansion setting. `latency_chung8_whp` transports that result to
+the explicit path event. At `n = 20`, the separately evaluated certificate
+`chung8_permutationExpansion_whp` gives success probability at least `5/6`.
+
+This sampling model does not identify Filecoin's deployed Feistel wiring with a uniform
+tuple of permutations. Reyzin's concrete Appendix C estimate `1 - 2⁻²⁴⁹` is for the
+deployed-scale Chung calculation; the formal theorem retains its exact combinatorial
+union-bound expression instead of importing that numerical estimate as an assumption.
 
 ## Build and submission verification
 

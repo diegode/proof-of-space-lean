@@ -1,20 +1,18 @@
 /-
 # The Chung-8 Filecoin specialization
 
-This file instantiates the Filecoin analysis with the rational finite-size profile from
-`ChungFilecoinCurve.lean`.  Its vertices are chosen inside the shifted degree-eight
-Chung region `E₈(x,y) < -2⁻²²`; concavity, reversal, and the unique gain maximizer are
-proved algebraically, so this specialization has no analytic typeclass assumption.
+This file instantiates the latency analysis with the rational degree-eight profile from
+`ChungFilecoinCurve.lean`. Concavity, reversal, and the unique gain maximizer are proved
+algebraically, so the specialization has no analytic typeclass assumption.
 
 The last section exhibits the reference chain of `Potential.lean` for these parameters —
 the `β_δ` orbit of the tracking floor, rationalized downwards — together with its
 `LedgerCert`, and evaluates the potential ledger's constants.  That is what
-`chung8_latency_15` runs on.  The chain is data supplied here, not a hypothesis of
+`chung8_latency_15_deterministic` runs on. The chain is data supplied here, not a hypothesis of
 anything upstream.
 -/
 import ProofOfSpace.ChungNumerics
 import ProofOfSpace.Latency
-import ProofOfSpace.Ledger
 import Mathlib.Analysis.Convex.Continuous
 
 namespace ProofOfSpace
@@ -28,9 +26,6 @@ open Set
 noncomputable def chungBeta8 (x : ℝ) : ℝ := filecoinBeta x
 
 @[simp] theorem chungBeta8_zero : chungBeta8 0 = 0 := by
-  simp [chungBeta8]
-
-@[simp] theorem chungBeta8_one : chungBeta8 1 = 1 := by
   simp [chungBeta8]
 
 theorem chungBeta8_maps {x : ℝ} (hx : x ∈ Icc (0 : ℝ) 1) :
@@ -70,9 +65,6 @@ theorem αmin_mem : αmin ∈ Icc (0 : ℝ) filecoinAlphaG := by
 
 theorem αmax_mem : αmax ∈ Icc filecoinAlphaG 1 := by
   norm_num [αmax, filecoinAlphaMax, filecoinAlphaG]
-
-theorem αmin_mem_Ioo : αmin ∈ Ioo (0 : ℝ) 1 := by
-  norm_num [αmin, filecoinAlphaMin]
 
 theorem gainD_αmin : chungBeta8 αmin - (189 : ℝ) / 5000 - αmin = 0 := by
   change filecoinBeta filecoinAlphaMin - (189 : ℝ) / 5000 - filecoinAlphaMin = 0
@@ -172,16 +164,12 @@ noncomputable def chung8Tracking :
       exact two_gpi_le_gainD8_06
     linarith
 
-@[simp] theorem chung8Tracking_mid :
-    (chung8Tracking).mid = (3 : ℝ) / 5 := rfl
-
 @[simp] theorem chung8Tracking_sigma :
     (chung8Tracking).σ = (74 : ℝ) / 625 := rfl
 
 /-! ### Scalar facts for the Filecoin parameters
 
-These facts are proved for the constructed curve and packaged by `chung8Filecoin`.
-They are the inequalities `no-break parameter conditions` of `Filecoin specialization`. -/
+These are the inequalities needed directly by the general and potential latency proofs. -/
 
 /-- `π̄ < ζ_δ - ρ`: the challenge floor stays above the tracking floor. -/
 theorem chung8_entry :
@@ -205,8 +193,7 @@ theorem chung8_condC :
       (chung8Setting).pi + (chung8Setting).gpi - (chung8Setting).piBar := by
     norm_num [Setting.piBar, Setting.gpi, Setting.gainD, chungBeta8]
 
-/-- The no-break condition `ρ < β_δ(π) - π̂` at the Filecoin parameters, which is what
-makes `Ledger.bMax` vanish and what the potential ledger needs for the tracking floor. -/
+/-- The no-break condition `ρ < β_δ(π) - π̂` at the Filecoin parameters. -/
 theorem chung8_nobreak :
     (chung8Setting).ρ
       < (chung8Setting).betaD (chung8Setting).pi - (chung8Tracking).lam := by
@@ -215,111 +202,6 @@ theorem chung8_nobreak :
     simp only [Setting.betaD_eq]; rfl
   rw [(chung8Tracking).lam_eq_piBar (chung8_condB), hb]
   linarith [chung8_condC]
-
-theorem chung8Filecoin :
-    FilecoinLatencyParameters (chung8Setting) (chung8Tracking) where
-  pi_eq := rfl
-  rho_eq := rfl
-  zetaDelta_eq := rfl
-  sigma_eq := rfl
-  gpi_lower := by rw [chung8Setting_gpi]; exact gpi8_bounds.1
-  gpi_upper := by rw [chung8Setting_gpi]; exact gpi8_bounds.2
-  ghat_eq := (chung8Tracking).ghat_eq_gpi (chung8_condB)
-  gtilde_eq :=
-    gtilde_eq_gpi
-      (by simp only [Setting.zetaFloor]; linarith [chung8_entry])
-      (by
-        simp only [Setting.zetaFloor, chung8Setting_zetaDelta, chung8Setting_rho,
-          chung8Setting_pi]
-        norm_num)
-  mid_eq := rfl
-  bMax_eq := bMax_eq_zero (chung8_nobreak)
-
-/-- The Filecoin setting satisfies `general scalar conditions`, so `latency_general` is not
-vacuous here.  The entry condition follows from the stronger `chung8_entry`, since
-`α_δ^min < π̄` always. -/
-theorem chung8GeneralRegime :
-    GeneralRegime (chung8Setting) where
-  entry := by
-    have h := chung8_entry
-    have hmin := (chung8Setting).αmin_lt_piBar
-    simp only [Setting.zetaFloor]
-    linarith
-  zeta_le := chung8_zeta_le
-
-/-- The two bundles used by the public latency theorem are simultaneously satisfied by
-the defined finite-size Chung-8 profile, without an analytic typeclass assumption. -/
-theorem chung8_filecoin_bundles :
-    FilecoinLatencyParameters (chung8Setting) (chung8Tracking) ∧
-      GeneralRegime (chung8Setting) :=
-  ⟨chung8Filecoin, chung8GeneralRegime⟩
-
-/-! ### Public latency corollaries specialized to the Chung curve -/
-
-/-- `cor:filecoin`, with `Setting.β` definitionally equal to the finite-size rational
-Chung-8 profile. -/
-theorem chung8_latency_corollary
-    {V : Type u} {ℓ n : ℕ}
-    (G : Concrete.LayeredGraph V (chung8Setting) ℓ n)
-    (P : Concrete.Pebbling G)
-    (hn : 0 < n) (hαpi : G.αpi = (1 : ℝ) / 5) (hℓ : 14 < ℓ)
-    (hDepth : G.DepthRobust G.αpi)
-    (A : Finset V) (hA : A ⊆ G.layer 0)
-    (hred : ∀ v ∈ A, v ∉ P.red 0)
-    (hweight : (chung8Setting).ζδ ≤ Concrete.Pebbling.weight n A) :
-    P.HasUnpebbledPathInFootprint A
-      ((1 : ℝ) / 5 * n +
-        ((FilecoinLatencyParameters.filecoinZMin (chung8Setting).gpi ℓ : ℝ) - 1) *
-          ((1 : ℝ) / 5 - (74 : ℝ) / 625) * n) :=
-  (chung8Filecoin).latency_corollary G P (chung8GeneralRegime)
-    hn hαpi hℓ hDepth A hA hred hweight
-
-/-! ### The growth constant
-
-The two-piece potential `ProofOfSpace.growthPot` supplies the level count
-`Φ_{σ̃}(π) + 1`, charging `2 ĝ` per level on
-`[σ, σ̃]`.  At the Filecoin Chung-8 parameters the mid-point `σ̃ = 3/5` is certified
-by `two_gpi_le_gainD8_06`.
-
-**This is wired into the ledger** through `chung8Tracking`'s mid-point field
-`σ̃ = 3/5`: `growthConst` takes the minimum of the two, `h₁ = growthConst + 1` becomes
-`5.957 < h₁ < 5.961`.  `FilecoinLatencyParameters.growthConst_eq` supplies this value
-to the numerical bounds.
--/
-
-/-- The mid-point certificate `2 ĝ ≤ gain_δ(3/5)`, transported to the abstract
-`Setting`. -/
-theorem chung8_midpoint :
-    2 * (chung8Tracking).ghat ≤ (chung8Setting).gainD (3/5) := by
-  rw [chung8Setting_gainD_06, (chung8Filecoin).ghat_eq, chung8Setting_gpi]
-  exact two_gpi_le_gainD8_06
-
-/-- the source condition plus concavity spread the certificate over the whole segment
-`[σ, 3/5]`, which is exactly the hypothesis `growthPot_window` needs. -/
-theorem chung8_midpoint_seg :
-    ∀ x, (chung8Tracking).σ ≤ x → x ≤ (3 : ℝ)/5 →
-      2 * (chung8Tracking).ghat ≤ (chung8Setting).gainD x :=
-  fun _ hx hxc =>
-    two_ghat_le_gainD_of_mem (chung8_midpoint) (by norm_num) hx hxc
-
-/-- The two-piece level count at the Filecoin Chung-8 parameters is below `3.961`; the
-window constant it produces is one more than this, `Φ_{3/5}(π) + 1 < 4.961`. -/
-theorem chung8_growthPot_lt :
-    growthPot (chung8Setting) (chung8Tracking) (3/5) ((chung8Setting).pi)
-      < (3961 : ℝ)/1000 := by
-  have hcπ : (3 : ℝ)/5 ≤ (chung8Setting).pi := by
-    rw [chung8Setting_pi]; norm_num
-  have hg : (chung8Tracking).ghat = (chung8Setting).gpi :=
-    (chung8Filecoin).ghat_eq
-  have hlow : (1113 : ℝ)/10000 < (chung8Setting).gpi := by
-    rw [chung8Setting_gpi]; exact gpi8_bounds.1
-  have hpos : 0 < (chung8Tracking).ghat := (chung8Tracking).ghat_pos
-  rw [growthPot_pi hcπ, chung8Setting_pi, hg]
-  change ((3 : ℝ)/5 - (74 : ℝ)/625) / (2 * (chung8Setting).gpi)
-      + ((4 : ℝ)/5 - (3 : ℝ)/5) / (chung8Setting).gpi < (3961 : ℝ)/1000
-  rw [hg] at hpos
-  rw [div_add_div _ _ (by positivity) (ne_of_gt hpos), div_lt_iff₀ (by positivity)]
-  nlinarith [hlow, hpos]
 
 /-! ### The Chung-8 reference chain
 
@@ -371,7 +253,7 @@ theorem chainX_one_sub_zero : chainX 1 - chainX 0 = gpi8 := by
 
 theorem chung8_ghat_eq :
     (chung8Tracking).ghat = gpi8 := by
-  rw [(chung8Filecoin).ghat_eq, chung8Setting_gpi]
+  rw [(chung8Tracking).ghat_eq_gpi chung8_condB, chung8Setting_gpi]
 
 theorem chung8_lam_eq :
     (chung8Tracking).lam = chainX 0 := by
@@ -773,7 +655,7 @@ conditions are the `ChungNumerics` brackets for the constructed curve.  The pote
 ledger charges the black budget once at `λ/ĝ`, with `λ = 1.45`, and has per-link span
 `potSpan = 3.82`.  The source weight is `σ = 74/625`.
 -/
-theorem chung8_latency_15
+theorem chung8_latency_15_deterministic
     {V : Type u} {n : ℕ}
     (G : Concrete.LayeredGraph V (chung8Setting) 15 n)
     (P : Concrete.Pebbling G)
@@ -797,59 +679,6 @@ theorem chung8_latency_15
     ring
   rwa [hlen] at h
 
-
-/-! ### Potential-ledger constants
-
-The potential ledger charges `potHead + λρ/ĝ = 11.02` levels once and
-`potSpan = 3.82` per link.
--/
-
-theorem chung8_potSpan_gt :
-    4 - 338 / 557 + 331 / 774
-      < LedgerCert.potSpan (chung8RefChain) (chung8LedgerCert) := by
-  have hlo : chainX 0 ≤ (74 : ℝ) / 625 := by
-    rw [chainX_zero]; linarith [beta8_pi_bounds.1]
-  have hx0 : chainX 0 = 811 / 5000 - gpi8 := by
-    have h := chainX_one_sub_zero
-    simp only [chainX_one] at h
-    linarith
-  have hpot : (chung8RefChain).refPot (74 / 625) < 338 / 557 := by
-    rw [chainPot_b0 hlo (by norm_num), hx0]
-    rw [div_lt_iff₀ (by linarith [gpi8_bounds.1] : (0 : ℝ) < gpi8)]
-    linarith [gpi8_bounds.2]
-  simp only [LedgerCert.potSpan, chung8Tracking_sigma, chung8RefChain_m,
-    chung8LedgerCert_loss]
-  norm_num
-  linarith
-
-theorem chung8_potSpan_pos :
-    0 < LedgerCert.potSpan (chung8RefChain) (chung8LedgerCert) := by
-  have := chung8_potSpan_gt
-  norm_num at this
-  linarith
-
-/-- **The per-link span, evaluated:** `3.8208 < potSpan < 3.8212`. -/
-theorem chung8_potSpan_bounds :
-    (38208 : ℝ) / 10000 < LedgerCert.potSpan (chung8RefChain) (chung8LedgerCert) ∧
-      LedgerCert.potSpan (chung8RefChain) (chung8LedgerCert) < (38212 : ℝ) / 10000 := by
-  have h1 := chung8_potSpan_gt
-  have h2 := chung8_potSpan_lt
-  constructor <;> [linarith; linarith]
-
-/-- **The certified asymptotic slope of the potential ledger**, one link per `potSpan`
-levels: `(α_π - σ)/potSpan ∈ (0.02135, 0.02136)`. -/
-theorem chung8_potential_slope_bounds :
-    (2135 : ℝ) / 100000 <
-        ((1 : ℝ) / 5 - (74 : ℝ) / 625)
-          / LedgerCert.potSpan (chung8RefChain) (chung8LedgerCert) ∧
-      ((1 : ℝ) / 5 - (74 : ℝ) / 625)
-          / LedgerCert.potSpan (chung8RefChain) (chung8LedgerCert)
-        < (2136 : ℝ) / 100000 := by
-  have hb := chung8_potSpan_bounds
-  have hpos := chung8_potSpan_pos
-  constructor
-  · rw [lt_div_iff₀ hpos]; linarith [hb.2]
-  · rw [div_lt_iff₀ hpos]; linarith [hb.1]
 
 end ChungCurve
 end ProofOfSpace

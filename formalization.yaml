@@ -5,13 +5,14 @@ project:
   name: "Formalized latency bounds for stacked proofs of space"
   description: >-
     A Lean 4 formalization of the static latency argument for stacked
-    proof-of-space graphs. Under explicit expansion, intra-layer depth
-    robustness, pebbling-budget, and scalar hypotheses, every sufficiently
-    large red-free challenge footprint contains an unpebbled directed path of
-    length Omega(ell*n). Thus the certified non-parallelizable work grows
-    linearly with the number of layers. All constants are explicit, and the
-    finite-size degree-eight Filecoin-shaped analysis optimizes the leading
-    coefficient, certifying it between 0.02135 and 0.02136.
+    proof-of-space graphs. A degree-eight Chung interlayer is sampled as eight
+    uniform permutations and reused throughout the stack. Under explicit
+    intra-layer depth robustness and pebbling-budget hypotheses, every
+    sufficiently large red-free challenge footprint contains, with an exact
+    quantified failure bound, an unpebbled directed path of length
+    Omega(ell*n). All constants are explicit, and the finite-size
+    Filecoin-shaped analysis certifies an asymptotic coefficient between
+    0.02135 and 0.02136.
   authors:
     - "Diego de Estrada (@diegode)"
   license: "Apache-2.0"
@@ -50,24 +51,23 @@ related_formalizations: []
 
 status:
   scope: >-
-    ProofOfSpaceStatement.latency_general is the registered conditional
-    latency theorem and returns an explicit unpebbled path in a static
-    red/black pebbling snapshot. Expansion, intra-layer depth robustness,
-    pebbling budgets, and scalar conditions occur in its signature. The Chung
-    zero-level threshold is constructed for every real degree d > 2. The
-    Filecoin specialization uses a rational degree-eight profile certified in
-    its entirety, not only at its vertices, at the finite-size level
-    E = -2^-22 on [2^-25, 1 - 2^-23]; its concavity, reversal law, and unique
-    maximizer are proved without an analytic typeclass. The interlayer
-    expansion claim is proved by the union bound and evaluated unconditionally
-    at n = 20, d = 8. The formalization does not include the reduction to a
-    time-indexed cryptographic game, nor the identification of Filecoin's
-    Feistel wiring with a uniform tuple of permutations.
+    ProofOfSpaceStatement.latency_chung8_whp is the registered probabilistic
+    latency theorem and returns an explicit unpebbled-path event in a static
+    red/black pebbling snapshot. The vertical graph is constructed from eight
+    uniformly sampled permutations; its expansion is proved with failure at
+    most an exact finite union-bound expression. Intra-layer depth robustness
+    and pebbling budgets remain in the signature. The rational degree-eight
+    profile is certified in its entirety at finite-size level E = -2^-22, and
+    its analytic and scalar properties are theorems rather than hypotheses.
+    The generic union-bound layer is uniform in width, degree, and expansion
+    setting. The formalization does not include the reduction to a time-indexed
+    cryptographic game, nor identify Filecoin's Feistel wiring with a uniform
+    tuple of permutations.
   sorry_count: 0
   sorry_in_definitions: 0
   axioms: ["propext", "Classical.choice", "Quot.sound"]
   main_results:
-    - declaration: "ProofOfSpaceStatement.latency_general"
+    - declaration: "ProofOfSpaceStatement.latency_chung8_whp"
       file: "Solution.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
@@ -107,14 +107,14 @@ automation:
 
 fidelity:
   divergences: >-
-    The theorem permits continuation chains to break and restart and tracks
+    The theorem samples a union of eight independent perfect matchings rather
+    than Filecoin's Feistel wiring, and reuses one sampled interlayer throughout
+    the stack. It permits continuation chains to break and restart and tracks
     those events in a global ledger. Lean counts depth forward from the
-    challenge layer, opposite to Reyzin's level numbering. Challenge.lean
-    packages the raw graph and parameter data in LatencyData and the conditional
-    assumptions in the explicit LiteratureHypotheses typeclass. Solution.lean
-    proves the resulting statement from the public theorem. The result concerns
+    challenge layer, opposite to Reyzin's level numbering. The result concerns
     a static pebbling snapshot and does not formalize a time-indexed sequential
-    game.
+    game. Reyzin's deployed-scale numerical failure estimate is not imported;
+    the theorem exposes the formal exact finite union bound.
 
 review:
   status: "self-assessed"
@@ -130,14 +130,14 @@ alignment:
   namespace: "ProofOfSpaceStatement"
   statements:
     - source: "Reyzin, Proofs of Space with Maximal Hardness (FOCS 2024), footprint and chain-growth framework"
-      lean: "ProofOfSpaceStatement.latency_general"
+      lean: "ProofOfSpaceStatement.latency_chung8_whp"
       module: "Solution"
       status: "adapted and proved"
       note: >-
-        Palomar-facing statement of the general conditional latency theorem.
-        It exposes the setting, graph, tracking, and pebbling structures as
-        primitive parameters and proves an explicit unpebbled path and length
-        bound while permitting broken and restarted continuation chains.
+        Palomar-facing probabilistic Chung-8 latency theorem. It constructs the
+        vertical graph from a uniform eight-tuple of permutations, proves an
+        exact expansion failure bound, and proves the explicit unpebbled path
+        event while permitting broken and restarted continuation chains.
 
 acknowledgements: >-
   Built with Lean and Mathlib. The proof architecture builds on work by Ben
