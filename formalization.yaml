@@ -10,7 +10,7 @@ project:
     large red-free challenge footprint contains an unpebbled directed path of
     length Omega(ell*n). Thus the certified non-parallelizable work grows
     linearly with the number of layers. All constants are explicit, and the
-    conditional degree-eight Filecoin-shaped analysis optimizes the leading
+    finite-size degree-eight Filecoin-shaped analysis optimizes the leading
     coefficient, certifying it between 0.02135 and 0.02136.
   authors:
     - "Diego de Estrada (@diegode)"
@@ -54,11 +54,15 @@ status:
     latency theorem and returns an explicit unpebbled path in a static
     red/black pebbling snapshot. Expansion, intra-layer depth robustness,
     pebbling budgets, and scalar conditions occur in its signature. The Chung
-    threshold is constructed for every real degree d > 2; the generic
-    typeclass ChungAnalyticHypotheses d states the remaining concavity and
-    unique-maximizer hypotheses in every dependent theorem. The numerical
-    Filecoin-shaped certificates specialize to degree eight. The formalization
-    does not include the reduction to a time-indexed cryptographic game.
+    zero-level threshold is constructed for every real degree d > 2. The
+    Filecoin specialization uses a rational degree-eight profile certified in
+    its entirety, not only at its vertices, at the finite-size level
+    E = -2^-22 on [2^-25, 1 - 2^-23]; its concavity, reversal law, and unique
+    maximizer are proved without an analytic typeclass. The interlayer
+    expansion claim is proved by the union bound and evaluated unconditionally
+    at n = 20, d = 8. The formalization does not include the reduction to a
+    time-indexed cryptographic game, nor the identification of Filecoin's
+    Feistel wiring with a uniform tuple of permutations.
   sorry_count: 0
   sorry_in_definitions: 0
   axioms: ["propext", "Classical.choice", "Quot.sound"]

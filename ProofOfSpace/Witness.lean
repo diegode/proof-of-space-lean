@@ -16,8 +16,9 @@ the member `((k+1)x)/(1+kx)` of the Möbius family at `k = 2291/625`, and proves
 field of `Setting`, `GeneralRegime`, and `FilecoinLatencyParameters` for it at
 `σ = 0.1184`, ending in `wSetting`, `wGeneralRegime`, and `wFilecoin`.  Strict
 concavity and the unique gain maximizer are theorems here, which is exactly why the
-model closes. For a Chung curve, those two facts are represented by the explicit
-degree-parametric hypothesis class `ChungAnalyticHypotheses d`.
+model closes. The finite-size Chung-8 specialization now proves those facts directly
+for its rational polygon; for the exact Chung root at a general degree they remain
+unproved, which is why no `Setting` is built from that root.
 
 The Möbius family is the natural place to look for a model because the reversal law
 `reversal identity` `β(1 - β x) = 1 - x` says exactly that `x ↦ 1 - β x` is an involution,

@@ -9,17 +9,9 @@ of the statement that a cheating prover must perform non-parallelizable work gro
 linearly with the number of layers.
 
 All constants are explicit. The quantitative objective is to make the leading constant
-as tight as possible, not merely to prove that it is positive. Under the explicit
-analytic hypotheses of the degree-eight Filecoin-shaped specialization, the
-potential-ledger analysis proves that the asymptotic coefficient lies strictly between
-`0.02135` and `0.02136`.
-
-The development builds on:
-
-- Leonid Reyzin, [*Proofs of Space with Maximal Hardness*](https://dblp.org/rec/conf/focs/Reyzin24),
-  FOCS 2024, pages 1159–1177.
-- Ben Fisch, [*Tight Proofs of Space and Replication*](https://doi.org/10.1007/978-3-030-17656-3_12),
-  EUROCRYPT 2019, pages 324–348.
+as tight as possible, not merely to prove that it is positive. For the unconditional
+finite-size degree-eight Filecoin-shaped profile, the potential-ledger analysis proves
+that the asymptotic coefficient lies strictly between `0.02135` and `0.02136`.
 
 ## The theorem and its scope
 
@@ -39,12 +31,6 @@ pebbling snapshot. It does not formalize a time-indexed cryptographic game or th
 reduction from path length to sequential running time. Expansion and depth robustness
 are hypotheses, not universal construction theorems.
 
-The Chung curve itself is constructed for every real degree `d > 2`. The remaining
-conditional analytic facts are bundled as `ChungAnalyticHypotheses d`: concavity of the
-closed profile and uniqueness of the unadjusted-gain maximizer. Every declaration that
-uses them has an explicit `[ChungAnalyticHypotheses d]` parameter. The Filecoin-shaped
-numerical certificates specialize the generic curve to degree eight.
-
 ## Palomar submission surface
 
 The Palomar statement of record is
@@ -55,9 +41,9 @@ challenge statement. [`Solution.lean`](Solution.lean) proves that statement usin
 [`comparator.json`](comparator.json) checks that the statements agree and permits only
 `propext`, `Classical.choice`, and `Quot.sound`.
 
-The theorem statement exposes every conditional hypothesis. The Chung specialization
-uses a bundled typeclass in each dependent declaration; there is no global instance or
-axiom declaring the analytic hypotheses true.
+The general theorem statement exposes every conditional hypothesis through `Setting`.
+The Chung-8 Filecoin specialization is a concrete `Setting` and depends on no global
+analytic axiom.
 
 Submission metadata is in [`formalization.yaml`](formalization.yaml), and the project is
 licensed under Apache-2.0. A public submission should use the full 40-character commit
@@ -65,8 +51,14 @@ SHA at the [Palomar submission form](https://submit.palomar-registry.org/).
 
 ## Proof architecture
 
-- `Chung.lean`, `ChungCurve.lean`, and `Expansion.lean` define the expansion exponent,
-  construct the degree-parametric threshold curve, and establish its proved shape laws.
+- `Chung.lean`, `ChungCurve.lean`, `ChungShifted.lean`, and `Expansion.lean` define the
+  expansion exponent, construct its zero-level and finite-size roots, and define the
+  abstract expansion interface.
+- `ChungFilecoinCurve.lean`, `ChungChord.lean`, and `ChungRegion.lean` define the
+  rational degree-eight profile used by the Filecoin specialization, prove its shape
+  laws, and certify it inside the finite-size Chung region.
+- `UnionBound.lean` proves the interlayer expansion claim by the union bound, and
+  `ChungExpansion.lean` evaluates its certificate for the degree-eight profile.
 - `Footprint.lean` develops normalized pebble budgets and the footprint recurrence.
 - `Tracking.lean`, `Search.lean`, and `Continuation.lean` construct fertile and
   expandable searches through the layers.
@@ -96,20 +88,28 @@ The published layered construction labels the challenge layer `V_ℓ` and the to
 `layer (ℓ - 1)` corresponds to `V₁`, and edges from `layer (d + 1)` to `layer d` move
 toward the challenge.
 
-## Open hypotheses of the degree-eight specialization
+## Filecoin construction and open graph hypotheses
 
-The specialization requires:
+The specialization targets the deployed Filecoin SDR graph — the degree-eight
+Chung/Feistel predecessor graph — at Reyzin's Appendix C level `ε_chung = 2⁻²²`. It
+requires two graph conditions, both of which occur in theorem types rather than as
+project axioms:
 
 1. `LayeredGraph.expands`: the sampled permutation interlayers realize the required
    degree-eight expansion profile.
 2. `LayeredGraph.DepthRobust`: each intra-layer graph has the required deletion-set
    depth robustness.
-3. `[ChungAnalyticHypotheses 8]`: the closed degree-eight profile is concave and its
-   unadjusted gain has a unique maximizer.
 
-Mapping, strict expansion, strict monotonicity, reversal, and the adjusted-gain roots
-are proved for the defined curve. The three remaining conditions above occur in theorem
-types and are not project axioms.
+The expansion profile itself is fully proved: a conservative rational polygon, used
+because the exact finite-size root cannot serve as a global `Setting.β`, certified over
+`[2⁻²⁵, 1 - 2⁻²³]`, below which no profile at all is certifiable at this `ε`.
+
+`UnionBound.lean` and `ChungExpansion.lean` go further and discharge condition 1 for the
+development's own sampling model: `chung8_permutationExpansion_whp` states
+unconditionally that a uniformly sampled eight-tuple of permutations of a twenty-element
+layer realizes the polygon with probability at least `5/6`. That does not cover the
+deployed wiring, which selects parents with a Feistel network rather than a uniform tuple
+of permutations.
 
 ## Build and trust audit
 
@@ -129,7 +129,9 @@ checks run in `.github/workflows/lean_action_ci.yml`.
 
 - Leonid Reyzin. *Proofs of Space with Maximal Hardness*. 65th IEEE Symposium on
   Foundations of Computer Science, 2024, 1159–1177.
-  [DBLP record](https://dblp.org/rec/conf/focs/Reyzin24).
+  [ePrint](https://eprint.iacr.org/2023/1530).
 - Ben Fisch. *Tight Proofs of Space and Replication*. Advances in Cryptology –
   EUROCRYPT 2019, Part II, LNCS 11477, 324–348.
-  [DOI](https://doi.org/10.1007/978-3-030-17656-3_12).
+  [ePrint](https://eprint.iacr.org/2018/702).
+- Filecoin, [SDR protocol specification](https://spec.filecoin.io/algorithms/sdr/) and
+  [`rust-fil-proofs` stacked graph implementation](https://github.com/filecoin-project/rust-fil-proofs/blob/master/storage-proofs-porep/src/stacked/vanilla/graph.rs).

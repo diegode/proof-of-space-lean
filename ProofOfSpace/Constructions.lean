@@ -19,11 +19,11 @@ The deterministic half of the deployed argument is proved here, not assumed:
 `intervalBlockTransfer` discharges the transfer obligation,
 `bucketSample_nodeDR_of_blockNodeDR` composes it into the deployed pipeline, and
 `DRSampleSeedLaw.exists_law` constructs the independent joint sampler law.
-What remains open in Lean is probabilistic or literature-level, and each remaining
-proposition carries a docstring saying exactly why: `PermutationExpansionWhpClaim`, and
-the base block certificate for `DRSample` at the deployed size, whose distance from
-the published bound is recorded by `filecoin_budget_exceeds_published_certificate` and
-`filecoin_depth_exceeds_published_certificate`.
+What remains open in Lean is literature-level: the base block certificate for `DRSample`
+at the deployed size, whose distance from the published bound is recorded by
+`filecoin_budget_exceeds_published_certificate` and
+`filecoin_depth_exceeds_published_certificate`.  The interlayer expansion claim
+`PermutationExpansionWhpClaim` is no longer open — see `UnionBound.lean`.
 -/
 
 namespace ProofOfSpace
@@ -414,10 +414,13 @@ noncomputable def PermutationInterlayer.uniformLaw (n d : ℕ) :
   PMF.uniformOfFintype (PermutationInterlayer n d)
 
 /-- Probability-facing form of the expansion claim required by a stack: that a sampled
-`d`-tuple of permutations *realizes* `β` in the sense of `permutation-stack construction`.  This
-development does not compute the probability — `stack realization proposition` and
-`deployed-layer sufficiency result` take realization as a hypothesis — and neither does this
-development.  Nothing below consumes this definition; it names the gap. -/
+`d`-tuple of permutations *realizes* `β` in the sense of `permutation-stack construction`.
+
+`UnionBound.lean` **proves** this claim by the union bound, reducing it to an inequality
+between two explicit natural numbers, and `ChungExpansion.lean` discharges that
+inequality for the finite-size Chung-8 profile at `n = 20`, `d = 8`.  What remains
+unformalized is not the probability calculation but the identification of the deployed
+Filecoin wiring — a Feistel permutation network — with a uniform tuple of permutations. -/
 def PermutationExpansionWhpClaim (S : Setting) (n d : ℕ) (δ : ℝ≥0∞) : Prop :=
   HoldsWithFailureAtMost (PermutationInterlayer.uniformLaw n d)
     (fun P => P.Expands S) δ

@@ -1,4 +1,7 @@
+import ProofOfSpace.ChungExpansion
 import ProofOfSpace.ChungFilecoin
+import ProofOfSpace.ChungRegion
 import ProofOfSpace.Constructions
 import ProofOfSpace.PotentialLedger
+import ProofOfSpace.UnionBound
 import ProofOfSpace.Witness
