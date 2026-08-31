@@ -41,9 +41,10 @@ challenge statement. [`Solution.lean`](Solution.lean) proves that statement usin
 [`comparator.json`](comparator.json) checks that the statements agree and permits only
 `propext`, `Classical.choice`, and `Quot.sound`.
 
-The general theorem statement exposes every conditional hypothesis through `Setting`.
-The Chung-8 Filecoin specialization is a concrete `Setting` and depends on no global
-analytic axiom.
+The statement separates its raw graph and parameter data into `LatencyData` and exposes
+every conditional assumption through the explicit typeclass parameter
+`[LiteratureHypotheses M]`; no hypothesis instance is declared globally. The Chung-8
+Filecoin specialization is a concrete `Setting` and depends on no global analytic axiom.
 
 Submission metadata is in [`formalization.yaml`](formalization.yaml), and the project is
 licensed under Apache-2.0. A public submission should use the full 40-character commit
