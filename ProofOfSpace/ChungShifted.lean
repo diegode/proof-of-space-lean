@@ -53,6 +53,40 @@ theorem shiftedSec_right_pos {d ε x : ℝ} (hε : 0 ≤ ε)
   rw [shiftedSec_right hx1]
   exact add_pos_of_pos_of_nonneg (binEntropy_pos hx hx1) hε
 
+/-- A negative shifted section at any interior point forces the finite-size level to
+lie below its admissible endpoint value `(d - 2) H(x)`. This is the side condition
+used in Reyzin's simplified expansion union bound. -/
+theorem level_lt_of_shiftedSec_neg {d ε x y : ℝ} (hd : 1 ≤ d) (hε : 0 ≤ ε)
+    (hx : 0 < x) (hxy : x < y) (hy : y < 1)
+    (hneg : shiftedSec d ε x y < 0) :
+    ε < (d - 2) * binEntropy x := by
+  by_contra hlevel
+  push Not at hlevel
+  have hleft : 0 ≤ shiftedSec d ε x x := by
+    rw [shiftedSec_left]
+    linarith
+  have hright : 0 ≤ shiftedSec d ε x 1 :=
+    (shiftedSec_right_pos hε hx (hxy.trans hy)).le
+  have hconc := (strictConcaveOn_shiftedSec (d := d) (ε := ε) hd hx
+    (hxy.trans hy)).concaveOn
+  have hxmem : x ∈ Icc x 1 := ⟨le_rfl, (hxy.trans hy).le⟩
+  have h1mem : (1 : ℝ) ∈ Icc x 1 := ⟨(hxy.trans hy).le, le_rfl⟩
+  have hden : (0 : ℝ) < 1 - x := by linarith
+  have hne : (1 : ℝ) - x ≠ 0 := ne_of_gt hden
+  have ha : 0 ≤ (1 - y) / (1 - x) := by positivity
+  have hb : 0 ≤ (y - x) / (1 - x) := by positivity
+  have hab : (1 - y) / (1 - x) + (y - x) / (1 - x) = 1 := by
+    field_simp
+    ring
+  have hc := hconc.2 hxmem h1mem ha hb hab
+  simp only [smul_eq_mul] at hc
+  have hcomb : (1 - y) / (1 - x) * x + (y - x) / (1 - x) * 1 = y := by
+    rw [show (1 - y) / (1 - x) * x + (y - x) / (1 - x) * 1 =
+      ((1 - y) * x + (y - x)) / (1 - x) by ring, div_eq_iff hne]
+    ring
+  rw [hcomb] at hc
+  nlinarith
+
 theorem exists_shifted_root {d ε x : ℝ} (hd : 2 < d) (hε : 0 ≤ ε)
     (hx : 0 < x) (hx1 : x < 1) (hlevel : ε < (d - 2) * binEntropy x) :
     ∃ r ∈ Ioo x 1, shiftedSec d ε x r = 0 := by

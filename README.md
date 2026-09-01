@@ -1,168 +1,224 @@
 # Formalized Latency Bounds for Stacked Proofs of Space
 
-This repository contains a Lean 4 formalization of latency lower bounds for stacked
-proof-of-space graphs. The construction stores data across `ℓ` layers of `n` nodes.
-For a uniformly sampled degree-eight Chung interlayer, and under explicit
-depth-robustness and pebbling-budget hypotheses, the Palomar theorem constructs with
-quantified high probability an unpebbled directed path of length `Ω(ℓ n)` in every
-sufficiently large red-free challenge footprint. This is the static combinatorial core
-of the statement that a cheating prover must perform non-parallelizable work growing
-linearly with the number of layers.
+This repository formalizes a static latency lower bound for a 15-layer stacked
+proof-of-space graph in Lean 4. The vertical wiring follows the Chung model used by
+Reyzin: sample one uniform permutation of the `8n` ports `Fin 8 × Fin n`, then reuse
+that interlayer across the 14 gaps of the stack.
 
-All constants are explicit. The quantitative objective is to make the leading constant
-as tight as possible, not merely to prove that it is positive. For the unconditional
-finite-size degree-eight Filecoin-shaped profile, the potential-ledger analysis proves
-that the asymptotic coefficient lies strictly between `0.02135` and `0.02136`.
+Under explicit within-layer depth-robustness and pebbling-budget hypotheses, the
+Filecoin specialization produces an unpebbled directed path containing at least
 
-## The theorem and its scope
+```text
+(1/5)n + (1/5 - 74/625)n = (176/625)n = 0.2816n
+```
 
-The reusable general theorem in `ProofOfSpace/Latency.lean` assumes:
+vertices. This is a statement about a static black/red pebbling snapshot; it does not
+formalize a time-indexed cryptographic game or a reduction from path length to running
+time.
 
-- a concave, strictly increasing expansion profile with the stated reversal and gain
-  properties;
-- uniform intra-layer depth robustness;
-- inter-layer expansion for the predecessor map;
-- a global black-pebble budget and a per-layer red-pebble budget;
-- a sufficiently large red-free challenge set; and
-- the scalar entry conditions collected in `GeneralRegime`.
+## The two theorem statements
 
-It returns a nonempty directed path whose nodes carry neither black nor red pebbles,
-together with an explicit lower bound on its length. The proof concerns a static
-pebbling snapshot. It does not formalize a time-indexed cryptographic game or the final
-reduction from path length to sequential running time.
+[`Challenge.lean`](Challenge.lean) has exactly two theorem declarations. The other
+content consists only of definitions and explicit hypotheses needed by their types.
 
-The Palomar-facing theorem specializes the analytic data to the proved finite-size
-Chung-8 profile and constructs the vertical graph from eight uniform permutations. Its
-failure probability is the exact finite union bound `chung8FailureBound n`; only the
-independent within-layer depth-robustness and pebbling conditions remain as hypotheses.
+### `chung8_pebbling_latency_whp`
 
-No expansion profile is posited. `Challenge.lean` writes out Reyzin's union-bound
-exponent `E₈(x, y) = H(x) + H(y) + 8(y H(x/y) - H(x))` and defines the expansion the
-theorem demands as the root of `E₈(x, ·) = -H(x)/2²³` — so what a sampled interlayer must
-achieve is exactly what Chung's own union bound certifies. The level is *relative*, a
-multiple of `H(x)` rather than a constant, and that is what keeps the statement uniform in
-the layer width: since `E₈(x, x) = -6 H(x)`, a fixed level cuts out an empty region once
-`H(x)` falls below it, and at Filecoin's `n ≈ 10⁹` even `k = 1` would land in that dead
-zone.
+`ProofOfSpaceStatement.chung8_pebbling_latency_whp` is the generic probabilistic lifting step.
+If every sampled interlayer satisfying the certified integer expansion event has some
+deterministic latency consequence, then the same consequence holds under the uniform
+law with failure at most `chung8FailureBound n`.
 
-The rational polygon lives entirely in the proof. `chung8_latency_15` needs the
-deterministic latency argument's expansion hypothesis, and the polygon supplies it:
-`ChungRelative.lean` proves the polygon lies strictly below that threshold on all of
-`(0,1)`, so the profile the statement defines from the exponent alone already demands
-everything the deterministic argument consumes.
+The required `ChungExpansionConditions n` make the finite-size and integer-rounding
+conditions explicit:
 
-## Palomar submission surface
+```text
+n > 0,
+δₙ = 189/10000 - 1/n > 0,
+1/n ≤ αₘₐₓ(probabilistic expansion interval) - αₘₐₓ(pebbling interval).
+```
 
-The Palomar statement of record is
-[`ProofOfSpaceStatement.latency_chung8_whp`](Challenge.lean). `Challenge.lean` imports
-only allowlisted Mathlib modules and contains only the deliberate `sorry`s permitted in a
-challenge statement. [`Solution.lean`](Solution.lean) proves that statement using
-[`ProofOfSpace.latency_general`](ProofOfSpace/Latency.lean).
-[`comparator.json`](comparator.json) checks that the statements agree and permits only
-`propext`, `Classical.choice`, and `Quot.sound`.
+The proof does not assume that a random interlayer expands. It derives the probability
+of that event from the fixed-pair count and union bound, then lifts the caller's
+deterministic implication.
 
-The statement separates its within-layer graph and pebbling data into `LatencyData` and
-exposes every remaining conditional assumption through the explicit typeclass parameter
-`[LiteratureHypotheses M]`; no hypothesis instance is declared globally. That class
-carries no numerals: the parameters it quantifies over (`αpi`, `δ`, `pi`, `ρ`) are
-`LatencyData` fields, and their Filecoin values are pinned by equation hypotheses in
-`chung8_latency_15`. The Chung-8 profile, vertical permutation construction, and its
-expansion probability are theorem data rather than fields of that class.
+### `chung8_pebbling_latency_15`
 
-Submission metadata is in [`formalization.yaml`](formalization.yaml), and the project is
-licensed under Apache-2.0. A public submission should use the full 40-character commit
-SHA at the [Palomar submission form](https://submit.palomar-registry.org/).
+`ProofOfSpaceStatement.chung8_pebbling_latency_15` specializes the generic theorem to the
+15-layer Filecoin parameters:
+
+- within-layer path fraction `απ = 1/5`;
+- per-layer red budget `δ = 189/5000`;
+- depth-robustness threshold `π = 4/5`;
+- total black budget `ρ = 4/5`; and
+- a red-free challenge set of density at least `4311/5000`.
+
+For a requested real security parameter `lambda`, the theorem assumes
+`ChungSecurityConditions n lambda` and concludes
+
+```lean
+HoldsWithFailureAtMost (ChungInterlayer.uniformLaw M.n)
+  (M.HasUnpebbledPathTo A
+    ((1 : ℝ) / 5 * M.n + ((1 : ℝ) / 5 - (74 : ℝ) / 625) * M.n))
+  (ENNReal.ofReal (Real.exp (-lambda * Real.log 2)))
+```
+
+Thus, in ordinary notation,
+
+```text
+Pr[M.HasUnpebbledPathTo A (176n/625)] ≥ 1 - 2^(-lambda).
+```
+
+`M.HasUnpebbledPathTo A L P` says that the pebbling game has a nonempty directed path
+ending at a vertex of `A`, with no vertex black- or red-pebbled at its layer, and with
+real-valued lower bound `Q.length ≥ L`. Since the length is a natural number, this is
+equivalent to `Q.length ≥ ⌈L⌉`.
+
+## The simplified expansion-failure bound
+
+Set
+
+```text
+α = chung8AlphaMin
+  = (961821/74555000)/2,
+δₙ = 189/10000 - 1/n,
+ε_chung = 2^(-22).
+```
+
+The formal definition is
+
+```text
+chung8FailureBound(n)
+  = exp(1/8) / (2π α sqrt(δₙ))
+      · exp(-n ε_chung log 2)
+  = exp(1/8) / (2π α sqrt(δₙ))
+      · 2^(-n ε_chung).
+```
+
+Lean stores this nonnegative real as `ENNReal.ofReal (...)`. In the simplified union
+bound, the `1/n` in each fixed-size estimate cancels against at most `n` possible
+source-set sizes. This replaces the former exact sum over all sizes and candidate
+neighbourhoods.
+
+The paper contains a small internal discrepancy: Appendix A's preview says `2⁻²³`,
+whereas the concrete Appendix C calculation says `2⁻²²`. The formalization follows
+Appendix C and independently certifies the stronger required exponent inequality at
+`ε_chung = 2⁻²²`.
+
+The public expansion profile is defined without the rational polygon. For source size
+`k`, let `S(n,k)` contain precisely the integers `m < n` satisfying
+
+```text
+k < m,
+α ≤ 1 - m/n,
+δₙ ≤ m/n - k/n,
+E₈(k/n,m/n) ≤ -ε_chung log 2.
+```
+
+Then `chung8FailureProfile n k` is the largest member of `S(n,k)`, defaulting to zero
+if it is empty. Thus the statement mentions only Reyzin's exponent and the finite-grid
+margin conditions. The event `P.Expands` says that every source set in the active
+interval has more than this certified number of distinct predecessor vertices.
+
+The rational polygon is proof-only: `Solution.lean` uses it to exhibit a member of
+`S(n,k)` at every active source size and to show that the exponent-defined public profile
+is strong enough for the deterministic latency argument.
+
+### Bounds on `epsilonChung` and `n`
+
+For the simplified bound, the exponent level must be admissible at every active source
+density. In the paper's bit convention this is
+
+```text
+0 < ε_chung < 6 H₂(x).
+```
+
+The Lean proof establishes the corresponding natural-log inequality
+`ε_chung log 2 < 6 H(x)` from the certified strict negativity of the polygon; it is
+not left as an assumption.
+
+For `lambda` bits of failure security, the paper's sufficient width condition is
+
+```text
+n > (λ - 2.4 - log₂(α) - ½ log₂(δₙ)) / ε_chung.
+```
+
+This inequality is the `security` field of `ChungSecurityConditions n lambda`.
+The formalization also proves the numerical prefactor estimate behind `2.4` and derives
+`chung8FailureBound n ≤ 2^(-lambda)`.
+
+## What the displayed probability statement means
+
+For
+
+```lean
+HoldsWithFailureAtMost (ChungInterlayer.uniformLaw M.n)
+  (M.HasUnpebbledPathTo A L)
+  (chung8FailureBound M.n)
+```
+
+the meanings are:
+
+- `P` is one uniformly random permutation of all `8n` ports, not eight independent
+  permutations of the `n` vertices;
+- the same `P` is used between every pair of consecutive layers;
+- each child vertex owns eight ports, and its predecessor neighbourhood consists of
+  the vertex components reached by permuting those ports;
+- the probability of the latency event is at least
+  `1 - chung8FailureBound M.n`.
+
+`HoldsWithFailureAtMost` uses extended nonnegative reals and is defined as
+`1 - failure ≤ successProbability`. As with any untruncated union bound, a failure
+expression at least one is valid but uninformative; the size and security conditions
+ensure the intended finite-size regime.
 
 ## Proof architecture
 
-- `Chung.lean`, `ChungCurve.lean`, `ChungShifted.lean`, and `Expansion.lean` define the
-  expansion exponent, construct its zero-level and finite-size roots, and define the
-  abstract expansion interface.
-- `ChungFilecoinCurve.lean`, `ChungChord.lean`, and `ChungRegion.lean` define the
-  rational degree-eight profile used by the Filecoin specialization, prove its shape
-  laws, and certify it inside the Chung region at the fixed level `-2⁻²²`, on
-  `[2⁻²⁵, 1 - 2⁻²³]`.
-- `ChungRelative.lean` moves to a level proportional to `H(x)` and extends the
-  certificate to all of `(0,1)`, covering the two corners the fixed level cannot reach
-  with a ray estimate along the polygon's opening chord and its mirror. Its
-  `filecoinBeta_lt_shiftedBeta_level` is the bridge `chung8_latency_15` consumes.
-- `UnionBound.lean` proves, by the union bound, that a sampled tuple of permutations
-  beats a given integer failure profile. It refers to no expansion function at all.
-- `Footprint.lean` develops normalized pebble budgets and the footprint recurrence.
-- `Tracking.lean`, `Search.lean`, and `Continuation.lean` construct fertile and
-  expandable searches through the layers.
-- `Growth.lean` bounds the cost of growth windows.
-- `Potential.lean` defines a piecewise-linear potential along a certified reference
-  trajectory.
-- `PotentialLedger.lean` prices search steps with that potential and derives the global
-  link count.
-- `Chain.lean` organizes continuation links and global budget accounting.
-- `Concrete.lean` instantiates the abstract analysis for finite layered graphs and
-  splices the links into a directed path.
-- `Latency.lean` states the public latency theorems.
-- `ChungNumerics.lean` and `ChungFilecoin.lean` prove the degree-eight numerical
-  certificates and the optimized asymptotic coefficient.
-- `Constructions.lean` states the bounded-indegree graph certificates required by the
-  concrete specialization.
+- `Chung.lean`, `ChungCurve.lean`, and `ChungShifted.lean` develop the exponent and its
+  finite-size shifted section.
+- `ChungFilecoinCurve.lean`, `ChungChord.lean`, `ChungNumerics.lean`, and
+  `ChungRegion.lean` define and certify the rational degree-eight polygon.
+- `PortExpansionProbability.lean` proves the sharp Stirling estimate, the fixed-pair
+  port-permutation count, and the abstract exponential union bound.
+- `ChungFilecoinExpansion.lean` proves all polygon, rounding, `ε_chung`, width, and
+  security side conditions needed for the Filecoin expansion instantiation.
+- `Footprint.lean`, `Tracking.lean`, `Continuation.lean`, `Potential.lean`, and related
+  files develop the deterministic accounting argument.
+- `Concrete.lean`, `Latency.lean`, and `Constructions.lean` realize the argument on
+  finite layered graphs and build the one-permutation port stack.
+- [`Solution.lean`](Solution.lean) connects the probabilistic expansion theorem to the
+  deterministic 15-layer latency result.
 
-`ProofOfSpace.lean` imports the complete public development.
+[`ProofOfSpace.lean`](ProofOfSpace.lean) imports the complete library development.
 
-## Indexing convention
+## Challenge and verification
 
-The published layered construction labels the challenge layer `V_ℓ` and the top layer
-`V₁`. Lean counts forward from the challenge: `layer 0` corresponds to `V_ℓ`,
-`layer (ℓ - 1)` corresponds to `V₁`, and edges from `layer (d + 1)` to `layer d` move
-toward the challenge.
+`Challenge.lean` imports only Mathlib and leaves its two theorem bodies as `sorry`.
+`Solution.lean` repeats the same public declarations and proves them. The comparator
+registers `ProofOfSpaceStatement.chung8_pebbling_latency_15` and permits only `propext`,
+`Classical.choice`, and `Quot.sound`.
 
-## Filecoin construction and open graph hypotheses
-
-The specialization uses the degree-eight profile at Reyzin's Appendix C exponent level
-`ε_chung = 2⁻²²`. In the Palomar theorem the vertical graph is an eight-tuple of uniform
-permutations, sampled once and reused between all consecutive layers. Consequently the
-only remaining graph hypothesis is:
-
-1. `LayeredGraph.DepthRobust`: each intra-layer graph has the required deletion-set
-   depth robustness.
-
-The expansion the statement demands is the Chung threshold itself, defined from the
-exponent. The rational polygon appears only in the proof, where it discharges the
-deterministic argument's hypothesis: it is a conservative under-approximation of that
-threshold, certified over all of `(0,1)`, and it is used rather than the root because
-concavity and a unique gain maximiser — both required of a `Setting.β` — are free for a
-minimum of affine functions and unproved for the root.
-
-`UnionBound.lean` proves the exact canonical failure bound uniformly in the layer width,
-degree, and abstract expansion setting. `latency_chung8_whp` transports that result to
-the explicit path event.
-
-This sampling model does not identify Filecoin's deployed Feistel wiring with a uniform
-tuple of permutations. Reyzin's concrete Appendix C estimate `1 - 2⁻²⁴⁹` is for the
-deployed-scale Chung calculation; the formal theorem retains its exact combinatorial
-union-bound expression instead of importing that numerical estimate as an assumption.
-
-## Build and submission verification
-
-With Lean 4 installed, run the project build. On Linux with Git, Go, Rust/Cargo, and
-Python 3 available, also run the pinned Palomar verification toolchain:
+Run:
 
 ```bash
 lake build
 ./scripts/verify-comparator.sh
 ```
 
-The first command builds the public dependency graph, Challenge, and Solution. The second
-uses [`comparator.json`](comparator.json) to check that the proved Solution declaration
-has the same name and type as the Challenge declaration, depends only on `propext`,
-`Classical.choice`, and `Quot.sound`, and replays through the NanoDa kernel. Both checks
-run in `.github/workflows/lean_action_ci.yml`.
+The first command builds the library, challenge, and solution. The second checks the
+registered Challenge/Solution statement, permitted axioms, and NanoDa replay using the
+pinned Palomar toolchain.
 
-## Published literature
+## Scope and literature
 
-- Leonid Reyzin. *Proofs of Space with Maximal Hardness*. 65th IEEE Symposium on
-  Foundations of Computer Science, 2024, 1159–1177.
+Lean numbers layers forward from the challenge: layer `0` is the challenge layer and
+layer `14` is the top layer. Vertical edges point from layer `d + 1` to layer `d`.
+
+The sampling theorem concerns an ideal uniform Chung port permutation. It does not
+identify Filecoin's deployed Feistel wiring with that distribution.
+
+- Leonid Reyzin. *Proofs of Space with Maximal Hardness*. FOCS 2024, 1159–1177.
   [ePrint](https://eprint.iacr.org/2023/1530).
-- Ben Fisch. *Tight Proofs of Space and Replication*. Advances in Cryptology –
-  EUROCRYPT 2019, Part II, LNCS 11477, 324–348.
-  [ePrint](https://eprint.iacr.org/2018/702).
-- Filecoin, [SDR protocol specification](https://spec.filecoin.io/algorithms/sdr/) and
-  [`rust-fil-proofs` stacked graph implementation](https://github.com/filecoin-project/rust-fil-proofs/blob/master/storage-proofs-porep/src/stacked/vanilla/graph.rs).
+- Ben Fisch. *Tight Proofs of Space and Replication*. EUROCRYPT 2019, Part II,
+  324–348. [ePrint](https://eprint.iacr.org/2018/702).
+
+The project is licensed under Apache-2.0.

@@ -5,14 +5,14 @@ project:
   name: "Formalized latency bounds for stacked proofs of space"
   description: >-
     A Lean 4 formalization of the static latency argument for stacked
-    proof-of-space graphs. A degree-eight Chung interlayer is sampled as eight
-    uniform permutations and reused throughout the stack. Under explicit
+    proof-of-space graphs. A degree-eight Chung interlayer is sampled as one
+    uniform permutation of all 8n ports and reused throughout the stack. Under explicit
     intra-layer depth robustness and pebbling-budget hypotheses, every
     sufficiently large red-free challenge footprint contains, with an exact
     quantified failure bound, an unpebbled directed path of length
     Omega(ell*n). All constants are explicit, and the finite-size
-    Filecoin-shaped analysis certifies an asymptotic coefficient between
-    0.02135 and 0.02136.
+    Filecoin-shaped analysis proves Reyzin's simplified expansion-failure
+    bound, including its finite-size and security-parameter conditions.
   authors:
     - "Diego de Estrada (@diegode)"
   license: "Apache-2.0"
@@ -51,30 +51,24 @@ related_formalizations: []
 
 status:
   scope: >-
-    ProofOfSpaceStatement.latency_chung8_whp is the registered probabilistic
+    ProofOfSpaceStatement.chung8_pebbling_latency_15 is the registered probabilistic
     latency theorem and returns an explicit unpebbled-path event in a static
-    red/black pebbling snapshot. The vertical graph is constructed from eight
-    uniformly sampled permutations; its expansion is proved with failure at
-    most an exact finite union-bound expression. Intra-layer depth robustness
-    and pebbling budgets remain in the signature. The rational degree-eight
-    profile is certified in its entirety inside the Chung region, at a level
-    proportional to H(x), on all of (0,1). No expansion profile is posited in
-    the statement: the expansion demanded of a sampled interlayer is the root
-    of Reyzin's union-bound exponent E_8(x,.) = -H(x)/2^23, written out in
-    Challenge.lean, and the rational polygon appears only in the proof, as the
-    under-approximation that discharges the deterministic argument's
-    hypothesis. The level is relative rather than fixed because E_8(x,x) =
-    -6 H(x): a fixed level empties the region near the endpoints and would cap
-    the theorem below deployed layer widths.
-    The generic union-bound layer is uniform in width, degree, and expansion
-    setting. The formalization does not include the reduction to a time-indexed
-    cryptographic game, nor identify Filecoin's Feistel wiring with a uniform
-    tuple of permutations.
+    red/black pebbling snapshot. The vertical graph is constructed from one
+    uniformly sampled permutation of all 8n Chung ports. Its expansion failure
+    is bounded by exp(1/8)/(2*pi*alpha*sqrt(delta_n))*2^(-n*epsilon_chung),
+    a simplified exponential union-bound expression. The statement exposes the
+    required positivity, grid-rounding, and security condition on n and
+    epsilon_chung = 2^-22. Its integer failure profile is defined only from
+    Reyzin's exponent and the finite-grid margin conditions; the rational polygon
+    is used only in the proof. Intra-layer depth robustness and pebbling budgets
+    remain explicit. The formalization does not include the reduction to a
+    time-indexed cryptographic game, nor identify Filecoin's Feistel wiring
+    with a uniform port permutation.
   sorry_count: 0
   sorry_in_definitions: 0
   axioms: ["propext", "Classical.choice", "Quot.sound"]
   main_results:
-    - declaration: "ProofOfSpaceStatement.latency_chung8_whp"
+    - declaration: "ProofOfSpaceStatement.chung8_pebbling_latency_15"
       file: "Solution.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
@@ -114,14 +108,15 @@ automation:
 
 fidelity:
   divergences: >-
-    The theorem samples a union of eight independent perfect matchings rather
+    The theorem samples one uniform permutation of all eight ports per vertex rather
     than Filecoin's Feistel wiring, and reuses one sampled interlayer throughout
     the stack. It permits continuation chains to break and restart and tracks
     those events in a global ledger. Lean counts depth forward from the
     challenge layer, opposite to Reyzin's level numbering. The result concerns
     a static pebbling snapshot and does not formalize a time-indexed sequential
     game. Reyzin's deployed-scale numerical failure estimate is not imported;
-    the theorem exposes the formal exact finite union bound.
+    the theorem proves the simplified expansion-failure bound and its displayed
+    sufficient width condition.
 
 review:
   status: "self-assessed"
@@ -137,13 +132,13 @@ alignment:
   namespace: "ProofOfSpaceStatement"
   statements:
     - source: "Reyzin, Proofs of Space with Maximal Hardness (FOCS 2024), footprint and chain-growth framework"
-      lean: "ProofOfSpaceStatement.latency_chung8_whp"
+      lean: "ProofOfSpaceStatement.chung8_pebbling_latency_15"
       module: "Solution"
       status: "adapted and proved"
       note: >-
         Palomar-facing probabilistic Chung-8 latency theorem. It constructs the
-        vertical graph from a uniform eight-tuple of permutations, proves an
-        exact expansion failure bound, and proves the explicit unpebbled path
+        vertical graph from one uniform permutation of all 8n ports, proves the
+        simplified expansion-failure bound, and proves the explicit unpebbled path
         event while permitting broken and restarted continuation chains.
 
 acknowledgements: >-

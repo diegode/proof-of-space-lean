@@ -688,6 +688,12 @@ noncomputable def filecoinAlphaMax : ℝ := 14155 / 14911
     (by norm_num [filecoinAlphaMin])]
   norm_num [filecoinAlphaMin, L0, chord]
 
+@[simp] theorem filecoinBeta_half_alphaMin :
+    filecoinBeta (filecoinAlphaMin / 2) = 378 / 14911 := by
+  rw [filecoinBeta_eq_L0 (by norm_num [filecoinAlphaMin])
+    (by norm_num [filecoinAlphaMin])]
+  norm_num [filecoinAlphaMin, L0, chord]
+
 @[simp] theorem filecoinBeta_alphaMax :
     filecoinBeta filecoinAlphaMax = 73593179 / 74555000 := by
   rw [filecoinBeta_eq_L11 (by norm_num [filecoinAlphaMax])

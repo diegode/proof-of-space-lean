@@ -49,6 +49,7 @@ challenge footprint bound is fertile, so is the *actual* reachability footprint 
 challenge set of weight `ζ_δ`.  This is the only thing a chain restart needs from the
 graph beyond what an ordinary extension needs. -/
 theorem challenge_fertile (P : Pebbling G) (hn : 0 < n) (hζ : 0 ≤ S.ζδ)
+    (hζmax : S.ζδ ≤ S.αmax) (hentry : S.piBar < S.ζδ - S.ρ)
     {A : Finset V} (hA : A ⊆ G.layer 0) (hred : ∀ v ∈ A, v ∉ P.red 0)
     (hweight : S.ζδ ≤ weight n A) {b : ℕ} (hb : b < ℓ)
     (hfertScalar : S.pi ≤ (P.challengeBound_struct hζ).f b) :
@@ -56,7 +57,13 @@ theorem challenge_fertile (P : Pebbling G) (hn : 0 < n) (hζ : 0 ≤ S.ζδ)
   have hstart : max 0 (S.ζδ - P.budget.spend 0) ≤ weight n (P.layerFootprint A 0) :=
     P.challenge_start_le hn hA hred hweight
   have hactual : P.challengeBound b ≤ weight n (P.layerFootprint A b) :=
-    P.footprintBound_le hn (le_max_left _ _) hstart (Nat.zero_le b) hb
+    P.footprintBound_le hn (le_max_left _ _) hstart
+      (fun {d} _ _ => by
+        change P.challengeBound d ∈ Set.Icc S.αmin S.αmax
+        exact ⟨S.αmin_lt_piBar.le.trans
+          ((P.challengeBound_struct hζ).piBar_lt hζmax hentry d).le,
+          (P.challengeBound_struct hζ).le_αmax hζmax hentry d⟩)
+      (Nat.zero_le b) hb
   exact hfertScalar.trans (by simpa [challengeBound_struct] using hactual)
 
 end Pebbling
@@ -93,12 +100,12 @@ theorem latency_potential {V : Type u}
     have h1 := S.piBar_pos
     have h2 := S.ρ_nonneg
     linarith
-  let CS := P.chainSystem T A hn hσapi.le hDepth
+  let CS := P.chainSystem T A hn hσapi.le hDepth hnobreak
   let Ch := P.challengeBound_struct hζ
   have hrestart : ∀ b : ℕ, b < ℓ → S.pi ≤ Ch.f b → Expandable P.budget T.ghat b →
       ∃ L : CS.Link, CS.depth L = b ∧ CS.count L = 1 := fun b hb hfertScalar hexp =>
     ⟨Concrete.Pebbling.Link.base hn hσapi.le hDepth hb hexp
-      (P.challenge_fertile hn hζ hA hred hweight hb hfertScalar), rfl, rfl⟩
+      (P.challenge_fertile hn hζ hζmax hentry hA hred hweight hb hfertScalar), rfl, rfl⟩
   obtain ⟨L, hL⟩ := LedgerCert.ChainSystem.potential_count Cert CS Ch hζmax hentry
     (fun L => CS.link_floor hnobreak L) (fun L => CS.link_le_αmax L) hrestart hz1 hz
   refine P.hasPath_mono A ?_ (CS.realizes L)

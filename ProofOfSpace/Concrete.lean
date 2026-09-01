@@ -177,8 +177,12 @@ structure LayeredGraph (V : Type u) (S : Setting) (ℓ n : ℕ) where
   inter_rank : ∀ {d u v}, inter d u v → rank u < rank v
   pred_subset : ∀ {d T}, pred d T ⊆ layer (d + 1)
   pred_edge : ∀ {d T u}, u ∈ pred d T → ∃ v ∈ T, inter d u v
-  expands : ∀ {d T}, d + 1 < ℓ → T ⊆ layer d →
-    S.β ((T.card : ℝ) / n) * n ≤ (pred d T).card
+  /-- Operational expansion on the active gain interval.  It is stated at any scalar
+  lower bound `x` for the source-set weight because the sampled construction may pass to
+  a subset whose cardinality is the next grid point above `x`. -/
+  expands : ∀ {d T x}, d + 1 < ℓ → T ⊆ layer d →
+    x ∈ Set.Icc S.αmin S.αmax → x ≤ (T.card : ℝ) / n →
+    S.β x * n ≤ (pred d T).card
 
 namespace LayeredGraph
 
@@ -444,7 +448,7 @@ theorem layerFootprint_subset (P : Pebbling G) (A : Finset V) (d : ℕ) :
 /-- One genuine expansion step: after deleting the red and black pebbles in the
 predecessor layer, the actual footprint is at least the scalar recurrence. -/
 theorem layerFootprint_step (P : Pebbling G) (hn : 0 < n) {A : Finset V} {d : ℕ}
-    (hd : d + 1 < ℓ) {x : ℝ} (hx0 : 0 ≤ x)
+    (hd : d + 1 < ℓ) {x : ℝ} (hxactive : x ∈ Set.Icc S.αmin S.αmax)
     (hx : x ≤ weight n (P.layerFootprint A d)) :
     max 0 (S.betaD x - P.budget.spend (d + 1)) ≤
       weight n (P.layerFootprint A (d + 1)) := by
@@ -453,18 +457,9 @@ theorem layerFootprint_step (P : Pebbling G) (hn : 0 < n) {A : Finset V} {d : �
   let U := G.pred d T \ (P.black (d + 1) ∪ P.red (d + 1))
   have hT : T ⊆ G.layer d := P.layerFootprint_subset A d
   have hTle : weight n T ≤ 1 := G.layer_weight_le_one hn (by omega) hT
-  have hxmem : x ∈ Set.Icc (0 : ℝ) 1 := ⟨hx0, hx.trans hTle⟩
-  have hy0 : 0 ≤ weight n T := div_nonneg (Nat.cast_nonneg _) (Nat.cast_nonneg _)
-  have hymem : weight n T ∈ Set.Icc (0 : ℝ) 1 := ⟨hy0, hTle⟩
-  have hβ : S.β x ≤ S.β (weight n T) := by
-    rcases eq_or_lt_of_le hx with heq | hlt
-    · rw [heq]
-    · exact (S.β_strictMonoOn hxmem hymem hlt).le
   have hnreal : (0 : ℝ) < n := by exact_mod_cast hn
-  have hβmul : S.β x * n ≤ S.β (weight n T) * n :=
-    mul_le_mul_of_nonneg_right hβ hnreal.le
-  have hexpand : S.β (weight n T) * n ≤ (G.pred d T).card := by
-    simpa [weight, T] using G.expands hd hT
+  have hexpand : S.β x * n ≤ (G.pred d T).card := by
+    exact G.expands hd hT hxactive (by simpa [weight, T] using hx)
   have hUsub : U ⊆ P.layerFootprint A (d + 1) := by
     intro u hu
     have hu' := Finset.mem_sdiff.mp hu
@@ -495,7 +490,7 @@ theorem layerFootprint_step (P : Pebbling G) (hn : 0 < n) {A : Finset V} {d : �
       simp only [Pebbling.budget_spend]
       field_simp
     simp only [Setting.betaD] at *
-    nlinarith [hβmul.trans hexpand, hcard, hred, hUcard]
+    nlinarith [hexpand, hcard, hred, hUcard]
   have hmain : S.betaD x - P.budget.spend (d + 1) ≤
       weight n (P.layerFootprint A (d + 1)) := by
     unfold weight
@@ -538,14 +533,17 @@ this dominance; it is proved here. -/
 theorem footprintBound_le (P : Pebbling G) (hn : 0 < n) {A : Finset V}
     {start : ℕ} {c : ℝ} (hc : 0 ≤ c)
     (hbase : c ≤ weight n (P.layerFootprint A start)) :
+    (∀ {d}, start ≤ d → d < ℓ →
+      P.footprintBound start c d ∈ Set.Icc S.αmin S.αmax) →
     ∀ {d}, start ≤ d → d < ℓ →
       P.footprintBound start c d ≤ weight n (P.layerFootprint A d) := by
+  intro hactive
   intro d hsd hdℓ
   induction d, hsd using Nat.le_induction with
   | base => simpa using hbase
   | succ d hsd ih =>
       rw [P.footprintBound_isBound start c d hsd]
-      exact P.layerFootprint_step hn hdℓ (P.footprintBound_nonneg hc hsd) (ih (by omega))
+      exact P.layerFootprint_step hn hdℓ (hactive hsd (by omega)) (ih (by omega))
 
 /-- An unpebbled source set of normalized size at least `c` starts a certified scalar
 footprint bound at `c`. -/
@@ -810,10 +808,43 @@ theorem source_scalar_le (L : Link P T A) :
     T.σ ≤ weight n (P.layerFootprint L.source L.depth) :=
   P.source_le_layerFootprint L.source_layer L.source_available L.source_weight
 
-theorem scalar_le_actual (L : Link P T A) (hn : 0 < n) {d : ℕ}
+theorem scalar_active (L : Link P T A)
+    (hnobreak : S.ρ < S.betaD S.pi - T.lam) {d : ℕ}
+    (hdepth : L.depth ≤ d) :
+    P.footprintBound L.depth T.σ d ∈ Set.Icc S.αmin S.αmax := by
+  set f := P.footprintBound L.depth T.σ
+  have hbound : IsFootprintBound S P.budget L.depth f :=
+    P.footprintBound_isBound L.depth T.σ
+  have hinit : f L.depth = T.σ := P.footprintBound_start L.depth T.σ
+  have hupper : f d ≤ S.αmax :=
+    (hbound.le_αmax (by rw [hinit]; exact T.σ_pos.le)
+      (by rw [hinit]; exact T.σ_lt_αmax.le) d hdepth).2
+  have hcond : S.αmin + S.ρ < S.betaD S.pi := by
+    linarith [T.αmin_lt_lam]
+  have hlower : S.αmin ≤ f d := by
+    by_cases hfe : ∃ d0, L.depth ≤ d0 ∧ d0 ≤ d ∧ S.pi ≤ f d0
+    · obtain ⟨d0, hd0b, hd0d, hd0f⟩ := hfe
+      rcases eq_or_lt_of_le hd0d with rfl | hlt
+      · exact S.αmin_lt_pi.le.trans hd0f
+      · have hpost := post_floor hbound (by rw [hinit]; exact T.σ_pos.le)
+          (by rw [hinit]; exact T.σ_lt_αmax.le) hcond hd0b hd0f d hlt
+        linarith
+    · push Not at hfe
+      have hle : ∀ i, i ≤ d - L.depth → f (L.depth + i) ≤ S.pi := fun i hi =>
+        (hfe (L.depth + i) (by omega) (by omega)).le
+      have hfloor := mirror_floor L.expandable hbound hinit hle
+        (d - L.depth) le_rfl
+      have : T.lam ≤ f d := by
+        rwa [show L.depth + (d - L.depth) = d from by omega] at hfloor
+      exact T.αmin_lt_lam.le.trans this
+  exact ⟨hlower, hupper⟩
+
+theorem scalar_le_actual (L : Link P T A) (hn : 0 < n)
+    (hnobreak : S.ρ < S.betaD S.pi - T.lam) {d : ℕ}
     (hdepth : L.depth ≤ d) (hd : d < ℓ) :
     P.footprintBound L.depth T.σ d ≤ weight n (P.layerFootprint L.source d) :=
-  P.footprintBound_le hn T.σ_pos.le L.source_scalar_le hdepth hd
+  P.footprintBound_le hn T.σ_pos.le L.source_scalar_le
+    (fun hde _ => L.scalar_active hnobreak hde) hdepth hd
 
 /-- Convert an actual footprint of weight at least `π` into a depth-robust local path. -/
 theorem local_path (L : Link P T A) (hn : 0 < n) {d : ℕ} (hd : d < ℓ)
@@ -1051,7 +1082,8 @@ graph-side axiom: it is `Link.extend`, proved above from actual reachability plu
 explicit uniform depth-robustness hypothesis. -/
 noncomputable def chainSystem [DecidableEq V] (P : Pebbling G) (T : Tracking S)
     (A : Finset V) (hn : 0 < n) (hσapi : T.σ ≤ G.αpi)
-    (hDepth : G.DepthRobust G.αpi) :
+    (hDepth : G.DepthRobust G.αpi)
+    (hnobreak : S.ρ < S.betaD S.pi - T.lam) :
     ChainSystem S P.budget T ℓ
       (fun z => P.HasUnpebbledPathInFootprint A (chainPathLength G T z)) where
   Link := Link P T A
@@ -1068,7 +1100,7 @@ noncomputable def chainSystem [DecidableEq V] (P : Pebbling G) (T : Tracking S)
     intro L b hdepth hb hfert hexp
     have hactual : P.footprintBound L.depth T.σ b ≤
         weight n (P.layerFootprint L.source b) :=
-      L.scalar_le_actual hn (le_of_lt hdepth) hb
+      L.scalar_le_actual hn hnobreak (le_of_lt hdepth) hb
     let L' := Link.extend hn hσapi hDepth L hdepth hb hexp (hfert.trans hactual)
     exact ⟨L', rfl, rfl⟩
 

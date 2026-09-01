@@ -1,3 +1,2 @@
 import ProofOfSpace.ChungFilecoin
-import ProofOfSpace.ChungRelative
-import ProofOfSpace.UnionBound
+import ProofOfSpace.ChungFilecoinExpansion

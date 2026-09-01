@@ -1,164 +1,134 @@
+import Mathlib.Analysis.SpecialFunctions.Log.Base
 import Mathlib.Analysis.SpecialFunctions.BinaryEntropy
-import Mathlib.Algebra.Order.Archimedean.Real.Basic
-import Mathlib.Algebra.Order.BigOperators.Group.Finset
-import Mathlib.Algebra.Order.Floor.Ring
-import Mathlib.Algebra.Order.Floor.Semiring
-import Mathlib.Data.List.Chain
 import Mathlib.Probability.Distributions.Uniform
 
 /-!
-# Probabilistic latency hardness for the Chung-8 stack
+# Chung-8 pebbling latency: statement surface
 
-This is the statement of record for the Palomar submission. It imports only Mathlib and
-states the latency theorem for an explicit random Chung interlayer: eight independently
-uniform perfect matchings on a layer of `n` vertices. One sampled interlayer is reused
-between every consecutive pair of layers. This is sufficient because the latency proof
-only needs the same deterministic expansion property at every layer.
-
-The degree-eight expansion profile is an explicit rational Chung polygon. The theorem
-does not assume that the sampled interlayer expands. Instead, it lifts any deterministic
-consequence of that expansion to a conclusion whose failure probability is at most
-`chung8FailureBound n`, the exact finite union bound for the sampled eight-tuple of
-permutations. Filecoin-specific storage and pebbling assumptions belong in the
-specialized latency corollary, not in this probabilistic construction theorem.
+The random interlayer is the model used by Reyzin: one uniform permutation of all
+`8n` ports. This file contains only the definitions needed to state the generic
+high-probability lifting theorem and its 15-layer Filecoin specialization.
 -/
 
 namespace ProofOfSpaceStatement
 
-open Finset Set
 open scoped ENNReal
 
-/-! ### The random Chung-8 interlayer -/
-
-/-- Eight independently sampled perfect matchings between two `n`-vertex layers. -/
 structure ChungInterlayer (n : ℕ) where
-  perm : Fin 8 → Equiv.Perm (Fin n)
+  perm : Equiv.Perm (Fin 8 × Fin n)
 deriving Fintype
 
-instance (n : ℕ) : Nonempty (ChungInterlayer n) :=
-  ⟨⟨fun _ => Equiv.refl (Fin n)⟩⟩
+instance (n : ℕ) : Nonempty (ChungInterlayer n) := ⟨⟨Equiv.refl _⟩⟩
 
 namespace ChungInterlayer
 
-/-- The uniform law on eight-tuples of permutations. -/
 noncomputable def uniformLaw (n : ℕ) : PMF (ChungInterlayer n) :=
   PMF.uniformOfFintype (ChungInterlayer n)
 
+def ports {n : ℕ} (T : Finset (Fin n)) : Finset (Fin 8 × Fin n) :=
+  Finset.univ ×ˢ T
+
+def neighborhood {n : ℕ} (P : ChungInterlayer n) (T : Finset (Fin n)) :
+    Finset (Fin n) :=
+  (ports T).image fun q => (P.perm q).2
+
 end ChungInterlayer
 
-/-- Probability assigned to a predicate by a probability mass function. -/
 noncomputable def probabilityOf {A : Type*} (p : PMF A) (Q : A → Prop) : ℝ≥0∞ :=
   by classical exact ∑' a, if Q a then p a else 0
 
-/-- A finite event holds with failure probability at most `δ`. -/
 def HoldsWithFailureAtMost {A : Type*} (p : PMF A) (Q : A → Prop)
     (δ : ℝ≥0∞) : Prop :=
   1 - δ ≤ probabilityOf p Q
 
-/-! ### Reyzin's union-bound exponent, and the profile it defines -/
+noncomputable def chung8PebblingAlphaMin : ℝ := 961821 / 74555000
+noncomputable def chung8PebblingAlphaMax : ℝ := 14155 / 14911
+noncomputable def chung8AlphaMin : ℝ := chung8PebblingAlphaMin / 2
+noncomputable def chung8AlphaMax : ℝ := 14533 / 14911
+noncomputable def epsilonChung : ℝ := 1 / 2 ^ (22 : ℕ)
+noncomputable def chung8Delta : ℝ := 189 / 10000
+noncomputable def chung8DeltaN (n : ℕ) : ℝ := chung8Delta - 1 / n
 
-/-- **Reyzin's union-bound exponent** for a random degree-eight Chung interlayer,
-`E₈(x, y) = H(x) + H(y) + 8 (y H(x/y) - H(x))`, in nats.  It is the rate at which the
-count of eight-tuples of permutations crushing a density-`x` set into a density-`y` set is
-weighed against `(n!)^8`. -/
+/-- Reyzin's degree-eight fixed-pair exponent, in nats. -/
 noncomputable def chungExponent8 (x y : ℝ) : ℝ :=
   Real.binEntropy x + Real.binEntropy y +
     8 * (y * Real.binEntropy (x / y) - Real.binEntropy x)
 
-/-- The level at which the exponent is required to close.  It is *relative* — a fixed
-multiple of `H(x)` rather than a fixed constant — and that is what makes the theorem
-uniform in the layer width.  Since `E₈(x, x) = -6 H(x)`, a fixed negative level cuts out
-an empty region once `H(x)` drops below it; at Filecoin's `n ≈ 10⁹` even the source size
-`k = 1` would land in that dead zone.  A relative level never degenerates. -/
-noncomputable def chung8Level (x : ℝ) : ℝ := Real.binEntropy x / 2 ^ 23
+/-- An integer neighbourhood size admissible for the exponential union bound. -/
+def chung8AdmissibleFailure (n k m : ℕ) : Prop :=
+  k < m ∧ m < n ∧
+  chung8AlphaMin ≤ 1 - (m : ℝ) / n ∧
+  chung8DeltaN n ≤ (m : ℝ) / n - (k : ℝ) / n ∧
+  chungExponent8 ((k : ℝ) / n) ((m : ℝ) / n) ≤
+    -epsilonChung * Real.log 2
 
-/-- **The Chung threshold**, defined by the exponent alone: the largest neighbourhood
-density that Chung's own union bound still certifies at source density `x`.  This is the
-root of `E₈(x, ·) = -chung8Level x`, and no expansion profile is posited anywhere in this
-file — what the theorem demands of a sampled interlayer is exactly what the union-bound
-exponent certifies. -/
-noncomputable def chung8Threshold (x : ℝ) : ℝ :=
-  sSup {y | y ∈ Set.Ioo x 1 ∧ chungExponent8 x y < -chung8Level x}
-
-namespace ChungInterlayer
-
-/-- Distinct predecessors reached from a set of children. -/
-def neighborhood {n : ℕ} (P : ChungInterlayer n) (T : Finset (Fin n)) :
-    Finset (Fin n) :=
-  T.biUnion fun v => Finset.univ.image fun j : Fin 8 => P.perm j v
-
-end ChungInterlayer
-
-/-- The largest neighbourhood size still counted as a failure for a `k`-set: one below the
-integer the Chung threshold demands. -/
+/-- The largest integer failure size certified directly by Reyzin's exponent and the
+finite-grid margin conditions. -/
 noncomputable def chung8FailureProfile (n k : ℕ) : ℕ :=
-  if k ≤ n then Nat.ceil (chung8Threshold ((k : ℝ) / n) * n) - 1 else 0
+  by classical exact ((Finset.range n).filter (chung8AdmissibleFailure n k)).sup id
 
 namespace ChungInterlayer
 
-/-- The deterministic Chung-8 expansion event: no nonempty source set is crushed to a size
-the exponent still certifies as a failure. -/
 def Expands {n : ℕ} (P : ChungInterlayer n) : Prop :=
-  ∀ T : Finset (Fin n), T.Nonempty →
+  ∀ T : Finset (Fin n),
+    chung8AlphaMin ≤ (T.card : ℝ) / n →
+    (T.card : ℝ) / n ≤ chung8AlphaMax →
     chung8FailureProfile n T.card < (P.neighborhood T).card
 
 end ChungInterlayer
 
-/-- The exact union-bound failure probability for a random Chung-8 interlayer. -/
+/-- The simplified expansion-failure bound, with `ε_chung` measured in bits. -/
 noncomputable def chung8FailureBound (n : ℕ) : ℝ≥0∞ :=
-  ((∑ k ∈ Finset.Ico 1 (n + 1), n.choose k *
-        (n.choose (chung8FailureProfile n k) *
-          ((chung8FailureProfile n k).descFactorial k * Nat.factorial (n - k)) ^ 8) : ℕ) :
-      ℝ≥0∞) /
-    ((Nat.factorial n ^ 8 : ℕ) : ℝ≥0∞)
+  ENNReal.ofReal
+    (Real.exp (1 / 8) /
+        (2 * Real.pi * chung8AlphaMin * Real.sqrt (chung8DeltaN n)) *
+      Real.exp (-(n : ℝ) * epsilonChung * Real.log 2))
 
+/-- Positivity and one-grid-step conditions required by the finite-size profile. -/
+class ChungExpansionConditions (n : ℕ) : Prop where
+  n_pos : 0 < n
+  delta_pos : 0 < chung8DeltaN n
+  grid_buffer : 1 / (n : ℝ) ≤ chung8AlphaMax - chung8PebblingAlphaMax
 
-/-! ### Latency data used by the Filecoin specialization -/
+/-- Reyzin's sufficient graph-width condition for `lambda` bits of security. -/
+class ChungSecurityConditions (n : ℕ) (lambda : ℝ) : Prop
+    extends ChungExpansionConditions n where
+  security :
+    (lambda - 12 / 5 - Real.logb 2 chung8AlphaMin -
+      Real.logb 2 (chung8DeltaN n) / 2) / epsilonChung < n
 
-/-- Within-layer edges and a static pebbling snapshot. Layers and vertical edges are
-constructed below rather than supplied as assumptions. -/
-structure LatencyData (ℓ : ℕ) where
+/-- A static black/red pebbling position on an `ℓ`-layer stacked graph. -/
+structure PebblingGame (ℓ : ℕ) where
   n : ℕ
-  /-- The path fraction `α_π` produced by within-layer depth robustness. -/
   αpi : ℝ
-  /-- The per-layer red-pebble budget `δ`, as a fraction of the layer width. -/
   δ : ℝ
-  /-- The within-layer robustness threshold `π`: deleting at most `(1 - π) n` nodes of a
-  layer still leaves an intra-layer path on `α_π n` surviving nodes. -/
   pi : ℝ
-  /-- The total black-pebble budget `ρ = 1 - ε_space`, as a fraction of the layer width. -/
   ρ : ℝ
   intra : Fin n → Fin n → Prop
   black : ℕ → Finset (ℕ × Fin n)
   red : ℕ → Finset (ℕ × Fin n)
 
-def LatencyData.layer {ℓ : ℕ} (M : LatencyData ℓ) (d : ℕ) :
+def PebblingGame.layer {ℓ : ℕ} (M : PebblingGame ℓ) (d : ℕ) :
     Finset (ℕ × Fin M.n) :=
   if d < ℓ then Finset.univ.image (fun i : Fin M.n => (d, i)) else ∅
 
-def LatencyData.depth {ℓ : ℕ} (M : LatencyData ℓ) (v : ℕ × Fin M.n) : ℕ := v.1
+def PebblingGame.depth {ℓ : ℕ} (M : PebblingGame ℓ) (v : ℕ × Fin M.n) : ℕ := v.1
 
-def LatencyData.intraEdge {ℓ : ℕ} (M : LatencyData ℓ) (d : ℕ)
+def PebblingGame.intraEdge {ℓ : ℕ} (M : PebblingGame ℓ) (d : ℕ)
     (u v : ℕ × Fin M.n) : Prop :=
   u.1 = d ∧ v.1 = d ∧ d < ℓ ∧ M.intra u.2 v.2
 
-/-- Vertical edges supplied by the sampled eight-tuple of permutations. -/
-def LatencyData.interEdge {ℓ : ℕ} (M : LatencyData ℓ)
-    (P : ChungInterlayer M.n) (d : ℕ)
-    (u v : ℕ × Fin M.n) : Prop :=
+def PebblingGame.interEdge {ℓ : ℕ} (M : PebblingGame ℓ)
+    (P : ChungInterlayer M.n) (d : ℕ) (u v : ℕ × Fin M.n) : Prop :=
   u.1 = d + 1 ∧ v.1 = d ∧ d + 1 < ℓ ∧
-    ∃ j : Fin 8, u.2 = P.perm j v.2
+    ∃ q ∈ ChungInterlayer.ports ({v.2} : Finset (Fin M.n)), (P.perm q).2 = u.2
 
-def LatencyData.edge {ℓ : ℕ} (M : LatencyData ℓ) (P : ChungInterlayer M.n)
+def PebblingGame.edge {ℓ : ℕ} (M : PebblingGame ℓ) (P : ChungInterlayer M.n)
     (u v : ℕ × Fin M.n) : Prop :=
   (∃ d, M.intraEdge d u v) ∨ (∃ d, M.interEdge P d u v)
 
-/-- The remaining literature-level inputs, after the Chung profile and vertical graph
-construction have been made explicit. The numeric parameters they quantify over are
-fields of `LatencyData`: the depth-robustness threshold `M.pi`, the per-layer red budget
-`M.δ`, and the total black budget `M.ρ`. Filecoin's values for them are pinned in the
-specialization below, not here. -/
-class LiteratureHypotheses {ℓ : ℕ} (M : LatencyData ℓ) : Prop where
+/-- Structural graph assumptions and pebble-budget constraints for an admissible game. -/
+class PebblingGame.IsAdmissible {ℓ : ℕ} (M : PebblingGame ℓ) : Prop where
   intra_rank : ∀ {u v}, M.intra u v → u.val < v.val
   depth_robust : ∀ X : Finset (Fin M.n),
     ((X.card : ℝ) ≤ (1 - M.pi) * M.n) →
@@ -171,40 +141,28 @@ class LiteratureHypotheses {ℓ : ℕ} (M : LatencyData ℓ) : Prop where
   red_bound : ∀ d, ((M.red d).card : ℝ) ≤ M.δ * M.n
   n_pos : 0 < M.n
 
-/-- The existence of an unpebbled dependency path of at least `L` nodes. -/
-def LatencyEvent {ℓ : ℕ} (M : LatencyData ℓ) (A : Finset (ℕ × Fin M.n))
+/-- The game has an unpebbled directed path of length at least `L` ending in `A`. -/
+def PebblingGame.HasUnpebbledPathTo {ℓ : ℕ} (M : PebblingGame ℓ)
+    (A : Finset (ℕ × Fin M.n))
     (L : ℝ) (P : ChungInterlayer M.n) : Prop :=
   ∃ u a, a ∈ A ∧ ∃ Q : List (ℕ × Fin M.n),
     Q ≠ [] ∧ Q.IsChain (M.edge P) ∧
     (∀ v ∈ Q, v ∉ M.black (M.depth v) ∧ v ∉ M.red (M.depth v)) ∧
-    Q.head? = some u ∧ Q.getLast? = some a ∧
-    L ≤ (Q.length : ℝ)
+    Q.head? = some u ∧ Q.getLast? = some a ∧ L ≤ (Q.length : ℝ)
 
-/--
-**Probabilistic Chung-8 latency lower bound.**
-
-A uniformly sampled eight-tuple of permutations satisfies every deterministic consequence
-of the Chung-8 expansion event with failure probability bounded by the exact finite union
-bound `chung8FailureBound M.n`.
--/
-theorem latency_chung8_whp
-    {ℓ : ℕ} (M : LatencyData ℓ) (A : Finset (ℕ × Fin M.n)) (L : ℝ)
-    (hdet : ∀ P : ChungInterlayer M.n, P.Expands → LatencyEvent M A L P) :
+/-- Certified Chung expansion lifts a deterministic pebbling conclusion to high probability. -/
+theorem chung8_pebbling_latency_whp
+    {ℓ : ℕ} (M : PebblingGame ℓ) [ChungExpansionConditions M.n]
+    (A : Finset (ℕ × Fin M.n)) (L : ℝ)
+    (hdet : ∀ P : ChungInterlayer M.n, P.Expands → M.HasUnpebbledPathTo A L P) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw M.n)
-      (LatencyEvent M A L) (chung8FailureBound M.n) := by
+      (M.HasUnpebbledPathTo A L) (chung8FailureBound M.n) := by
   sorry
 
-/--
-**The Filecoin 15-layer specialization.**
-
-This is where the Filecoin values enter: the depth-robustness pair `π = 4/5`,
-`α_π = 1/5`, the per-layer red budget `δ = 189/5000`, the black budget `ρ = 4/5`, and the
-adjusted challenge weight `ζ_δ = 4311/5000` obtained from `ζ`, `ρ`, and `δ`. The theorem
-uses the generic Chung-8 high-probability result above after proving deterministically
-that expansion implies the displayed latency event.
--/
-theorem chung8_latency_15
-    (M : LatencyData 15) [LiteratureHypotheses M]
+/-- The 15-layer Filecoin latency lower bound at `lambda` bits of security. -/
+theorem chung8_pebbling_latency_15
+    (lambda : ℝ) (M : PebblingGame 15) [PebblingGame.IsAdmissible M]
+    [ChungSecurityConditions M.n lambda]
     (A : Finset (ℕ × Fin M.n)) (hA : A ⊆ M.layer 0)
     (hred : ∀ v ∈ A, v ∉ M.red 0)
     (hαpi : M.αpi = (1 : ℝ) / 5)
@@ -213,9 +171,9 @@ theorem chung8_latency_15
     (hρ : M.ρ = (4 : ℝ) / 5)
     (hweight : (4311 : ℝ) / 5000 ≤ (A.card : ℝ) / M.n) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw M.n)
-      (LatencyEvent M A
+      (M.HasUnpebbledPathTo A
         ((1 : ℝ) / 5 * M.n + ((1 : ℝ) / 5 - (74 : ℝ) / 625) * M.n))
-      (chung8FailureBound M.n) := by
+      (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
   sorry
 
 end ProofOfSpaceStatement
