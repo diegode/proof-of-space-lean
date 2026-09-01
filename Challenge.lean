@@ -28,9 +28,9 @@ noncomputable def uniformLaw (n : ℕ) : PMF (ChungInterlayer n) :=
 def ports {n : ℕ} (T : Finset (Fin n)) : Finset (Fin 8 × Fin n) :=
   Finset.univ ×ˢ T
 
-def neighborhood {n : ℕ} (P : ChungInterlayer n) (T : Finset (Fin n)) :
+def neighborhood {n : ℕ} (p : ChungInterlayer n) (T : Finset (Fin n)) :
     Finset (Fin n) :=
-  (ports T).image fun q => (P.perm q).2
+  (ports T).image fun q => (p.perm q).2
 
 end ChungInterlayer
 
@@ -69,11 +69,11 @@ noncomputable def chung8FailureProfile (n k : ℕ) : ℕ :=
 
 namespace ChungInterlayer
 
-def Expands {n : ℕ} (P : ChungInterlayer n) : Prop :=
+def Expands {n : ℕ} (p : ChungInterlayer n) : Prop :=
   ∀ T : Finset (Fin n),
     chung8AlphaMin ≤ (T.card : ℝ) / n →
     (T.card : ℝ) / n ≤ chung8AlphaMax →
-    chung8FailureProfile n T.card < (P.neighborhood T).card
+    chung8FailureProfile n T.card < (p.neighborhood T).card
 
 end ChungInterlayer
 
@@ -100,82 +100,82 @@ class ChungSecurityConditions (n : ℕ) (lambda : ℝ) : Prop
 /-- A static black/red pebbling position on an `ℓ`-layer stacked graph. -/
 structure PebblingGame (ℓ : ℕ) where
   n : ℕ
-  αpi : ℝ
+  απ : ℝ
   δ : ℝ
-  pi : ℝ
+  π : ℝ
   ρ : ℝ
   intra : Fin n → Fin n → Prop
   black : ℕ → Finset (ℕ × Fin n)
   red : ℕ → Finset (ℕ × Fin n)
 
-def PebblingGame.layer {ℓ : ℕ} (M : PebblingGame ℓ) (d : ℕ) :
-    Finset (ℕ × Fin M.n) :=
-  if d < ℓ then Finset.univ.image (fun i : Fin M.n => (d, i)) else ∅
+def PebblingGame.layer {ℓ : ℕ} (G : PebblingGame ℓ) (i : ℕ) :
+    Finset (ℕ × Fin G.n) :=
+  if i < ℓ then Finset.univ.image (fun v : Fin G.n => (i, v)) else ∅
 
-def PebblingGame.depth {ℓ : ℕ} (M : PebblingGame ℓ) (v : ℕ × Fin M.n) : ℕ := v.1
+def PebblingGame.depth {ℓ : ℕ} (G : PebblingGame ℓ) (v : ℕ × Fin G.n) : ℕ := v.1
 
-def PebblingGame.intraEdge {ℓ : ℕ} (M : PebblingGame ℓ) (d : ℕ)
-    (u v : ℕ × Fin M.n) : Prop :=
-  u.1 = d ∧ v.1 = d ∧ d < ℓ ∧ M.intra u.2 v.2
+def PebblingGame.intraEdge {ℓ : ℕ} (G : PebblingGame ℓ) (i : ℕ)
+    (u v : ℕ × Fin G.n) : Prop :=
+  u.1 = i ∧ v.1 = i ∧ i < ℓ ∧ G.intra u.2 v.2
 
-def PebblingGame.interEdge {ℓ : ℕ} (M : PebblingGame ℓ)
-    (P : ChungInterlayer M.n) (d : ℕ) (u v : ℕ × Fin M.n) : Prop :=
-  u.1 = d + 1 ∧ v.1 = d ∧ d + 1 < ℓ ∧
-    ∃ q ∈ ChungInterlayer.ports ({v.2} : Finset (Fin M.n)), (P.perm q).2 = u.2
+def PebblingGame.interEdge {ℓ : ℕ} (G : PebblingGame ℓ)
+    (p : ChungInterlayer G.n) (i : ℕ) (u v : ℕ × Fin G.n) : Prop :=
+  u.1 = i + 1 ∧ v.1 = i ∧ i + 1 < ℓ ∧
+    ∃ q ∈ ChungInterlayer.ports ({v.2} : Finset (Fin G.n)), (p.perm q).2 = u.2
 
-def PebblingGame.edge {ℓ : ℕ} (M : PebblingGame ℓ) (P : ChungInterlayer M.n)
-    (u v : ℕ × Fin M.n) : Prop :=
-  (∃ d, M.intraEdge d u v) ∨ (∃ d, M.interEdge P d u v)
+def PebblingGame.edge {ℓ : ℕ} (G : PebblingGame ℓ) (p : ChungInterlayer G.n)
+    (u v : ℕ × Fin G.n) : Prop :=
+  (∃ i, G.intraEdge i u v) ∨ (∃ i, G.interEdge p i u v)
 
 /-- Structural graph assumptions and pebble-budget constraints for an admissible game. -/
-class PebblingGame.IsAdmissible {ℓ : ℕ} (M : PebblingGame ℓ) : Prop where
-  intra_rank : ∀ {u v}, M.intra u v → u.val < v.val
-  depth_robust : ∀ X : Finset (Fin M.n),
-    ((X.card : ℝ) ≤ (1 - M.pi) * M.n) →
-    ∃ p : List (Fin M.n), p ≠ [] ∧ p.IsChain M.intra ∧
-      (∀ v ∈ p, v ∉ X) ∧ M.αpi * M.n ≤ (p.length : ℝ)
-  black_subset : ∀ d, M.black d ⊆ M.layer d
-  red_subset : ∀ d, M.red d ⊆ M.layer d
+class PebblingGame.IsAdmissible {ℓ : ℕ} (G : PebblingGame ℓ) : Prop where
+  intra_rank : ∀ {u v}, G.intra u v → u.val < v.val
+  depth_robust : ∀ X : Finset (Fin G.n),
+    ((X.card : ℝ) ≤ (1 - G.π) * G.n) →
+    ∃ P : List (Fin G.n), P ≠ [] ∧ P.IsChain G.intra ∧
+      (∀ v ∈ P, v ∉ X) ∧ G.απ * G.n ≤ (P.length : ℝ)
+  black_subset : ∀ i, G.black i ⊆ G.layer i
+  red_subset : ∀ i, G.red i ⊆ G.layer i
   black_total : ∀ m,
-    ∑ d ∈ Finset.range m, ((M.black d).card : ℝ) / M.n ≤ M.ρ
-  red_bound : ∀ d, ((M.red d).card : ℝ) ≤ M.δ * M.n
-  n_pos : 0 < M.n
+    ∑ i ∈ Finset.range m, ((G.black i).card : ℝ) / G.n ≤ G.ρ
+  red_bound : ∀ i, ((G.red i).card : ℝ) ≤ G.δ * G.n
+  n_pos : 0 < G.n
 
-/-- The game has an unpebbled directed path of length at least `L` ending in `A`. -/
-def PebblingGame.HasUnpebbledPathTo {ℓ : ℕ} (M : PebblingGame ℓ)
-    (A : Finset (ℕ × Fin M.n))
-    (L : ℝ) (P : ChungInterlayer M.n) : Prop :=
-  ∃ u a, a ∈ A ∧ ∃ Q : List (ℕ × Fin M.n),
-    Q ≠ [] ∧ Q.IsChain (M.edge P) ∧
-    (∀ v ∈ Q, v ∉ M.black (M.depth v) ∧ v ∉ M.red (M.depth v)) ∧
-    Q.head? = some u ∧ Q.getLast? = some a ∧ L ≤ (Q.length : ℝ)
+/-- The game has an unpebbled directed path of length at least `L` ending in `S`. -/
+def PebblingGame.HasUnpebbledPathTo {ℓ : ℕ} (G : PebblingGame ℓ)
+    (S : Finset (ℕ × Fin G.n))
+    (L : ℝ) (p : ChungInterlayer G.n) : Prop :=
+  ∃ u v, v ∈ S ∧ ∃ P : List (ℕ × Fin G.n),
+    P ≠ [] ∧ P.IsChain (G.edge p) ∧
+    (∀ w ∈ P, w ∉ G.black (G.depth w) ∧ w ∉ G.red (G.depth w)) ∧
+    P.head? = some u ∧ P.getLast? = some v ∧ L ≤ (P.length : ℝ)
 
 -- The public challenge theorem bodies are intentionally omitted; see `README.md`.
 set_option warn.sorry false
 
 /-- Certified Chung expansion lifts a deterministic pebbling conclusion to high probability. -/
 theorem chung8_pebbling_latency_whp
-    {ℓ : ℕ} (M : PebblingGame ℓ) [ChungExpansionConditions M.n]
-    (A : Finset (ℕ × Fin M.n)) (L : ℝ)
-    (hdet : ∀ P : ChungInterlayer M.n, P.Expands → M.HasUnpebbledPathTo A L P) :
-    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw M.n)
-      (M.HasUnpebbledPathTo A L) (chung8FailureBound M.n) := by
+    {ℓ : ℕ} (G : PebblingGame ℓ) [ChungExpansionConditions G.n]
+    (S : Finset (ℕ × Fin G.n)) (L : ℝ)
+    (hdet : ∀ p : ChungInterlayer G.n, p.Expands → G.HasUnpebbledPathTo S L p) :
+    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw G.n)
+      (G.HasUnpebbledPathTo S L) (chung8FailureBound G.n) := by
   sorry
 
 /-- The 15-layer Filecoin latency lower bound at `lambda` bits of security. -/
 theorem chung8_pebbling_latency_15
-    (lambda : ℝ) (M : PebblingGame 15) [PebblingGame.IsAdmissible M]
-    [ChungSecurityConditions M.n lambda]
-    (A : Finset (ℕ × Fin M.n)) (hA : A ⊆ M.layer 0)
-    (hred : ∀ v ∈ A, v ∉ M.red 0)
-    (hαpi : M.αpi = (1 : ℝ) / 5)
-    (hδ : M.δ = (189 : ℝ) / 5000)
-    (hpi : M.pi = (4 : ℝ) / 5)
-    (hρ : M.ρ = (4 : ℝ) / 5)
-    (hweight : (4311 : ℝ) / 5000 ≤ (A.card : ℝ) / M.n) :
-    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw M.n)
-      (M.HasUnpebbledPathTo A
-        ((1 : ℝ) / 5 * M.n + ((1 : ℝ) / 5 - (74 : ℝ) / 625) * M.n))
+    (lambda : ℝ) (G : PebblingGame 15) [PebblingGame.IsAdmissible G]
+    [ChungSecurityConditions G.n lambda]
+    (S : Finset (ℕ × Fin G.n)) (hS : S ⊆ G.layer 0)
+    (hred : ∀ v ∈ S, v ∉ G.red 0)
+    (hαπ : G.απ = (1 : ℝ) / 5)
+    (hδ : G.δ = (189 : ℝ) / 5000)
+    (hπ : G.π = (4 : ℝ) / 5)
+    (hρ : G.ρ = (4 : ℝ) / 5)
+    (hweight : (4311 : ℝ) / 5000 ≤ (S.card : ℝ) / G.n) :
+    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw G.n)
+      (G.HasUnpebbledPathTo S
+        ((1 : ℝ) / 5 * G.n + ((1 : ℝ) / 5 - (74 : ℝ) / 625) * G.n))
       (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
   sorry
 

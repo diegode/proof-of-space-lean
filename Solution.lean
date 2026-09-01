@@ -85,9 +85,9 @@ class ChungSecurityConditions (n : ℕ) (lambda : ℝ) : Prop
 /-- A static black/red pebbling position on an `ℓ`-layer stacked graph. -/
 structure PebblingGame (ℓ : ℕ) where
   n : ℕ
-  αpi : ℝ
+  απ : ℝ
   δ : ℝ
-  pi : ℝ
+  π : ℝ
   ρ : ℝ
   intra : Fin n → Fin n → Prop
   black : ℕ → Finset (ℕ × Fin n)
@@ -116,9 +116,9 @@ def PebblingGame.edge {ℓ : ℕ} (M : PebblingGame ℓ) (P : ChungInterlayer M.
 class PebblingGame.IsAdmissible {ℓ : ℕ} (M : PebblingGame ℓ) : Prop where
   intra_rank : ∀ {u v}, M.intra u v → u.val < v.val
   depth_robust : ∀ X : Finset (Fin M.n),
-    ((X.card : ℝ) ≤ (1 - M.pi) * M.n) →
+    ((X.card : ℝ) ≤ (1 - M.π) * M.n) →
     ∃ p : List (Fin M.n), p ≠ [] ∧ p.IsChain M.intra ∧
-      (∀ v ∈ p, v ∉ X) ∧ M.αpi * M.n ≤ (p.length : ℝ)
+      (∀ v ∈ p, v ∉ X) ∧ M.απ * M.n ≤ (p.length : ℝ)
   black_subset : ∀ d, M.black d ⊆ M.layer d
   red_subset : ∀ d, M.red d ⊆ M.layer d
   black_total : ∀ m,
@@ -283,9 +283,9 @@ theorem chung8_pebbling_latency_15
     [C : ChungSecurityConditions M.n lambda]
     (A : Finset (ℕ × Fin M.n)) (hA : A ⊆ M.layer 0)
     (hred : ∀ v ∈ A, v ∉ M.red 0)
-    (hαpi : M.αpi = (1 : ℝ) / 5)
+    (hαπ : M.απ = (1 : ℝ) / 5)
     (hδ : M.δ = (189 : ℝ) / 5000)
-    (hpi : M.pi = (4 : ℝ) / 5)
+    (hπ : M.π = (4 : ℝ) / 5)
     (hρ : M.ρ = (4 : ℝ) / 5)
     (hweight : (4311 : ℝ) / 5000 ≤ (A.card : ℝ) / M.n) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw M.n)
@@ -317,7 +317,7 @@ theorem chung8_pebbling_latency_15
       ChungCurve.portExpands_filecoin_of_profile M.n Pc hprofile
     let standalone : Concrete.StandaloneGraph M.n :=
       { edge := M.intra, edge_lt := fun {_ _} h => H.intra_rank h }
-    let G := Concrete.portStack standalone ChungCurve.chung8Setting 15 M.αpi H.n_pos
+    let G := Concrete.portStack standalone ChungCurve.chung8Setting 15 M.απ H.n_pos
       (fun _ => Pc) (fun _ _ => hPc)
     let pebbling : Concrete.Pebbling G := {
       black := M.black
@@ -340,14 +340,14 @@ theorem chung8_pebbling_latency_15
       intro X hX
       apply H.depth_robust X
       have heq : (1 - ChungCurve.chung8Setting.pi) * (M.n : ℝ) =
-          (1 - M.pi) * M.n := by
-        rw [ChungCurve.chung8Setting_pi, hpi]
+          (1 - M.π) * M.n := by
+        rw [ChungCurve.chung8Setting_pi, hπ]
       rwa [heq] at hX
     have hA' : A ⊆ G.layer 0 := hA
     have hweight' : ChungCurve.chung8Setting.ζδ ≤ Concrete.Pebbling.weight M.n A := by
       simpa only [ChungCurve.chung8Setting_zetaDelta, Concrete.Pebbling.weight] using hweight
     have hpath := ChungCurve.chung8_latency_15_deterministic G pebbling H.n_pos
-      hαpi hDepth A hA' hred hweight'
+      hαπ hDepth A hA' hred hweight'
     rcases hpath with ⟨u, a, ha, Q, hfirst, hlast, hlength⟩
     refine ⟨u, a, ha, Q.nodes, Q.nonempty, ?_, Q.unpebbled', ?_, ?_, hlength⟩
     · exact Q.chain
