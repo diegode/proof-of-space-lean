@@ -9,8 +9,8 @@ consecutive layers.
 
 [`chung8_pebbling_latency_15`](Challenge.lean) proves that, under explicit
 within-layer depth-robustness, pebbling-budget, and security
-conditions, there is an unpebbled directed path ending in a sufficiently large
-red-free challenge set and having length at least
+conditions, there is an unpebbled directed path ending in any challenge set of
+weight `ζ` in the final layer and having length at least
 
 ```text
 (1/5)n + (1/5 - 74/625)n = (176/625)n = 0.2816n

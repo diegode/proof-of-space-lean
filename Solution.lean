@@ -134,7 +134,7 @@ def Chung8LatencyRegion (ℓ z : ℕ) (απ δ π ρ ζ σ : ℝ) : Prop :=
     ∀ (M : PebblingGame ℓ), M.απ = απ → M.δ = δ → M.π = π → M.ρ = ρ → M.ζ = ζ →
       PebblingGame.IsAdmissible M →
       ∀ (A : Finset (ℕ × Fin M.n)), A ⊆ M.layer 0 →
-        (∀ v ∈ A, v ∉ M.red 0) → M.ζ - M.δ ≤ (A.card : ℝ) / M.n →
+        M.ζ ≤ (A.card : ℝ) / M.n →
         ∀ P : ChungInterlayer M.n, P.Expands →
           M.HasUnpebbledPathTo A (M.latencyLength σ z) P
 
@@ -317,26 +317,24 @@ theorem chung8_pebbling_latency_whp
     (z : ℕ) (σ : ℝ)
     (hregion : Chung8LatencyRegion ℓ z M.απ M.δ M.π M.ρ M.ζ σ)
     (A : Finset (ℕ × Fin M.n)) (hA : A ⊆ M.layer 0)
-    (hred : ∀ v ∈ A, v ∉ M.red 0)
-    (hweight : M.ζ - M.δ ≤ (A.card : ℝ) / M.n) :
+    (hweight : M.ζ ≤ (A.card : ℝ) / M.n) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw M.n)
       (M.HasUnpebbledPathTo A (M.latencyLength σ z))
       (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
   apply chung8_pebbling_of_expands_whp lambda M A
   intro P hP
-  exact hregion.2 M rfl rfl rfl rfl rfl H A hA hred hweight P hP
+  exact hregion.2 M rfl rfl rfl rfl rfl H A hA hweight P hP
 
 theorem chung8_pebbling_latency_15
     (lambda : ℝ) (M : PebblingGame 15) [H : PebblingGame.IsAdmissible M]
     [C : ChungSecurityConditions M.n lambda]
     (A : Finset (ℕ × Fin M.n)) (hA : A ⊆ M.layer 0)
-    (hred : ∀ v ∈ A, v ∉ M.red 0)
     (hαπ : M.απ = (1 : ℝ) / 5)
     (hδ : M.δ = (189 : ℝ) / 5000)
     (hπ : M.π = (4 : ℝ) / 5)
     (hρ : M.ρ = (4 : ℝ) / 5)
     (hζ : M.ζ = (9 : ℝ) / 10)
-    (hweight : M.ζ - M.δ ≤ (A.card : ℝ) / M.n) :
+    (hweight : M.ζ ≤ (A.card : ℝ) / M.n) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw M.n)
       (M.HasUnpebbledPathTo A (M.latencyLength ((74 : ℝ) / 625) 2))
       (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
@@ -345,7 +343,7 @@ theorem chung8_pebbling_latency_15
       ((189 : ℝ) / 5000) ((4 : ℝ) / 5) ((4 : ℝ) / 5) ((9 : ℝ) / 10)
       ((74 : ℝ) / 625) := by
     refine ⟨by norm_num, ?_⟩
-    intro N hNαπ hNδ hNπ hNρ hNζ hN B hB hBred hBweight P hP
+    intro N hNαπ hNδ hNπ hNρ hNζ hN B hB hBweight P hP
     let Pc : Concrete.PortInterlayer N.n := interlayerEquiv N.n P
     have hPc : Pc.Expands ChungCurve.chung8Setting := by
       change (interlayerEquiv N.n P).Expands ChungCurve.chung8Setting
@@ -387,33 +385,45 @@ theorem chung8_pebbling_latency_15
       intro X hX
       apply hN.depth_robust X
       simpa only [ChungCurve.chung8Setting_pi, hNπ] using hX
-    have hB' : B ⊆ G.layer 0 := hB
-    have hadjusted : N.ζ - N.δ = (4311 : ℝ) / 5000 := by
-      rw [hNζ, hNδ]
-      norm_num
+    -- The challenge set is only assumed to have weight `ζ`; discarding its red
+    -- nodes leaves the red-free set of weight `ζ_δ = ζ - δ` that the deterministic
+    -- argument starts from, using the per-layer red bound `red_bound 0`.
+    have hB' : B \ N.red 0 ⊆ G.layer 0 := Finset.sdiff_subset.trans hB
+    have hBred : ∀ v ∈ B \ N.red 0, v ∉ N.red 0 := fun _ hv => (Finset.mem_sdiff.mp hv).2
     have hweight' : ChungCurve.chung8Setting.ζδ ≤
-        Concrete.Pebbling.weight N.n B := by
-      simpa only [ChungCurve.chung8Setting_zetaDelta, Concrete.Pebbling.weight,
-        hadjusted] using hBweight
+        Concrete.Pebbling.weight N.n (B \ N.red 0) := by
+      have hnpos : (0 : ℝ) < N.n := by exact_mod_cast hN.n_pos
+      have hred0 : ((N.red 0).card : ℝ) ≤ (189 : ℝ) / 5000 * N.n := by
+        simpa only [hNδ] using hN.red_bound 0
+      have hcardNat : B.card ≤ (B \ N.red 0).card + (N.red 0).card :=
+        (Finset.card_le_card Finset.subset_union_left).trans_eq
+          (Finset.card_sdiff_add_card B (N.red 0)).symm
+      have hcard : (B.card : ℝ) ≤ ((B \ N.red 0).card : ℝ) + ((N.red 0).card : ℝ) := by
+        exact_mod_cast hcardNat
+      rw [hNζ, le_div_iff₀ hnpos] at hBweight
+      simp only [ChungCurve.chung8Setting_zetaDelta, Concrete.Pebbling.weight]
+      rw [le_div_iff₀ hnpos]
+      linarith
     have hGαπ : G.αpi = (1 : ℝ) / 5 := by
       change N.απ = (1 : ℝ) / 5
       exact hNαπ
     have hpath := ChungCurve.chung8_latency_15_deterministic G pebbling hN.n_pos hGαπ
-      hDepth B hB' hBred hweight'
+      hDepth (B \ N.red 0) hB' hBred hweight'
     rcases hpath with ⟨u, a, ha, Q, hfirst, hlast, hlength⟩
     have hlatency : N.latencyLength ((74 : ℝ) / 625) 2 =
         (1 : ℝ) / 5 * N.n + ((1 : ℝ) / 5 - (74 : ℝ) / 625) * N.n := by
       simp only [PebblingGame.latencyLength, hNαπ]
       push_cast
       ring
-    refine ⟨u, a, ha, Q.nodes, Q.nonempty, Q.chain, Q.unpebbled', ?_, ?_, ?_⟩
+    refine ⟨u, a, (Finset.mem_sdiff.mp ha).1, Q.nodes, Q.nonempty, Q.chain,
+      Q.unpebbled', ?_, ?_, ?_⟩
     · rw [List.head?_eq_some_head Q.nonempty]
       exact congrArg some hfirst
     · rw [List.getLast?_eq_some_getLast Q.nonempty]
       exact congrArg some hlast
     · rw [hlatency]
       exact hlength
-  apply chung8_pebbling_latency_whp lambda M 2 ((74 : ℝ) / 625) ?_ A hA hred hweight
+  apply chung8_pebbling_latency_whp lambda M 2 ((74 : ℝ) / 625) ?_ A hA hweight
   simpa only [hαπ, hδ, hπ, hρ, hζ] using hregion
 
 end ProofOfSpaceStatement

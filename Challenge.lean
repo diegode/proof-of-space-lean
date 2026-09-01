@@ -155,7 +155,7 @@ def Chung8LatencyRegion (ℓ z : ℕ) (απ δ π ρ ζ σ : ℝ) : Prop :=
     ∀ (G : PebblingGame ℓ), G.απ = απ → G.δ = δ → G.π = π → G.ρ = ρ → G.ζ = ζ →
       PebblingGame.IsAdmissible G →
       ∀ (S : Finset (ℕ × Fin G.n)), S ⊆ G.layer 0 →
-        (∀ v ∈ S, v ∉ G.red 0) → G.ζ - G.δ ≤ (S.card : ℝ) / G.n →
+        G.ζ ≤ (S.card : ℝ) / G.n →
         ∀ p : ChungInterlayer G.n, p.Expands →
           G.HasUnpebbledPathTo S (G.latencyLength σ z) p
 
@@ -170,8 +170,7 @@ theorem chung8_pebbling_latency_whp
     (z : ℕ) (σ : ℝ)
     (hregion : Chung8LatencyRegion ℓ z G.απ G.δ G.π G.ρ G.ζ σ)
     (S : Finset (ℕ × Fin G.n)) (hS : S ⊆ G.layer 0)
-    (hred : ∀ v ∈ S, v ∉ G.red 0)
-    (hweight : G.ζ - G.δ ≤ (S.card : ℝ) / G.n) :
+    (hweight : G.ζ ≤ (S.card : ℝ) / G.n) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw G.n)
       (G.HasUnpebbledPathTo S (G.latencyLength σ z))
       (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
@@ -182,13 +181,12 @@ theorem chung8_pebbling_latency_15
     (lambda : ℝ) (G : PebblingGame 15) [PebblingGame.IsAdmissible G]
     [ChungSecurityConditions G.n lambda]
     (S : Finset (ℕ × Fin G.n)) (hS : S ⊆ G.layer 0)
-    (hred : ∀ v ∈ S, v ∉ G.red 0)
     (hαπ : G.απ = (1 : ℝ) / 5)
     (hδ : G.δ = (189 : ℝ) / 5000)
     (hπ : G.π = (4 : ℝ) / 5)
     (hρ : G.ρ = (4 : ℝ) / 5)
     (hζ : G.ζ = (9 : ℝ) / 10)
-    (hweight : G.ζ - G.δ ≤ (S.card : ℝ) / G.n) :
+    (hweight : G.ζ ≤ (S.card : ℝ) / G.n) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw G.n)
       (G.HasUnpebbledPathTo S (G.latencyLength ((74 : ℝ) / 625) 2))
       (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
