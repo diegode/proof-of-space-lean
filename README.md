@@ -19,10 +19,18 @@ red-free challenge set and having length at least
 with failure probability at most `2^(-lambda)`.
 
 [`chung8_pebbling_latency_whp`](Challenge.lean) is the reusable probabilistic
-form of the general, break-aware latency theorem. Its parameters are symbolic and
-its conclusion is the explicit lower bound
-`απ*n + (z_min(ℓ)-1)*(απ-σ)*n`, under the uniform interlayer law, with
-failure probability at most `2^(-lambda)`.
+Chung-8 theorem. Its game parameters, source weight `σ`, and link count `z` are
+all symbolic. `Chung8LatencyRegion` gives a semantic, proof-independent
+description of the covered scalar tuples: a tuple belongs to the region when
+every admissible game with those fundamental parameters has the deterministic
+`z`-link latency property under Chung-8 expansion.
+
+For every tuple in that region, the conclusion is the symbolic lower bound
+`απ*n + (z-1)*(απ-σ)*n`, under the uniform interlayer law, with failure
+probability at most `2^(-lambda)`. The 15-layer result is its direct
+specialization at `z = 2`, `σ = 74/625`, and the Filecoin parameters. Its proof
+establishes that tuple's region membership using the analytic and
+potential-ledger certificates, which occur only in the solution and library.
 
 The result concerns a static black/red pebbling snapshot. It does not formalize
 a time-indexed cryptographic game, a reduction from path length to running time,

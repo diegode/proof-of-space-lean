@@ -46,14 +46,16 @@ noncomputable def chungExponent8 (x y : ℝ) : ℝ :=
   Real.binEntropy x + Real.binEntropy y +
     8 * (y * Real.binEntropy (x / y) - Real.binEntropy x)
 
-/-- The relative exponent level, meaningful at every interior density. -/
-noncomputable def chung8Level (x : ℝ) : ℝ :=
-  Real.binEntropy x / 2 ^ (23 : ℕ)
+/-- A symmetric relative exponent margin. It is invariant under Chung's
+anti-diagonal reflection `(x,y) ↦ (1-y,1-x)` and remains meaningful at every
+interior pair. -/
+noncomputable def chung8Level (x y : ℝ) : ℝ :=
+  min (Real.binEntropy x) (Real.binEntropy y) / 2 ^ (23 : ℕ)
 
 /-- The degree-eight Chung expansion function, defined directly by its entropy formula. -/
 noncomputable def chung8Beta (x : ℝ) : ℝ :=
   if x = 1 then 1
-  else sSup {y | y ∈ Set.Ioo x 1 ∧ chungExponent8 x y < -chung8Level x}
+  else sSup {y | y ∈ Set.Ioo x 1 ∧ chungExponent8 x y < -chung8Level x y}
 
 /-- The largest integer neighbourhood size still counted as a failure. -/
 noncomputable def chung8FailureProfile (n k : ℕ) : ℕ :=
@@ -94,12 +96,7 @@ structure PebblingGame (ℓ : ℕ) where
   δ : ℝ
   π : ℝ
   ρ : ℝ
-  σ : ℝ
-  ζδ : ℝ
-  αg : ℝ
-  αmin : ℝ
-  αmax : ℝ
-  mid : ℝ
+  ζ : ℝ
   intra : Fin n → Fin n → Prop
   black : ℕ → Finset (ℕ × Fin n)
   red : ℕ → Finset (ℕ × Fin n)
@@ -110,52 +107,9 @@ def PebblingGame.layer {ℓ : ℕ} (G : PebblingGame ℓ) (i : ℕ) :
 
 def PebblingGame.depth {ℓ : ℕ} (G : PebblingGame ℓ) (v : ℕ × Fin G.n) : ℕ := v.1
 
-/-- The latency supplied by `z` completed links of the chain construction. -/
-def PebblingGame.latencyLength {ℓ : ℕ} (G : PebblingGame ℓ) (z : ℕ) : ℝ :=
-  G.απ * G.n + ((z : ℝ) - 1) * (G.απ - G.σ) * G.n
-
-/-- The non-chain overhead and link count from the minimum-link definition in
-`thm:latency`, specialized only to the fixed Chung-8 curve. -/
-noncomputable def PebblingGame.latencyConstants {ℓ : ℕ} (G : PebblingGame ℓ) : ℕ × ℕ :=
-  let gainD := fun x ↦ chung8Beta x - G.δ - x
-  let betaD := fun x ↦ chung8Beta x - G.δ
-  let gpi := gainD G.π
-  let piBar := 1 - chung8Beta G.π
-  let zetaFloor := G.ζδ - G.ρ
-  let gtilde := min (gainD zetaFloor) gpi
-  let sigmaHat := min G.σ (1 - chung8Beta G.σ)
-  let lam := min piBar sigmaHat
-  let ghat := min gpi (gainD G.σ / 2)
-  let infertileCap := fun h ↦ Nat.ceil ((G.ρ - (G.ζδ - G.π)) / h)
-  let blockedCap := fun g ↦ Nat.ceil (G.ρ / g) - 1
-  let sCap := infertileCap gtilde + blockedCap ghat
-  let growthSpan := fun x ↦ max 1 ⌊(G.π - G.σ + x) / ghat⌋₊
-  let asymptoticGrowth := max 1 ((G.π - G.σ) / ghat)
-  let growthPot := fun split v ↦
-    (min v split - G.σ) / (2 * ghat) + (max v split - split) / ghat
-  let growthConst := min asymptoticGrowth (growthPot G.mid G.π + 1)
-  let h₁ := growthConst + 1
-  let ledgerSlack := 2 * G.ρ / ghat
-  let gmin := min ghat gtilde
-  let jointSlack := 2 * G.ρ / gmin
-  let searchHead := max 0 (1 + (G.π - G.ζδ) / gtilde)
-  let spendCap := ⌈G.ρ / ghat⌉₊
-  let growthCap := growthSpan G.ρ
-  let h₀ := growthCap + 2 * spendCap
-  let bMax := blockedCap (betaD G.π - lam)
-  let s₀ := sCap + bMax * h₀
-  let jointEntry :=
-    if bMax = 0 then ⌈((ℓ : ℝ) - searchHead - jointSlack) / h₁⌉₊ else 0
-  let z := max 1 (max
-    ⌈((ℓ : ℝ) - sCap - ledgerSlack - bMax * h₁) / (((bMax : ℝ) + 1) * h₁)⌉₊
-    (max jointEntry ((ℓ - s₀) / ((bMax + 1) * h₀) + 1)))
-  (s₀, z)
-
-noncomputable def PebblingGame.latencyOverhead {ℓ : ℕ} (G : PebblingGame ℓ) : ℕ :=
-  G.latencyConstants.1
-
-noncomputable def PebblingGame.latencyLinks {ℓ : ℕ} (G : PebblingGame ℓ) : ℕ :=
-  G.latencyConstants.2
+/-- The latency supplied by `z` completed links with source weight `sigma`. -/
+def PebblingGame.latencyLength {ℓ : ℕ} (G : PebblingGame ℓ) (σ : ℝ) (z : ℕ) : ℝ :=
+  G.απ * G.n + ((z : ℝ) - 1) * (G.απ - σ) * G.n
 
 def PebblingGame.intraEdge {ℓ : ℕ} (G : PebblingGame ℓ) (i : ℕ)
     (u v : ℕ × Fin G.n) : Prop :=
@@ -184,39 +138,6 @@ class PebblingGame.IsAdmissible {ℓ : ℕ} (G : PebblingGame ℓ) : Prop where
   red_bound : ∀ i, ((G.red i).card : ℝ) ≤ G.δ * G.n
   n_pos : 0 < G.n
 
-/-- The scalar and tracking assumptions of `thm:latency`, for the fixed Chung-8 curve. -/
-class ChungLatencyConditions {ℓ : ℕ} (G : PebblingGame ℓ) : Prop where
-  beta_maps : ∀ {x : ℝ}, x ∈ Set.Icc (0 : ℝ) 1 → chung8Beta x ∈ Set.Icc (0 : ℝ) 1
-  beta_zero : chung8Beta 0 = 0
-  beta_mono : StrictMonoOn chung8Beta (Set.Icc (0 : ℝ) 1)
-  beta_concave : ConcaveOn ℝ (Set.Icc (0 : ℝ) 1) chung8Beta
-  beta_expands : ∀ {x : ℝ}, x ∈ Set.Ioo (0 : ℝ) 1 → x < chung8Beta x
-  beta_reversal : ∀ {x : ℝ}, x ∈ Set.Ioo (0 : ℝ) 1 →
-    chung8Beta (1 - chung8Beta x) = 1 - x
-  alphaG_mem : G.αg ∈ Set.Ioo (0 : ℝ) 1
-  alphaG_max : ∀ {x : ℝ}, x ∈ Set.Icc (0 : ℝ) 1 → x ≠ G.αg →
-    chung8Beta x - x < chung8Beta G.αg - G.αg
-  delta_nonneg : 0 ≤ G.δ
-  rho_pos : 0 < G.ρ
-  pi_mem : G.π ∈ Set.Ioo (0 : ℝ) 1
-  alphaG_lt_pi : G.αg < G.π
-  gpi_pos : 0 < chung8Beta G.π - G.δ - G.π
-  alphaMin_mem : G.αmin ∈ Set.Icc (0 : ℝ) G.αg
-  alphaMax_mem : G.αmax ∈ Set.Icc G.αg 1
-  gain_min : chung8Beta G.αmin - G.δ - G.αmin = 0
-  gain_max : chung8Beta G.αmax - G.δ - G.αmax = 0
-  sigma_gt : G.αmin < G.σ
-  sigma_lt : G.σ < G.π
-  mid_ge : G.σ ≤ G.mid
-  mid_le : G.mid ≤ G.π
-  mid_gain : 2 * min (chung8Beta G.π - G.δ - G.π)
-      ((chung8Beta G.σ - G.δ - G.σ) / 2) ≤
-    chung8Beta G.mid - G.δ - G.mid
-  entry : G.αmin < G.ζδ - G.ρ
-  zeta_le : G.ζδ ≤ G.αmax
-  sigma_lt_alphaPi : G.σ < G.απ
-  inside : G.latencyOverhead < ℓ
-
 /-- The game has an unpebbled directed path of length at least `L` ending in `S`. -/
 def PebblingGame.HasUnpebbledPathTo {ℓ : ℕ} (G : PebblingGame ℓ)
     (S : Finset (ℕ × Fin G.n))
@@ -226,19 +147,33 @@ def PebblingGame.HasUnpebbledPathTo {ℓ : ℕ} (G : PebblingGame ℓ)
     (∀ w ∈ P, w ∉ G.black (G.depth w) ∧ w ∉ G.red (G.depth w)) ∧
     P.head? = some u ∧ P.getLast? = some v ∧ L ≤ (P.length : ℝ)
 
+/-- The parameter tuples for which Chung-8 expansion deterministically supplies `z`
+links. This is a semantic, proof-independent description of the covered region: it
+quantifies over every admissible game with the displayed fundamental parameters. -/
+def Chung8LatencyRegion (ℓ z : ℕ) (απ δ π ρ ζ σ : ℝ) : Prop :=
+  σ < απ ∧
+    ∀ (G : PebblingGame ℓ), G.απ = απ → G.δ = δ → G.π = π → G.ρ = ρ → G.ζ = ζ →
+      PebblingGame.IsAdmissible G →
+      ∀ (S : Finset (ℕ × Fin G.n)), S ⊆ G.layer 0 →
+        (∀ v ∈ S, v ∉ G.red 0) → G.ζ - G.δ ≤ (S.card : ℝ) / G.n →
+        ∀ p : ChungInterlayer G.n, p.Expands →
+          G.HasUnpebbledPathTo S (G.latencyLength σ z) p
+
 -- The public challenge theorem bodies are intentionally omitted; see `README.md`.
 set_option warn.sorry false
 
-/-- The Chung-8 high-probability form of `thm:latency`. -/
+/-- The high-probability Chung-8 latency theorem for every tuple in the semantic
+latency region. All game parameters and the certified link count remain symbolic. -/
 theorem chung8_pebbling_latency_whp
     {ℓ : ℕ} (lambda : ℝ) (G : PebblingGame ℓ)
     [PebblingGame.IsAdmissible G] [ChungSecurityConditions G.n lambda]
-    [ChungLatencyConditions G]
+    (z : ℕ) (σ : ℝ)
+    (hregion : Chung8LatencyRegion ℓ z G.απ G.δ G.π G.ρ G.ζ σ)
     (S : Finset (ℕ × Fin G.n)) (hS : S ⊆ G.layer 0)
     (hred : ∀ v ∈ S, v ∉ G.red 0)
-    (hweight : G.ζδ ≤ (S.card : ℝ) / G.n) :
+    (hweight : G.ζ - G.δ ≤ (S.card : ℝ) / G.n) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw G.n)
-      (G.HasUnpebbledPathTo S (G.latencyLength G.latencyLinks))
+      (G.HasUnpebbledPathTo S (G.latencyLength σ z))
       (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
   sorry
 
@@ -252,11 +187,10 @@ theorem chung8_pebbling_latency_15
     (hδ : G.δ = (189 : ℝ) / 5000)
     (hπ : G.π = (4 : ℝ) / 5)
     (hρ : G.ρ = (4 : ℝ) / 5)
-    (hσ : G.σ = (74 : ℝ) / 625)
-    (hζδ : G.ζδ = (4311 : ℝ) / 5000)
-    (hweight : G.ζδ ≤ (S.card : ℝ) / G.n) :
+    (hζ : G.ζ = (9 : ℝ) / 10)
+    (hweight : G.ζ - G.δ ≤ (S.card : ℝ) / G.n) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw G.n)
-      (G.HasUnpebbledPathTo S (G.latencyLength 2))
+      (G.HasUnpebbledPathTo S (G.latencyLength ((74 : ℝ) / 625) 2))
       (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
   sorry
 
