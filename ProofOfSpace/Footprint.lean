@@ -110,8 +110,9 @@ theorem step_ge (h : IsFootprintBound S B start f) {d : ℕ} (hd : start ≤ d) 
 
 /--
 **The accumulated bound** — Reyzin, Claim 3, as this development cites it —
-in the inequality form used throughout: the footprint at depth `t + i` is at least the starting weight plus the
-accumulated gains minus the accumulated spend.  Truncation at `0` can only help, so
+in the inequality form used throughout: the footprint at depth `t + i` is at least the
+starting weight plus the accumulated gains minus the accumulated spend. Truncation at `0` can
+only help, so
 unlike the equality version this needs no positivity hypothesis.
 -/
 theorem sum_le (h : IsFootprintBound S B start f) {t : ℕ} (ht : start ≤ t) (i : ℕ) :

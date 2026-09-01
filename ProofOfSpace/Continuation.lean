@@ -54,7 +54,7 @@ theorem search_reaches {g : ℝ} (hg : 0 < g) (Fert : ℕ → Prop) [DecidablePr
     (hD : q + blockedCap S g ≤ D) :
     ∃ p, t ≤ p ∧ p ≤ t + D ∧ Fert p ∧ Expandable B g p := by
   by_contra hcon
-  push_neg at hcon
+  push Not at hcon
   have hbad : ∀ p, t ≤ p → p ≤ t + D → ¬(Fert p ∧ Expandable B g p) := by
     intro p h1 h2 ⟨hf, he⟩
     exact absurd he (hcon p h1 h2 hf)
@@ -74,8 +74,9 @@ fertile and `g`-expandable within `s(g,h)` levels.  Clause (ii) of the developme
 the set `S_σ` of sources of long paths inside `F_π` — is the depth-robustness input,
 recorded separately in `Chain.lean`.
 
-The expandability parameter `g` is unconstrained beyond `g > 0`: `s(g,h) = infertileCap(h)+blockedCap(g)`
-already absorbs the cost of a smaller `g` through `blockedCap(g) = ⌈ρ/g⌉ - 1`.  Only the
+The expandability parameter `g` is unconstrained beyond `g > 0`:
+`s(g,h) = infertileCap(h)+blockedCap(g)` already absorbs the cost of a smaller `g` through
+`blockedCap(g) = ⌈ρ/g⌉ - 1`. Only the
 *fertility* parameter `h` has to satisfy `h ≤ g_π`, which is what `infertile_card_le`
 needs.  Every caller instantiates both at `g = h = g_π`.
 -/

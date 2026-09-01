@@ -1,4 +1,13 @@
 /-
+Copyright (c) 2026 Diego de Estrada. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Diego de Estrada
+-/
+import ProofOfSpace.ChungNumerics
+import ProofOfSpace.Latency
+import Mathlib.Analysis.Convex.Continuous
+
+/-!
 # The Chung-8 Filecoin specialization
 
 This file instantiates the latency analysis with the rational degree-eight profile from
@@ -7,13 +16,10 @@ algebraically, so the specialization has no analytic typeclass assumption.
 
 The last section exhibits the reference chain of `Potential.lean` for these parameters —
 the `β_δ` orbit of the tracking floor, rationalized downwards — together with its
-`LedgerCert`, and evaluates the potential ledger's constants.  That is what
+`LedgerCert`, and evaluates the potential ledger's constants. That is what
 `chung8_latency_15_deterministic` runs on. The chain is data supplied here, not a hypothesis of
 anything upstream.
 -/
-import ProofOfSpace.ChungNumerics
-import ProofOfSpace.Latency
-import Mathlib.Analysis.Convex.Continuous
 
 namespace ProofOfSpace
 namespace ChungCurve
@@ -285,21 +291,21 @@ noncomputable def chung8RefChain :
     rw [chung8_ghat_eq]
     interval_cases k
     · rw [chainX_one_sub_zero]
-    · show gpi8 ≤ chainX 2 - chainX 1
+    · change gpi8 ≤ chainX 2 - chainX 1
       simp only [chainX_two, chainX_one]; linarith [gpi8_bounds.2]
-    · show gpi8 ≤ chainX 3 - chainX 2
+    · change gpi8 ≤ chainX 3 - chainX 2
       simp only [chainX_three, chainX_two]; linarith [gpi8_bounds.2]
-    · show gpi8 ≤ chainX 4 - chainX 3
+    · change gpi8 ≤ chainX 4 - chainX 3
       simp only [chainX_four, chainX_three]; linarith [gpi8_bounds.2]
   step := by
     intro k hk
     interval_cases k
     · rw [chung8_betaD_chainX_zero]
-    · show chainX 2 ≤ _
+    · change chainX 2 ≤ _
       norm_num [Setting.gainD, chung8Setting, chainX, chungBeta8]
-    · show chainX 3 ≤ _
+    · change chainX 3 ≤ _
       norm_num [Setting.gainD, chung8Setting, chainX, chungBeta8]
-    · show chainX 4 ≤ _
+    · change chainX 4 ≤ _
       norm_num [Setting.gainD, chung8Setting, chainX, chungBeta8]
   mem := by
     intro k hk

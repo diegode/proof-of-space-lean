@@ -531,14 +531,13 @@ induction of the one-step bound through every remaining layer.  The development 
 recurrence `footprint recurrence` from Reyzin and works with it directly, never restating
 this dominance; it is proved here. -/
 theorem footprintBound_le (P : Pebbling G) (hn : 0 < n) {A : Finset V}
-    {start : ℕ} {c : ℝ} (hc : 0 ≤ c)
+    {start : ℕ} {c : ℝ} (_hc : 0 ≤ c)
     (hbase : c ≤ weight n (P.layerFootprint A start)) :
     (∀ {d}, start ≤ d → d < ℓ →
       P.footprintBound start c d ∈ Set.Icc S.αmin S.αmax) →
     ∀ {d}, start ≤ d → d < ℓ →
       P.footprintBound start c d ≤ weight n (P.layerFootprint A d) := by
-  intro hactive
-  intro d hsd hdℓ
+  intro hactive d hsd hdℓ
   induction d, hsd using Nat.le_induction with
   | base => simpa using hbase
   | succ d hsd ih =>

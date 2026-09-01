@@ -6,8 +6,8 @@ This file formalizes the constants and chain of this development:
 * `h₁`, `ledgerSlack`, `spendCap`, `growthCap`, `h₀`, `localSpan` — the per-link
   constants of `span bound`/`optimized span bound`, and `zMinNoBreak`, the chain length of
   `latency_general`.
-* `ChainSystem` — the chain of `latency analysis`, in the form in which the analysis uses it.  All the
-  graph-specific content of the development is confined to its two fields `extend` (depth
+* `ChainSystem` — the chain of `latency analysis`, in the form in which the analysis uses it.
+  All the graph-specific content of the development is confined to its two fields `extend` (depth
   robustness at a fertile expandable level, plus the path splicing of `path-payoff lemma`) and
   `realizes`.  Depth robustness is the one input the development leaves unproven for the
   concrete construction, so it is an assumption here as well.
@@ -117,9 +117,9 @@ whole budget: the `h_0 - 1` of `attempt-span bound`, whenever `ρ > 0`. -/
 noncomputable def localSpan (S : Setting) (T : Tracking S) : ℕ :=
   growthCap S T + contSpan T S.ρ
 
-/-- **`z_min` of `minimum link-count definition`, specialized to `b^max = 0`**: the maximum defining the link
-count when no break can be paid for.  `Ledger.zMin` is the general `minimum link-count definition`, and `Ledger.zMin_eq_zMinNoBreak`
-identifies the two there. -/
+/-- **`z_min` of `minimum link-count definition`, specialized to `b^max = 0`**: the maximum
+defining the link count when no break can be paid for. `Ledger.zMin` is the general
+`minimum link-count definition`, and `Ledger.zMin_eq_zMinNoBreak` identifies the two there. -/
 noncomputable def zMinNoBreak (S : Setting) (T : Tracking S) (ℓ s : ℕ) : ℕ :=
   max 1 (max ⌈((ℓ : ℝ) - s - ledgerSlack S T) / h₁ S T⌉₊
     (max ⌈((ℓ : ℝ) - searchHead S - jointSlack S T) / h₁ S T⌉₊

@@ -180,7 +180,7 @@ noncomputable def portStack (H : StandaloneGraph n) (S : Setting) (ℓ : ℕ)
       rw [Finset.mem_filter] at hvfilter
       refine ⟨v, hvfilter.1, rfl, hvfilter.2, hk, q, ?_, ?_⟩
       · rw [PortInterlayer.ports, Finset.mem_product]
-        exact ⟨Finset.mem_univ _, by simpa [hvq]⟩
+        exact ⟨Finset.mem_univ _, by simp [hvq]⟩
       · exact hqi
     · rw [if_neg hk] at hu
       simp at hu

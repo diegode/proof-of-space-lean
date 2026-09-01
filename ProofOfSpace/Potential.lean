@@ -72,7 +72,7 @@ private theorem clamp_diff {a b : ℝ} (hab : b ≤ a) :
   · rw [max_eq_left h]
     have hb : b ≤ 0 := by
       by_contra hc
-      push_neg at hc
+      push Not at hc
       exact absurd h (not_le.mpr (lt_min (by norm_num) hc))
     rcases le_total a 0 with ha | ha
     · rw [max_eq_left (le_trans (min_le_right _ _) ha)]; linarith
@@ -171,7 +171,7 @@ theorem bucket_eq_zero {k : ℕ} (hk : k < C.m) {v : ℝ} (hv : v ≤ C.x k) :
   exact div_nonpos_of_nonpos_of_nonneg (by linarith) (C.width_pos hk).le
 
 theorem refPot_mono {u v : ℝ} (huv : u ≤ v) : C.refPot u ≤ C.refPot v :=
-  Finset.sum_le_sum fun k hk => C.bucket_mono (Finset.mem_range.mp hk) huv
+  Finset.sum_le_sum fun _k hk => C.bucket_mono (Finset.mem_range.mp hk) huv
 
 theorem refPot_nonneg (v : ℝ) : 0 ≤ C.refPot v :=
   Finset.sum_nonneg fun k _ => C.bucket_nonneg k v
@@ -309,7 +309,7 @@ end RefChain
 theorem betaD_concaveOn (S : Setting) : ConcaveOn ℝ (Icc (0 : ℝ) 1) S.betaD := by
   have h : S.betaD = S.β - fun _ : ℝ => S.δ := by
     funext x
-    show S.β x - S.δ = _
+    change S.β x - S.δ = _
     simp
   rw [h]
   exact S.β_concaveOn.sub (convexOn_const S.δ (convex_Icc 0 1))

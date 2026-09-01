@@ -38,7 +38,7 @@ theorem log_stirlingSeq_sub_limit_le {k : ℕ} (hk : 0 < k) :
         ring
       rw [heq] at hs
       dsimp only [f, g]
-      convert hs using 1 <;> push_cast <;> ring
+      convert hs using 1 <;> push_cast <;> ring_nf
     have hsum := Finset.sum_le_sum hstep
     rw [Finset.sum_range_sub', Finset.sum_range_sub'] at hsum
     simp only [f, g, Nat.add_zero] at hsum
@@ -332,7 +332,7 @@ theorem hitProb_eq_choose_div_choose {Q K M : ℕ} :
   push_cast
   exact ENNReal.mul_div_mul_left _ _ (by simp [Nat.factorial_ne_zero]) (by simp)
 
-theorem portTerm_eq_ofReal_pairMass {n k m : ℕ} (hk : 0 < k)
+theorem portTerm_eq_ofReal_pairMass {n k m : ℕ} (_hk : 0 < k)
     (hkm : k < m) (hmn : m < n) :
     (n.choose k : ℝ≥0∞) * ((n.choose m : ℝ≥0∞) *
       hitProb (8 * n) (8 * k) (8 * m)) = ENNReal.ofReal (portExpansionPairMass n k m) := by
@@ -509,7 +509,7 @@ theorem portExpansion_failure_le (n : ℕ) (a b : ℝ) (m : ℕ → ℕ)
   intro k hk
   simp only [active]
   by_cases hact : a ≤ (k : ℝ) / n ∧ (k : ℝ) / n ≤ b
-  · simp [hact, mul_assoc]
+  · simp [hact]
   · simp [hact]
 
 /-- The `1/n` in each fixed-size estimate cancels against at most `n` active source

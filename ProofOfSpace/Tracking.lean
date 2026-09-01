@@ -141,7 +141,7 @@ theorem lam_mem_Icc : T.lam ∈ Icc (0:ℝ) 1 :=
 
 theorem αmin_lt_sigmaHat : S.αmin < T.sigmaHat := by
   by_contra hcon
-  push_neg at hcon
+  push Not at hcon
   have h := S.gainD_nonpos_of_le_αmin T.sigmaHat_mem_Icc hcon
   rw [T.gainD_sigmaHat] at h
   linarith [T.gainD_σ_pos]
@@ -176,7 +176,7 @@ so the tracking floor is exactly `π̄`. -/
 theorem lam_eq_piBar : T.lam = S.piBar := by
   refine min_eq_left ?_
   by_contra hcon
-  push_neg at hcon
+  push Not at hcon
   have h1 : S.gainD T.sigmaHat ≤ S.gpi :=
     S.gainD_le_gpi_of_lt_piBar T.sigmaHat_mem_Icc hcon
   rw [T.gainD_sigmaHat] at h1

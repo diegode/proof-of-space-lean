@@ -150,6 +150,9 @@ def PebblingGame.HasUnpebbledPathTo {ℓ : ℕ} (M : PebblingGame ℓ)
     (∀ v ∈ Q, v ∉ M.black (M.depth v) ∧ v ∉ M.red (M.depth v)) ∧
     Q.head? = some u ∧ Q.getLast? = some a ∧ L ≤ (Q.length : ℝ)
 
+-- The public challenge theorem bodies are intentionally omitted; see `README.md`.
+set_option warn.sorry false
+
 /-- Certified Chung expansion lifts a deterministic pebbling conclusion to high probability. -/
 theorem chung8_pebbling_latency_whp
     {ℓ : ℕ} (M : PebblingGame ℓ) [ChungExpansionConditions M.n]

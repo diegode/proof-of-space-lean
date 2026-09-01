@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2026 Diego de Estrada. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Diego de Estrada
+-/
 import ProofOfSpace.PortExpansionProbability
 import ProofOfSpace.ChungFilecoin
 import Mathlib.Analysis.Real.Pi.Bounds

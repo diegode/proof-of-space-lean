@@ -266,7 +266,7 @@ theorem chung8_pebbling_latency_whp
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw M.n)
       (M.HasUnpebbledPathTo A L) (chung8FailureBound M.n) := by
   classical
-  letI : ChungCurve.FiniteExpansionConditions M.n := internalExpansionConditions M.n
+  let _ : ChungCurve.FiniteExpansionConditions M.n := internalExpansionConditions M.n
   have hw := Concrete.portExpansion_whp_exponential M.n chung8AlphaMin chung8AlphaMax
     (chung8DeltaN M.n) epsilonChung (chung8FailureProfile M.n)
     C.n_pos (by norm_num [chung8AlphaMin, chung8PebblingAlphaMin]) C.delta_pos
@@ -300,7 +300,7 @@ theorem chung8_pebbling_latency_15
     apply chung8_pebbling_latency_whp M A
     intro P hP
     let Pc : Concrete.PortInterlayer M.n := interlayerEquiv M.n P
-    letI : ChungCurve.FiniteExpansionConditions M.n := internalExpansionConditions M.n
+    let _ : ChungCurve.FiniteExpansionConditions M.n := internalExpansionConditions M.n
     have hpublic : Pc.ExpandsProfileOn chung8AlphaMin chung8AlphaMax
         (chung8FailureProfile M.n) := (public_profile_iff P).1 hP
     have hprofile : Pc.ExpandsProfileOn ChungCurve.expansionAlphaMin
@@ -355,7 +355,7 @@ theorem chung8_pebbling_latency_15
       exact congrArg some hfirst
     · rw [List.getLast?_eq_some_getLast Q.nonempty]
       exact congrArg some hlast
-  letI : ChungCurve.ExpansionSecurityConditions M.n lambda :=
+  let _ : ChungCurve.ExpansionSecurityConditions M.n lambda :=
     internalSecurityConditions M.n lambda
   have hbound := ChungCurve.expansionFailureBound_le_security M.n lambda
   rw [HoldsWithFailureAtMost] at hgeneric ⊢
