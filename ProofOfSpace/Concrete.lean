@@ -839,11 +839,21 @@ theorem scalar_active (L : Link P T A)
   exact ⟨hlower, hupper⟩
 
 theorem scalar_le_actual (L : Link P T A) (hn : 0 < n)
-    (hnobreak : S.ρ < S.betaD S.pi - T.lam) {d : ℕ}
+    {d : ℕ}
+    (hactive : ∀ e, L.depth ≤ e → e ≤ d →
+      P.footprintBound L.depth T.σ e ∈ Set.Icc S.αmin S.αmax)
     (hdepth : L.depth ≤ d) (hd : d < ℓ) :
-    P.footprintBound L.depth T.σ d ≤ weight n (P.layerFootprint L.source d) :=
-  P.footprintBound_le hn T.σ_pos.le L.source_scalar_le
-    (fun hde _ => L.scalar_active hnobreak hde) hdepth hd
+    P.footprintBound L.depth T.σ d ≤ weight n (P.layerFootprint L.source d) := by
+  have go : ∀ e, L.depth ≤ e → e ≤ d → e < ℓ →
+      P.footprintBound L.depth T.σ e ≤ weight n (P.layerFootprint L.source e) := by
+    intro e hde hed heℓ
+    induction e, hde using Nat.le_induction with
+    | base => simpa using L.source_scalar_le
+    | succ e hde ih =>
+        rw [P.footprintBound_isBound L.depth T.σ e hde]
+        exact P.layerFootprint_step hn heℓ (hactive e hde (by omega))
+          (ih (by omega) (by omega))
+  exact go d hdepth le_rfl hd
 
 /-- Convert an actual footprint of weight at least `π` into a depth-robust local path. -/
 theorem local_path (L : Link P T A) (hn : 0 < n) {d : ℕ} (hd : d < ℓ)
@@ -1081,8 +1091,7 @@ graph-side axiom: it is `Link.extend`, proved above from actual reachability plu
 explicit uniform depth-robustness hypothesis. -/
 noncomputable def chainSystem [DecidableEq V] (P : Pebbling G) (T : Tracking S)
     (A : Finset V) (hn : 0 < n) (hσapi : T.σ ≤ G.αpi)
-    (hDepth : G.DepthRobust G.αpi)
-    (hnobreak : S.ρ < S.betaD S.pi - T.lam) :
+    (hDepth : G.DepthRobust G.αpi) :
     ChainSystem S P.budget T ℓ
       (fun z => P.HasUnpebbledPathInFootprint A (chainPathLength G T z)) where
   Link := Link P T A
@@ -1096,10 +1105,10 @@ noncomputable def chainSystem [DecidableEq V] (P : Pebbling G) (T : Tracking S)
   count_pos := Link.count_pos
   realizes := Link.realized
   extend := by
-    intro L b hdepth hb hfert hexp
+    intro L b hdepth hb hfert hexp hactive
     have hactual : P.footprintBound L.depth T.σ b ≤
         weight n (P.layerFootprint L.source b) :=
-      L.scalar_le_actual hn hnobreak (le_of_lt hdepth) hb
+      L.scalar_le_actual hn hactive (le_of_lt hdepth) hb
     let L' := Link.extend hn hσapi hDepth L hdepth hb hexp (hfert.trans hactual)
     exact ⟨L', rfl, rfl⟩
 

@@ -174,7 +174,9 @@ structure ChainSystem (S : Setting) (B : Budget S) (T : Tracking S) (ℓ : ℕ)
   realizes : ∀ L, Realizes (count L)
   /-- **Depth robustness** (assumed) and the splice of `path-payoff lemma`. -/
   extend : ∀ (L : Link) (b : ℕ), depth L < b → b < ℓ → S.pi ≤ wt L b →
-      Expandable B T.ghat b → ∃ L' : Link, depth L' = b ∧ count L' = count L + 1
+      Expandable B T.ghat b →
+      (∀ d, depth L ≤ d → d ≤ b → wt L d ∈ Set.Icc S.αmin S.αmax) →
+      ∃ L' : Link, depth L' = b ∧ count L' = count L + 1
 
 /-! ### The accounting
 

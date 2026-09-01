@@ -626,6 +626,7 @@ theorem potential_links {C : RefChain S T} (Cert : LedgerCert S T C)
       · exact absurd hpast hnotpast
       · have ht2ℓ : t2 < ℓ := by omega
         obtain ⟨L', hdepth', hcount'⟩ := CS.extend L t2 hlt ht2ℓ hfert hexp
+          (fun d hd _ => ⟨T.αmin_lt_lam.le.trans (hfloor L d hd), hmax L d hd⟩)
         refine ⟨L', by omega, by omega, ?_⟩
         rw [hdepth', ← hcast]
         exact ht2bound

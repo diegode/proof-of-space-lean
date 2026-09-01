@@ -8,7 +8,7 @@ consecutive layers.
 ## Main result
 
 [`chung8_pebbling_latency_15`](Challenge.lean) proves that, under explicit
-within-layer depth-robustness, pebbling-budget, finite-size, and security
+within-layer depth-robustness, pebbling-budget, and security
 conditions, there is an unpebbled directed path ending in a sufficiently large
 red-free challenge set and having length at least
 
@@ -19,8 +19,10 @@ red-free challenge set and having length at least
 with failure probability at most `2^(-lambda)`.
 
 [`chung8_pebbling_latency_whp`](Challenge.lean) is the reusable probabilistic
-step: any deterministic consequence of the certified Chung expansion event
-holds under the uniform interlayer law with the stated expansion-failure bound.
+form of the general, break-aware latency theorem. Its parameters are symbolic and
+its conclusion is the explicit lower bound
+`απ*n + (z_min(ℓ)-1)*(απ-σ)*n`, under the uniform interlayer law, with
+failure probability at most `2^(-lambda)`.
 
 The result concerns a static black/red pebbling snapshot. It does not formalize
 a time-indexed cryptographic game, a reduction from path length to running time,

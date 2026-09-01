@@ -1,4 +1,5 @@
 import ProofOfSpace.Concrete
+import ProofOfSpace.Ledger
 import ProofOfSpace.PotentialLedger
 
 /-!
@@ -66,9 +67,63 @@ theorem challenge_fertile (P : Pebbling G) (hn : 0 < n) (hζ : 0 ≤ S.ζδ)
       (Nat.zero_le b) hb
   exact hfertScalar.trans (by simpa [challengeBound_struct] using hactual)
 
+/-- The challenge-footprint comparison under the general entry condition used by
+`latency_general`. -/
+theorem challenge_fertile_gen (P : Pebbling G) (hn : 0 < n) (hζ : 0 ≤ S.ζδ)
+    (hζmax : S.ζδ ≤ S.αmax) (hentry : S.αmin < S.ζδ - S.ρ)
+    {A : Finset V} (hA : A ⊆ G.layer 0) (hred : ∀ v ∈ A, v ∉ P.red 0)
+    (hweight : S.ζδ ≤ weight n A) {b : ℕ} (hb : b < ℓ)
+    (hfertScalar : S.pi ≤ (P.challengeBound_struct hζ).f b) :
+    S.pi ≤ weight n (P.layerFootprint A b) := by
+  let C := P.challengeBound_struct hζ
+  have hstart : max 0 (S.ζδ - P.budget.spend 0) ≤ weight n (P.layerFootprint A 0) :=
+    P.challenge_start_le hn hA hred hweight
+  have hactual : P.challengeBound b ≤ weight n (P.layerFootprint A b) :=
+    P.footprintBound_le hn (le_max_left _ _) hstart
+      (fun {d} _ _ => ⟨hentry.le.trans (C.zetaFloor_le hζmax hentry d),
+        (C.invariants_gen hζmax hentry d).2⟩)
+      (Nat.zero_le b) hb
+  exact hfertScalar.trans (by simpa [C, challengeBound_struct] using hactual)
+
 end Pebbling
 
 end Concrete
+
+/-! ### The break-aware general latency bound -/
+
+/-- The adjusted challenge weight is nonnegative in the general regime. -/
+theorem zetaDelta_nonneg {S : Setting} (GR : GeneralRegime S) : 0 ≤ S.ζδ := by
+  have h := GR.entry
+  simp only [Setting.zetaFloor] at h
+  linarith [S.αmin_nonneg, S.ρ_nonneg]
+
+/-- Concrete latency lower bound under exactly the general scalar conditions. -/
+theorem latency_general {V : Type u}
+    {S : Setting} {ℓ n : ℕ} (G : Concrete.LayeredGraph V S ℓ n)
+    (P : Concrete.Pebbling G) (T : Tracking S) (GR : GeneralRegime S)
+    (hn : 0 < n) (hρ : 0 < S.ρ) (hσapi : T.σ < G.αpi)
+    (hDepth : G.DepthRobust G.αpi)
+    (hinside : s₀ S T < ℓ)
+    (A : Finset V) (hA : A ⊆ G.layer 0)
+    (hred : ∀ v ∈ A, v ∉ P.red 0)
+    (hweight : S.ζδ ≤ Concrete.Pebbling.weight n A) :
+    P.HasUnpebbledPathInFootprint A
+      (latencyLength G.αpi T.σ n (zMin S T ℓ)) := by
+  classical
+  have hζ : 0 ≤ S.ζδ := zetaDelta_nonneg GR
+  let CS := P.chainSystem T A hn hσapi.le hDepth
+  let C := P.challengeBound_struct hζ
+  have hrestart : ∀ b : ℕ, b < ℓ → S.pi ≤ C.f b → Expandable P.budget T.ghat b →
+      ∃ L : CS.Link, CS.depth L = b ∧ CS.count L = 1 := fun b hb hfertScalar hexp =>
+    ⟨Concrete.Pebbling.Link.base hn hσapi.le hDepth hb hexp
+      (P.challenge_fertile_gen hn hζ GR.zeta_le GR.entry hA hred hweight hb
+        hfertScalar), rfl, rfl⟩
+  have hchain := CS.latency_gen GR hρ C hrestart hinside (by
+    intro z z' hzz' hz'
+    apply P.hasPath_mono A _ hz'
+    simpa only [Concrete.Pebbling.chainPathLength, latencyLength] using
+      latencyLength_mono hσapi.le hzz')
+  simpa only [Concrete.Pebbling.chainPathLength, latencyLength] using hchain
 
 /-! ### The potential-ledger latency bound -/
 
@@ -100,7 +155,7 @@ theorem latency_potential {V : Type u}
     have h1 := S.piBar_pos
     have h2 := S.ρ_nonneg
     linarith
-  let CS := P.chainSystem T A hn hσapi.le hDepth hnobreak
+  let CS := P.chainSystem T A hn hσapi.le hDepth
   let Ch := P.challengeBound_struct hζ
   have hrestart : ∀ b : ℕ, b < ℓ → S.pi ≤ Ch.f b → Expandable P.budget T.ghat b →
       ∃ L : CS.Link, CS.depth L = b ∧ CS.count L = 1 := fun b hb hfertScalar hexp =>

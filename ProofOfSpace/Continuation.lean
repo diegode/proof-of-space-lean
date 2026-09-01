@@ -197,7 +197,7 @@ theorem fertile_continuation_gen {f : ℕ → ℝ} {t1 E : ℕ}
     (hfloor : ∀ d, t1 ≤ d → d < E → T.lam ≤ f d)
     (hmax : ∀ d, t1 ≤ d → d < E → f d ≤ S.αmax) :
     ∃ t2, t1 ≤ t2 ∧
-      (E ≤ t2 ∨ (S.pi ≤ f t2 ∧ Expandable B T.ghat t2)) ∧
+      (E ≤ t2 ∨ (t2 < E ∧ S.pi ≤ f t2 ∧ Expandable B T.ghat t2)) ∧
       t2 - t1 ≤ contSpan T (∑ d ∈ Finset.Ico (t1 + 1) t2, B.spend d) := by
   classical
   set Fert : ℕ → Prop := fun d => S.pi ≤ f d with hFert
@@ -222,7 +222,10 @@ theorem fertile_continuation_gen {f : ℕ → ℝ} {t1 E : ℕ}
     push Not at this
     exact this.2
   have ht1t2 : t1 ≤ t2 := base_le_searchPos J
-  refine ⟨t2, ht1t2, hJspec.symm, ?_⟩
+  refine ⟨t2, ht1t2, ?_, ?_⟩
+  · by_cases hcutoff : E ≤ t2
+    · exact Or.inl hcutoff
+    · exact Or.inr ⟨lt_of_not_ge hcutoff, hJspec.resolve_right hcutoff⟩
   -- the two capacities
   obtain ⟨_, hQlt⟩ := searchQ_spend (B := B) (g := T.ghat) (Fert := Fert) (t := t1) hbad J
     (le_refl J)
@@ -307,7 +310,7 @@ theorem fertile_continuation {f : ℕ → ℝ} {t1 ℓ : ℕ}
     (hfloor : ∀ d, t1 ≤ d → T.lam ≤ f d)
     (hmax : ∀ d, t1 ≤ d → f d ≤ S.αmax) :
     ∃ t2, t1 ≤ t2 ∧
-      (ℓ ≤ t2 ∨ (S.pi ≤ f t2 ∧ Expandable B T.ghat t2)) ∧
+      (ℓ ≤ t2 ∨ (t2 < ℓ ∧ S.pi ≤ f t2 ∧ Expandable B T.ghat t2)) ∧
       t2 - t1 ≤ contSpan T (∑ d ∈ Finset.Ico (t1 + 1) t2, B.spend d) :=
   fertile_continuation_gen hbound hfert (fun d hd _ => hfloor d hd) (fun d hd _ => hmax d hd)
 
