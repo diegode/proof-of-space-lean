@@ -6,10 +6,18 @@ import Mathlib.Probability.Distributions.Uniform
 # Chung-8 pebbling latency: statement surface
 
 The random interlayer is the model used by Reyzin: one uniform permutation of all
-`8n` ports. This file contains only the definitions needed to state the generic
-high-probability latency theorem and its 14-layer Filecoin specialization.
+`8n` ports. This file contains only the definitions needed to state the two generic
+high-probability latency theorems and their Filecoin specializations.
 
-Both public theorems are *uniform*: the wiring is sampled first, and the event
+`chung8_pebbling_latency_whp` prices a chosen number of chain links and its
+14-layer instance `chung8_pebbling_latency_14` gives `0.2816 n`;
+`chung8_pebbling_latency_full_asymptotic` eliminates the link count in favour of a
+slope in the layer count, and its instance `chung8_pebbling_latency_asymptotic`
+gives `0.0523 (ℓ - 10.1) n` for every `ℓ ≥ 11`. The pair differs only in the
+robustness threshold `π` at which `IsAdmissible.depth_robust` is read and in the
+payoff per link; neither implies the other.
+
+All four public theorems are *uniform*: the wiring is sampled first, and the event
 whose probability is bounded quantifies over every admissible pebbling position
 and every challenge set. The pebble sets are chosen with the wiring in hand, so
 the game may not be fixed before the sample.
@@ -374,6 +382,80 @@ theorem chung8_pebbling_latency_14
           ∀ S : Finset (ℕ × Fin n), S ⊆ G.layer 0 →
             (9 : ℝ) / 10 ≤ (S.card : ℝ) / n →
               G.HasUnpebbledPathTo S ((176 : ℝ) / 625 * n) p)
+      ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
+  sorry
+
+/-- **The asymptotic latency theorem, at full link payoff.**
+
+The same probability event, the same certified level budget and the same three prices as
+`chung8_pebbling_latency_whp`.  Two things change.
+
+The graph hypothesis is stronger: the game's robustness threshold must clear the
+profile's by the source weight, `π + σ ≤ E.π`.  `IsAdmissible.depth_robust` is the same
+deletion-form statement as before — it is read at a smaller `π`, so it demands a path of
+length `απ n` after `(1 - π) n` nodes are deleted rather than after `(1 - E.π) n`.
+
+In exchange every completed chain link contributes a whole `απ n` instead of
+`(απ - σ) n`.  A footprint of weight `E.π` then contains `σ n` distinct nodes that each
+*begin* a path of length `απ n` inside it, so the source of a link no longer consists of
+prefix nodes carrying only the suffix behind them.  The path length is therefore linear
+in the layer count, with slope `απ / L.linkCost`: there is no link count to choose, and
+no `σ < απ` to assume.  The level condition is what is left of the one above after the
+link count is eliminated,
+
+    `L.searchCost (ζ - δ) + L.chargeRate · ρ < ℓ`,
+
+the initial search and the whole black budget, each priced in layers by the budget. -/
+theorem chung8_pebbling_latency_full_asymptotic
+    {ℓ n : ℕ} (lambda : ℕ) (a b : ℝ) [ChungSecurityConditions n lambda a b]
+    (E : ExpansionProfile) (σ : ℝ) (L : LevelBudget E σ)
+    (απ δ π ρ ζ : ℝ)
+    (ha : a ≤ E.αmin) (hb : E.αmax + 1 / n ≤ b)
+    (hδ : δ ≤ E.δ) (hπ : π + σ ≤ E.π)
+    (hρ : 0 ≤ ρ) (hρtop : ρ ≤ L.ρmax)
+    (hentry : E.piBar + ρ < ζ - δ) (hζ : ζ - δ ≤ E.αmax)
+    (hnobreak : ρ < E.betaD E.π - E.floor σ)
+    (hslack : E.floor σ + (L.cs - 1) * E.trackingGain σ ≤ σ)
+    (hαπ : 0 ≤ απ) (hspan : 0 < L.linkCost)
+    (hlevels : L.searchCost (ζ - δ) + L.chargeRate * ρ < (ℓ : ℝ)) :
+    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
+      (fun p : ChungInterlayer n =>
+        ∀ G : PebblingGame ℓ n, G.απ = απ → G.δ = δ → G.π = π → G.ρ = ρ → G.ζ = ζ →
+          PebblingGame.IsAdmissible G →
+          ∀ S : Finset (ℕ × Fin n), S ⊆ G.layer 0 → ζ ≤ (S.card : ℝ) / n →
+            G.HasUnpebbledPathTo S
+              (((ℓ : ℝ) - L.searchCost (ζ - δ) - L.chargeRate * ρ) / L.linkCost
+                * απ * n) p)
+      ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
+  sorry
+
+/-- The asymptotic Filecoin latency lower bound at `lambda` bits of security: an
+unpebbled path of length `0.0523 (ℓ - 10.1) n`, at every layer count from eleven on.
+It is the point
+`(απ, δ, π, ρ, ζ, σ) = (0.2, 0.0378, 0.6816, 0.8, 0.9, 0.1184)`
+of `chung8_pebbling_latency_full_asymptotic`, whose level condition there reads
+`10.0853 < ℓ`.
+
+Against `chung8_pebbling_latency_14` this trades the robustness threshold for the slope.
+`IsAdmissible.depth_robust` is asked here at `π = 426/625 = 0.6816` rather than at
+`4/5`: deleting any `0.3184 n` nodes of a layer must still leave an intra-layer path on
+`0.2 n` nodes, where the fourteen-layer theorem deletes only `0.2 n`.  In exchange the
+bound grows by `0.0523 n` per layer instead of `0.02135 n`, and it overtakes the
+`0.2816 n` of `chung8_pebbling_latency_14` at `ℓ = 16`.  Neither theorem implies the
+other. -/
+theorem chung8_pebbling_latency_asymptotic
+    {ℓ n : ℕ} (lambda : ℕ) (hn : 1000 ≤ n) (hℓ : 11 ≤ ℓ)
+    [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
+    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
+      (fun p : ChungInterlayer n =>
+        ∀ G : PebblingGame ℓ n,
+          G.απ = (1 : ℝ) / 5 → G.δ = (189 : ℝ) / 5000 → G.π = (426 : ℝ) / 625 →
+          G.ρ = (4 : ℝ) / 5 → G.ζ = (9 : ℝ) / 10 →
+          PebblingGame.IsAdmissible G →
+          ∀ S : Finset (ℕ × Fin n), S ⊆ G.layer 0 →
+            (9 : ℝ) / 10 ≤ (S.card : ℝ) / n →
+              G.HasUnpebbledPathTo S
+                ((523 : ℝ) / 10000 * ((ℓ : ℝ) - 101 / 10) * n) p)
       ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
   sorry
 

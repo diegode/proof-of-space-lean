@@ -626,8 +626,7 @@ which is depth robustness at `E.π - σ`.  In exchange every completed link cont
 whole `απ n` instead of `(απ - σ) n`, so the path length is linear in the layer count with
 slope `απ / L.linkCost` — there is no link count to choose, and no `σ < απ` to assume.
 
-This theorem is not part of the registered public interface; `Challenge.lean` and
-`comparator.json` are unchanged. -/
+This is `Challenge.lean`'s `chung8_pebbling_latency_full_asymptotic`. -/
 theorem chung8_pebbling_latency_full_asymptotic
     {ℓ n : ℕ} (lambda : ℕ) (a b : ℝ) [ChungSecurityConditions n lambda a b]
     (E : ExpansionProfile) (σ : ℝ) (L : LevelBudget E σ)

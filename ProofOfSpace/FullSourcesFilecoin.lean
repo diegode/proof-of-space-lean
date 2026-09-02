@@ -61,9 +61,10 @@ here at `523/10000`, and the offset `10.1` absorbs the ledger head
 `463/774 + 105600/11131 < 10.0853`: the initial search and the whole black budget.
 
 Against `chung8_latency_deterministic`, whose linear envelope is
-`0.02135 (ℓ - 10.0853) + 0.1184`, this is stronger from `ℓ = 14` on and 2.45 times its
-slope.  The two are not comparable as graph theorems: this one assumes depth robustness at
-`426/625`, that one at `4/5`.
+`0.02135 (ℓ - 10.0853) + 0.2`, this is 2.45 times the slope and overtakes it at `ℓ = 16`,
+the first layer count at which the discrete link count is still two.  The two are not
+comparable as graph theorems: this one assumes depth robustness at `426/625`, that one
+at `4/5`.
 -/
 theorem chung8_latency_asymptotic
     {V : Type u} {ℓ n : ℕ} (hℓ : 11 ≤ ℓ)

@@ -92,9 +92,9 @@ budget; the trade can also be read the other way, keeping the `4/5` threshold an
 the fertility threshold to `π + σ`, which re-prices the certificate.
 
 `chung8_pebbling_latency_asymptotic` and the generic
-`chung8_pebbling_latency_full_asymptotic` it instantiates are **not** part of the
-registered public interface: [`Challenge.lean`](Challenge.lean) and `comparator.json` are
-unchanged, and both theorems live in [`Solution.lean`](Solution.lean).
+`chung8_pebbling_latency_full_asymptotic` it instantiates are stated in
+[`Challenge.lean`](Challenge.lean), proved in [`Solution.lean`](Solution.lean), and
+registered in `comparator.json` alongside the other two public theorems.
 
 ## Expansion is assumed only on a density range
 
