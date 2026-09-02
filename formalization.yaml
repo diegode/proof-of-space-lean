@@ -51,7 +51,7 @@ related_formalizations: []
 
 status:
   scope: >-
-    ProofOfSpaceStatement.chung8_pebbling_latency_15 is the registered probabilistic
+    ProofOfSpaceStatement.chung8_pebbling_latency_14 is the registered probabilistic
     latency theorem and returns an explicit unpebbled-path event in a static
     red/black pebbling snapshot. The vertical graph is constructed from one
     uniformly sampled permutation of all 8n Chung ports. Its expansion failure
@@ -68,7 +68,7 @@ status:
   sorry_in_definitions: 0
   axioms: ["propext", "Classical.choice", "Quot.sound"]
   main_results:
-    - declaration: "ProofOfSpaceStatement.chung8_pebbling_latency_15"
+    - declaration: "ProofOfSpaceStatement.chung8_pebbling_latency_14"
       file: "Solution.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
@@ -132,7 +132,7 @@ alignment:
   namespace: "ProofOfSpaceStatement"
   statements:
     - source: "Reyzin, Proofs of Space with Maximal Hardness (FOCS 2024), footprint and chain-growth framework"
-      lean: "ProofOfSpaceStatement.chung8_pebbling_latency_15"
+      lean: "ProofOfSpaceStatement.chung8_pebbling_latency_14"
       module: "Solution"
       status: "adapted and proved"
       note: >-

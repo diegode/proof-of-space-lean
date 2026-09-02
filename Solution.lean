@@ -465,32 +465,15 @@ theorem chung8_pebbling_latency_at
   exact hev M hαπ hδ hπ hρ hζ hAdm A hA hweight
 
 
-/-- **The 14-layer Filecoin latency lower bound** at `lambda` bits of security: the same
-`0.2816 n` payoff as before, one layer earlier.  The improvement is entirely in the
-potential ledger's budget charge — `λ` falls from `1.45` to `1.32` — and changes no
-assumption of the statement. -/
+/-- **The 14-layer Filecoin latency lower bound** at `lambda` bits of security: an
+unpebbled path of length `0.2816 n`, the `ℓ = 14` instance of
+`chung8_pebbling_latency_at`. -/
 theorem chung8_pebbling_latency_14
     {n : ℕ} (lambda : ℝ) (hn : 1000 ≤ n)
     [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
       (fun P : ChungInterlayer n =>
         ∀ M : PebblingGame 14 n,
-          M.απ = (1 : ℝ) / 5 → M.δ = (189 : ℝ) / 5000 → M.π = (4 : ℝ) / 5 →
-          M.ρ = (4 : ℝ) / 5 → M.ζ = (9 : ℝ) / 10 →
-          PebblingGame.IsAdmissible M →
-          ∀ A : Finset (ℕ × Fin n), A ⊆ M.layer 0 →
-            (9 : ℝ) / 10 ≤ (A.card : ℝ) / n →
-              M.HasUnpebbledPathTo A ((176 : ℝ) / 625 * n) P)
-      (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) :=
-  chung8_pebbling_latency_at (by norm_num) lambda hn
-
-/-- The original 15-layer statement, as an instance of the same threshold. -/
-theorem chung8_pebbling_latency_15
-    {n : ℕ} (lambda : ℝ) (hn : 1000 ≤ n)
-    [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
-    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
-      (fun P : ChungInterlayer n =>
-        ∀ M : PebblingGame 15 n,
           M.απ = (1 : ℝ) / 5 → M.δ = (189 : ℝ) / 5000 → M.π = (4 : ℝ) / 5 →
           M.ρ = (4 : ℝ) / 5 → M.ζ = (9 : ℝ) / 10 →
           PebblingGame.IsAdmissible M →

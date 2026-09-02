@@ -758,20 +758,5 @@ theorem chung8_latency_14_deterministic
       ((1 : ℝ) / 5 * n + ((1 : ℝ) / 5 - (74 : ℝ) / 625) * n) :=
   chung8_latency_deterministic (by norm_num) G P hn hαpi hDepth A hA hred hweight
 
-/-- **The 15-layer instance**, the original threshold, now with a level to spare. -/
-theorem chung8_latency_15_deterministic
-    {V : Type u} {n : ℕ}
-    (G : Concrete.LayeredGraph V (chung8Setting) 15 n)
-    (P : Concrete.Pebbling G)
-    (hn : 0 < n) (hαpi : G.αpi = (1 : ℝ) / 5)
-    (hDepth : G.DepthRobust G.αpi)
-    (A : Finset V) (hA : A ⊆ G.layer 0)
-    (hred : ∀ v ∈ A, v ∉ P.red 0)
-    (hweight : (chung8Setting).ζδ ≤ Concrete.Pebbling.weight n A) :
-    P.HasUnpebbledPathInFootprint A
-      ((1 : ℝ) / 5 * n + ((1 : ℝ) / 5 - (74 : ℝ) / 625) * n) :=
-  chung8_latency_deterministic (by norm_num) G P hn hαpi hDepth A hA hred hweight
-
-
 end ChungCurve
 end ProofOfSpace

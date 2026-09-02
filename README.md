@@ -30,7 +30,7 @@ belongs to the region when every wiring that expands on `[a, b]` gives the
 deterministic `z`-link latency property, for every admissible game with those
 fundamental parameters. The theorem itself is the transfer from that
 deterministic hypothesis through the union bound; the latency content lives in
-the region-membership proof, which for the 14- and 15-layer tuples is discharged in
+the region-membership proof, which for the 14-layer tuple is discharged in
 `Solution.lean` from the analytic and potential-ledger certificates.
 
 ## Expansion is assumed only on a density range
@@ -77,11 +77,9 @@ lake build
 ./scripts/verify-comparator.sh
 ```
 
-The comparator checks the registered theorems
-`ProofOfSpaceStatement.chung8_pebbling_latency_14` and
-`ProofOfSpaceStatement.chung8_pebbling_latency_15`, their permitted axioms, and
-NanoDa replay using the pinned toolchain.  `chung8_pebbling_latency_15` is kept
-as an instance of the same threshold; the 14-layer statement is the sharper one.
+The comparator checks the registered theorem
+`ProofOfSpaceStatement.chung8_pebbling_latency_14`, its permitted axioms, and
+NanoDa replay using the pinned toolchain.
 
 The development builds on Leonid Reyzin's *Proofs of Space with Maximal
 Hardness* (FOCS 2024) and Ben Fisch's *Tight Proofs of Space and Replication*

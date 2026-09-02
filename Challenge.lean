@@ -7,7 +7,7 @@ import Mathlib.Probability.Distributions.Uniform
 
 The random interlayer is the model used by Reyzin: one uniform permutation of all
 `8n` ports. This file contains only the definitions needed to state the generic
-high-probability latency theorem and its 15-layer Filecoin specialization.
+high-probability latency theorem and its 14-layer Filecoin specialization.
 
 Both public theorems are *uniform*: the wiring is sampled first, and the event
 whose probability is bounded quantifies over every admissible pebbling position
@@ -194,25 +194,8 @@ theorem chung8_pebbling_latency_whp
       (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
   sorry
 
-/-- The 15-layer Filecoin latency lower bound at `lambda` bits of security. -/
-theorem chung8_pebbling_latency_15
-    {n : ℕ} (lambda : ℝ) (hn : 1000 ≤ n)
-    [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
-    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
-      (fun p : ChungInterlayer n =>
-        ∀ G : PebblingGame 15 n,
-          G.απ = (1 : ℝ) / 5 → G.δ = (189 : ℝ) / 5000 → G.π = (4 : ℝ) / 5 →
-          G.ρ = (4 : ℝ) / 5 → G.ζ = (9 : ℝ) / 10 →
-          PebblingGame.IsAdmissible G →
-          ∀ S : Finset (ℕ × Fin n), S ⊆ G.layer 0 →
-            (9 : ℝ) / 10 ≤ (S.card : ℝ) / n →
-              G.HasUnpebbledPathTo S ((176 : ℝ) / 625 * n) p)
-      (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
-  sorry
-
-/-- The 14-layer Filecoin latency lower bound at `lambda` bits of security: the same
-`0.2816 n` payoff as the 15-layer statement, one layer earlier, under exactly the same
-assumptions. -/
+/-- The 14-layer Filecoin latency lower bound at `lambda` bits of security: an
+unpebbled path of length `0.2816 n`. -/
 theorem chung8_pebbling_latency_14
     {n : ℕ} (lambda : ℝ) (hn : 1000 ≤ n)
     [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
