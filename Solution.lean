@@ -1,6 +1,7 @@
 import ProofOfSpace.ChungFilecoinExpansion
 import ProofOfSpace.ChungFilecoinGeneral
 import ProofOfSpace.ChungRelative
+import ProofOfSpace.FullSourcesFilecoin
 
 namespace ProofOfSpaceStatement
 
@@ -616,6 +617,160 @@ theorem chung8_pebbling_latency_whp
     rw [hlat]
     exact hlength
 
+/-- **The asymptotic latency theorem, at full link payoff.**
+
+Same probability event, same certified level budget and the same three ledger prices as
+`chung8_pebbling_latency_whp`.  Two things change.  The graph hypothesis is stronger: the
+game's robustness threshold must clear the profile's by the source weight, `π + σ ≤ E.π`,
+which is depth robustness at `E.π - σ`.  In exchange every completed link contributes a
+whole `απ n` instead of `(απ - σ) n`, so the path length is linear in the layer count with
+slope `απ / L.linkCost` — there is no link count to choose, and no `σ < απ` to assume.
+
+This theorem is not part of the registered public interface; `Challenge.lean` and
+`comparator.json` are unchanged. -/
+theorem chung8_pebbling_latency_full_asymptotic
+    {ℓ n : ℕ} (lambda : ℕ) (a b : ℝ) [ChungSecurityConditions n lambda a b]
+    (E : ExpansionProfile) (σ : ℝ) (L : LevelBudget E σ)
+    (απ δ π ρ ζ : ℝ)
+    (ha : a ≤ E.αmin) (hb : E.αmax + 1 / n ≤ b)
+    (hδ : δ ≤ E.δ) (hπ : π + σ ≤ E.π)
+    (hρ : 0 ≤ ρ) (hρtop : ρ ≤ L.ρmax)
+    (hentry : E.piBar + ρ < ζ - δ) (hζ : ζ - δ ≤ E.αmax)
+    (hnobreak : ρ < E.betaD E.π - E.floor σ)
+    (hslack : E.floor σ + (L.cs - 1) * E.trackingGain σ ≤ σ)
+    (hαπ : 0 ≤ απ) (hspan : 0 < L.linkCost)
+    (hlevels : L.searchCost (ζ - δ) + L.chargeRate * ρ < (ℓ : ℝ)) :
+    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
+      (fun P : ChungInterlayer n =>
+        ∀ M : PebblingGame ℓ n, M.απ = απ → M.δ = δ → M.π = π → M.ρ = ρ → M.ζ = ζ →
+          PebblingGame.IsAdmissible M →
+          ∀ B : Finset (ℕ × Fin n), B ⊆ M.layer 0 → ζ ≤ (B.card : ℝ) / n →
+            M.HasUnpebbledPathTo B
+              (((ℓ : ℝ) - L.searchCost (ζ - δ) - L.chargeRate * ρ) / L.linkCost
+                * απ * n) P)
+      ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
+  classical
+  refine chung8_of_expands_whp lambda a b _ ?_
+  intro P hP N hNαπ hNδ hNπ hNρ hNζ hN B hB hBweight
+  have hnR : (0 : ℝ) < n := by exact_mod_cast hN.n_pos
+  let Pc : Concrete.PortInterlayer n := interlayerEquiv n P
+  -- The public profile is the deterministic `Setting`, with the game's budget and its
+  -- red-free challenge weight.
+  let S : Setting :=
+    { β := E.β, αg := E.αg, δ := E.δ, pi := E.π, ρ := ρ, ζδ := ζ - δ
+      αmin := E.αmin, αmax := E.αmax
+      β_maps := E.β_maps, β_zero := E.β_zero, β_strictMonoOn := E.β_strictMonoOn
+      β_concaveOn := E.β_concaveOn, β_expands := E.β_expands, β_reversal := E.β_reversal
+      αg_mem := E.αg_mem, αg_max := E.αg_max, δ_nonneg := E.δ_nonneg, ρ_nonneg := hρ
+      pi_mem := E.π_mem, αg_lt_pi := E.αg_lt_π, gpi_pos := E.gpi_pos
+      αmin_mem := E.αmin_mem, αmax_mem := E.αmax_mem
+      gainD_αmin := E.gainD_αmin, gainD_αmax := E.gainD_αmax }
+  let T : Tracking S :=
+    { σ := σ, σ_gt := L.σ_gt, σ_lt := L.σ_lt, mid := L.mid, mid_ge := L.mid_ge
+      mid_le := L.mid_le, mid_gain := L.mid_gain }
+  let C : RefChain S T :=
+    { m := L.m, x := L.x, m_pos := L.m_pos, base := L.base, width := L.width
+      step := L.step, mem := L.mem, top := L.top }
+  let Cert : LedgerCert S T C :=
+    { lam := L.lam, loss := L.loss, cs := L.cs, wtop := L.wtop, kappa := L.kappa
+      a2 := L.a2, b2 := L.b2
+      one_le_lam := L.one_le_lam, loss_nonneg := L.loss_nonneg, one_le_cs := L.one_le_cs
+      wtop_pos := L.wtop_pos, kappa_nonneg := L.kappa_nonneg
+      loss_ge := L.loss_ge, topLip := L.topLip, chord := L.chord
+      ghat_le_lam_wtop := L.ghat_le_lam_wtop, inf_rate := L.inf_rate
+      blockDrop := fun y hy hyρ => L.blockDrop y hy (le_trans hyρ hρtop)
+      blockDrop_one := L.blockDrop_one
+      blk_rate := fun y w hy hyρ hw => L.blk_rate y w hy (le_trans hyρ hρtop) hw }
+  have hPc : Pc.Expands S := by
+    apply portExpands_of_public P hN.n_pos S a b ha hb
+    · intro x t hx ht _ hxt
+      exact le_trans (E.β_strictMonoOn.monotoneOn hx ht hxt) (E.le_chung8 ht)
+    · exact hP
+  let standalone : Concrete.StandaloneGraph n :=
+    { edge := N.intra, edge_lt := fun {_ _} h => hN.intra_rank h }
+  let G := Concrete.portStack standalone S ℓ N.απ hN.n_pos (fun _ => Pc) (fun _ _ => hPc)
+  let pebbling : Concrete.Pebbling G := {
+    black := N.black
+    red := N.red
+    black_subset := by
+      intro d v hv
+      exact hN.black_subset d hv
+    red_subset := by
+      intro d v hv
+      exact hN.red_subset d hv
+    black_total := by
+      intro m
+      have h := hN.black_total m
+      rw [hNρ] at h
+      exact h
+    red_bound := by
+      intro d
+      have h := hN.red_bound d
+      rw [hNδ] at h
+      exact h.trans (mul_le_mul_of_nonneg_right hδ hnR.le)
+  }
+  have hDepth : G.DepthRobustThr (S.pi - T.σ) G.αpi := by
+    apply Concrete.portStack_depthRobustThr_of_nodeDR
+    intro X hX
+    refine hN.depth_robust X ?_
+    have hmono : (1 - (E.π - σ)) * n ≤ (1 - π) * n :=
+      mul_le_mul_of_nonneg_right (by linarith) hnR.le
+    rw [hNπ]
+    exact le_trans hX hmono
+  -- The challenge set has weight `ζ`; discarding its red nodes leaves a red-free set of
+  -- weight at least `ζ - δ`, which is what the deterministic argument starts from.
+  have hB' : B \ N.red 0 ⊆ G.layer 0 := Finset.sdiff_subset.trans hB
+  have hBred : ∀ v ∈ B \ N.red 0, v ∉ N.red 0 := fun _ hv => (Finset.mem_sdiff.mp hv).2
+  have hweight' : S.ζδ ≤ Concrete.Pebbling.weight n (B \ N.red 0) := by
+    have hred0 : ((N.red 0).card : ℝ) ≤ δ * n := by
+      have h := hN.red_bound 0
+      rw [hNδ] at h
+      exact h
+    have hcardNat : B.card ≤ (B \ N.red 0).card + (N.red 0).card :=
+      (Finset.card_le_card Finset.subset_union_left).trans_eq
+        (Finset.card_sdiff_add_card B (N.red 0)).symm
+    have hcard : (B.card : ℝ) ≤ ((B \ N.red 0).card : ℝ) + ((N.red 0).card : ℝ) := by
+      exact_mod_cast hcardNat
+    rw [le_div_iff₀ hnR] at hBweight
+    change ζ - δ ≤ _
+    simp only [Concrete.Pebbling.weight]
+    rw [le_div_iff₀ hnR]
+    linarith
+  have hαpi0 : (0 : ℝ) ≤ G.αpi := by
+    change (0 : ℝ) ≤ N.απ
+    rw [hNαπ]; exact hαπ
+  have hzcond : LedgerCert.potHead C Cert + Cert.lam * S.ρ / T.ghat < (ℓ : ℝ) := by
+    have hcharge : Cert.lam * S.ρ / T.ghat = L.chargeRate * ρ := by
+      change L.lam * ρ / E.trackingGain σ = L.lam / E.trackingGain σ * ρ
+      ring
+    rw [hcharge]
+    exact hlevels
+  have hpath := latency_full_asymptotic G pebbling T Cert hN.n_pos hαpi0 hDepth
+    (show S.ζδ ≤ S.αmax from hζ) (show S.piBar < S.ζδ - S.ρ from by
+      change E.piBar < ζ - δ - ρ
+      linarith [hentry])
+    (show S.ρ < S.betaD S.pi - T.lam from hnobreak)
+    (show T.lam + (Cert.cs - 1) * T.ghat ≤ T.σ from hslack)
+    (show 0 < LedgerCert.potSpan C Cert from hspan)
+    hzcond (B \ N.red 0) hB' hBred hweight'
+  rcases hpath with ⟨u, v, hv, Q, hfirst, hlast, hlength⟩
+  refine ⟨v, (Finset.mem_sdiff.mp hv).1, Q.nodes, Q.nonempty, Q.chain,
+    Q.unpebbled', ?_, ?_⟩
+  · rw [List.getLast?_eq_some_getLast Q.nonempty]
+    exact congrArg some hlast
+  · have hlat : ((ℓ : ℝ) - L.searchCost (ζ - δ) - L.chargeRate * ρ) / L.linkCost * απ * n
+        = ((ℓ : ℝ) - LedgerCert.potHead C Cert - Cert.lam * S.ρ / T.ghat)
+            / LedgerCert.potSpan C Cert * G.αpi * n := by
+      have hcharge : Cert.lam * S.ρ / T.ghat = L.chargeRate * ρ := by
+        change L.lam * ρ / E.trackingGain σ = L.lam / E.trackingGain σ * ρ
+        ring
+      rw [hcharge]
+      change _ = ((ℓ : ℝ) - L.searchCost (ζ - δ) - L.chargeRate * ρ) / L.linkCost
+        * N.απ * n
+      rw [hNαπ]
+    rw [hlat]
+    exact hlength
+
 /-! ### The degree-eight Chung profile as an instance -/
 
 private theorem chung8Beta_nonneg {x : ℝ} (hx : 0 ≤ x) : 0 ≤ chung8Beta x := by
@@ -825,5 +980,97 @@ theorem chung8_pebbling_latency_14
     ring
   rw [← hlen]
   exact hev M hαπ hδ hπ hρ hζ hAdm A hA hweight
+
+/-- **The asymptotic Filecoin latency bound at `lambda` bits of security.**
+
+The point `(απ, δ, π, ρ, ζ, σ) = (0.2, 0.0378, 0.6816, 0.8, 0.9, 0.1184)` of
+`chung8_pebbling_latency_full_asymptotic`, at every layer count from eleven on.  It is
+`chung8_pebbling_latency_14` with the robustness threshold lowered from `0.8` to
+`426/625 = 0.6816` — in deletion form, `0.3184 n` nodes removed instead of `0.2 n` — and
+the payoff correspondingly raised from `(απ - σ) n` to `απ n` per link.
+
+The certified slope is `523/10000` of `n` per layer, against the `0.02135` of
+`chung8_pebbling_latency_14`; the offset `10.1` absorbs the ledger head
+`463/774 + 105600/11131 < 10.0853`.  At `ℓ = 14` it already gives `0.204 n`. -/
+theorem chung8_pebbling_latency_asymptotic
+    {ℓ n : ℕ} (lambda : ℕ) (hn : 1000 ≤ n) (hℓ : 11 ≤ ℓ)
+    [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
+    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
+      (fun P : ChungInterlayer n =>
+        ∀ M : PebblingGame ℓ n,
+          M.απ = (1 : ℝ) / 5 → M.δ = (189 : ℝ) / 5000 → M.π = (426 : ℝ) / 625 →
+          M.ρ = (4 : ℝ) / 5 → M.ζ = (9 : ℝ) / 10 →
+          PebblingGame.IsAdmissible M →
+          ∀ A : Finset (ℕ × Fin n), A ⊆ M.layer 0 →
+            (9 : ℝ) / 10 ≤ (A.card : ℝ) / n →
+              M.HasUnpebbledPathTo A
+                ((523 : ℝ) / 10000 * ((ℓ : ℝ) - 101 / 10) * n) P)
+      ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
+  have hn1000 : (1000 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn
+  have hℓ' : (11 : ℝ) ≤ (ℓ : ℝ) := by exact_mod_cast hℓ
+  have ha : (1 : ℝ) / 100 ≤ chung8Profile.αmin := by
+    change (1 : ℝ) / 100 ≤ ChungCurve.filecoinAlphaMin
+    rw [ChungCurve.filecoinAlphaMin]; norm_num
+  have hb : chung8Profile.αmax + 1 / (n : ℝ) ≤ 24 / 25 := by
+    have h1 : (1 : ℝ) / n ≤ 1 / 1000 :=
+      one_div_le_one_div_of_le (by norm_num) hn1000
+    have h2 : chung8Profile.αmax = (14155 : ℝ) / 14911 := by
+      change ChungCurve.filecoinAlphaMax = _
+      rw [ChungCurve.filecoinAlphaMax]
+    rw [h2]; linarith
+  have hζδ : (9 : ℝ) / 10 - 189 / 5000 = 4311 / 5000 := by norm_num
+  have hhead : chung8Budget.searchCost ((9 : ℝ) / 10 - 189 / 5000) = 463 / 774 := by
+    rw [hζδ]
+    exact ChungCurve.chung8_potHead_eq
+  have hspanlt : chung8Budget.linkCost < 4 - 675 / 1113 + 331 / 774 :=
+    ChungCurve.chung8_potSpan_lt
+  have hspan : 0 < chung8Budget.linkCost :=
+    ChungCurve.chung8_potSpan_pos
+  have hcharge : chung8Budget.chargeRate * (4 / 5) = 105600 / 11131 := by
+    have h : (33 : ℝ) / 25 * (4 / 5) / ChungCurve.chung8Tracking.ghat = 105600 / 11131 :=
+      ChungCurve.chung8_ledgerCharge_eq
+    change (33 : ℝ) / 25 / ChungCurve.chung8Tracking.ghat * (4 / 5) = _
+    rw [← h]; ring
+  have hlevels : chung8Budget.searchCost ((9 : ℝ) / 10 - 189 / 5000)
+      + chung8Budget.chargeRate * (4 / 5) < (ℓ : ℝ) := by
+    rw [hhead, hcharge]
+    linarith
+  have hmain := chung8_pebbling_latency_full_asymptotic (ℓ := ℓ) (n := n) lambda
+    (1 / 100) (24 / 25)
+    chung8Profile ((74 : ℝ) / 625) chung8Budget ((1 : ℝ) / 5) ((189 : ℝ) / 5000)
+    ((426 : ℝ) / 625) ((4 : ℝ) / 5) ((9 : ℝ) / 10) ha hb le_rfl
+    (by change (426 : ℝ) / 625 + 74 / 625 ≤ (4 : ℝ) / 5; norm_num)
+    (by norm_num) le_rfl
+    (by change ChungCurve.chung8Setting.piBar + (4 : ℝ) / 5 < _
+        rw [Setting.piBar]
+        norm_num [ChungCurve.chungBeta8])
+    (by change (9 : ℝ) / 10 - 189 / 5000 ≤ ChungCurve.filecoinAlphaMax
+        rw [ChungCurve.filecoinAlphaMax]; norm_num)
+    ChungCurve.chung8_nobreak ChungCurve.chung8_cs_slack (by norm_num) hspan hlevels
+  rw [HoldsWithFailureAtMost] at hmain ⊢
+  refine hmain.trans (probabilityOf_mono _ ?_)
+  intro P hev M hαπ hδ hπ hρ hζ hAdm A hA hweight
+  obtain ⟨a, haA, Q, hQne, hQchain, hQunp, hQlast, hQlen⟩ :=
+    hev M hαπ hδ hπ hρ hζ hAdm A hA hweight
+  refine ⟨a, haA, Q, hQne, hQchain, hQunp, hQlast, le_trans ?_ hQlen⟩
+  -- weaken the certified span to the round slope of the statement
+  rw [hhead, hcharge]
+  have hn0 : (0 : ℝ) ≤ (n : ℝ) := Nat.cast_nonneg n
+  have hnum : (0 : ℝ) ≤ (ℓ : ℝ) - 463 / 774 - 105600 / 11131 := by linarith
+  have hdiv : ((ℓ : ℝ) - 463 / 774 - 105600 / 11131) / (4 - 675 / 1113 + 331 / 774)
+      ≤ ((ℓ : ℝ) - 463 / 774 - 105600 / 11131) / chung8Budget.linkCost :=
+    div_le_div_of_nonneg_left hnum hspan hspanlt.le
+  set q : ℝ := ((ℓ : ℝ) - 463 / 774 - 105600 / 11131) / (4 - 675 / 1113 + 331 / 774)
+    with hqdef
+  have hqB : q * (4 - 675 / 1113 + 331 / 774) = (ℓ : ℝ) - 463 / 774 - 105600 / 11131 := by
+    rw [hqdef]; field_simp
+  norm_num at hqB
+  have hkey : (523 : ℝ) / 10000 * ((ℓ : ℝ) - 101 / 10) ≤ q * (1 / 5) := by linarith
+  have hstep1 : (523 : ℝ) / 10000 * ((ℓ : ℝ) - 101 / 10) * n ≤ q * (1 / 5) * n :=
+    mul_le_mul_of_nonneg_right hkey hn0
+  have hstep2 : q * (1 / 5) * (n : ℝ)
+      ≤ ((ℓ : ℝ) - 463 / 774 - 105600 / 11131) / chung8Budget.linkCost * (1 / 5) * n :=
+    mul_le_mul_of_nonneg_right (by linarith) hn0
+  linarith
 
 end ProofOfSpaceStatement

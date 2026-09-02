@@ -1,4 +1,5 @@
 import ProofOfSpace.Latency
+import ProofOfSpace.FullSources
 import Mathlib.Probability.Distributions.Uniform
 
 /-!
@@ -456,6 +457,27 @@ theorem permutationStack_depthRobust_of_nodeDR (H : StandaloneGraph n) (S : Sett
     (permutationStack H S ℓ d α hn P hP).DepthRobust α := by
   intro k hk
   exact (permutationStack H S ℓ d α hn P hP).depthRobustAt_of_nodeDepthRobustAt hk
+    ((permutationStack_nodeDepthRobustAt_iff H S ℓ d α hn P hP hk).mpr hDR)
+
+/-- The same transfer at an explicit robustness threshold `τ`, as
+`ProofOfSpace.latency_full` needs it: a standalone certificate with deletion budget
+`(1 - τ) n` gives `DepthRobustThr τ`.  The `S.pi` versions above are the case `τ = S.pi`. -/
+theorem portStack_depthRobustThr_of_nodeDR (H : StandaloneGraph n) (S : Setting)
+    (ℓ : ℕ) (α τ : ℝ) (hn : 0 < n) (P : ℕ → PortInterlayer n)
+    (hP : ∀ k, k + 1 < ℓ → (P k).Expands S)
+    (hDR : H.NodeDR ((1 - τ) * n) (α * n)) :
+    (portStack H S ℓ α hn P hP).DepthRobustThr τ α := by
+  intro k hk
+  exact (portStack H S ℓ α hn P hP).depthRobustAtThr_of_nodeDepthRobustAt hk
+    ((portStack_nodeDepthRobustAt_iff H S ℓ α hn P hP hk).mpr hDR)
+
+theorem permutationStack_depthRobustThr_of_nodeDR (H : StandaloneGraph n) (S : Setting)
+    (ℓ d : ℕ) (α τ : ℝ) (hn : 0 < n) (P : ℕ → PermutationInterlayer n d)
+    (hP : ∀ k, k + 1 < ℓ → (P k).Expands S)
+    (hDR : H.NodeDR ((1 - τ) * n) (α * n)) :
+    (permutationStack H S ℓ d α hn P hP).DepthRobustThr τ α := by
+  intro k hk
+  exact (permutationStack H S ℓ d α hn P hP).depthRobustAtThr_of_nodeDepthRobustAt hk
     ((permutationStack_nodeDepthRobustAt_iff H S ℓ d α hn P hP hk).mpr hDR)
 
 /-- Probability assigned to a property by a finite sampler.  This is the interface used

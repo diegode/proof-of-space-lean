@@ -1,3 +1,5 @@
 import ProofOfSpace.ChungFilecoin
 import ProofOfSpace.ChungFilecoinGeneral
 import ProofOfSpace.ChungFilecoinExpansion
+import ProofOfSpace.FullSources
+import ProofOfSpace.FullSourcesFilecoin

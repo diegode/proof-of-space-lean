@@ -53,6 +53,49 @@ constructed degree-eight profile — and `chung8Budget`, the `β_δ` orbit of th
 floor with its certificate. `chung8BudgetAt` gives the same budget at any source weight
 in `[0.1184, 0.6]`, where the tracking constants do not move.
 
+## The asymptotic bound
+
+[`chung8_pebbling_latency_asymptotic`](Solution.lean) is the Reyzin-style statement: a
+path length linear in the layer count, for every `ℓ ≥ 11` rather than for one layer
+count. Except with probability `2^(-lambda)`, every admissible position and challenge set
+admit an unpebbled path of length
+
+```text
+(523/10000)(ℓ - 10.1) n
+```
+
+so every layer buys another `0.0523 n`, against the `0.02135 n` per layer that
+`chung8_pebbling_latency_whp` gives at the same budget as the link count `z` grows
+(`(α_π - σ)/L.linkCost`). It is the same profile, the same certified budget and the same
+three prices; what changes is the graph assumption and the payoff per chain link. At
+`ℓ = 14` the two are close — `0.204 n` against the `0.2816 n` of
+`chung8_pebbling_latency_14` — and the asymptotic bound is ahead from about `ℓ = 16`.
+
+`chung8_pebbling_latency_14` reaches a footprint of weight `π`, takes *one* depth-robust
+path of length `α_π n` inside it, and keeps that path's first `σ n` nodes as the next
+source; a source node is the `i`-th node of a prefix, so it carries only the suffix behind
+it, and a link is worth `(α_π - σ) n = 0.0816 n`. The asymptotic theorem instead takes as
+its source *every* node of the footprint that begins a whole `α_π n` path inside it. There
+are at least `σ n` of those as soon as the footprint has weight `π`, provided the layer is
+depth robust at the lower threshold `π - σ`
+([`card_fullSources`](ProofOfSpace/FullSources.lean)) — delete the sources and depth
+robustness hands back a long path whose first node was a source after all. Each link is
+then worth the whole `α_π n = 0.2 n`.
+
+The price is that threshold. The asymptotic theorem assumes depth robustness at
+`426/625 = 0.6816` where the 14-layer theorem assumes it at `4/5`: in deletion form,
+`0.3184 n` nodes removed from a layer instead of `0.2 n`, for the same path length
+`0.2 n`. The two are therefore not comparable as graph theorems, and neither subsumes the
+other. [`FullSources.lean`](ProofOfSpace/FullSources.lean) proves the generic theorem
+`latency_full_asymptotic`, whose slope is `α_π / L.linkCost` for any profile and certified
+budget; the trade can also be read the other way, keeping the `4/5` threshold and raising
+the fertility threshold to `π + σ`, which re-prices the certificate.
+
+`chung8_pebbling_latency_asymptotic` and the generic
+`chung8_pebbling_latency_full_asymptotic` it instantiates are **not** part of the
+registered public interface: [`Challenge.lean`](Challenge.lean) and `comparator.json` are
+unchanged, and both theorems live in [`Solution.lean`](Solution.lean).
+
 ## Expansion is assumed only on a density range
 
 `ChungInterlayer.ExpandsOn a b` demands the Chung-8 profile only of source sets
@@ -90,6 +133,10 @@ port-permutation model.
 - [`Solution.lean`](Solution.lean) proves those statements from the library.
 - [`ProofOfSpace/`](ProofOfSpace/) contains the deterministic latency argument,
   the layer specializations, and the expansion probability bound.
+- [`ProofOfSpace/FullSources.lean`](ProofOfSpace/FullSources.lean) is the
+  full-length path-source lemma and the full-payoff chain, and
+  [`ProofOfSpace/FullSourcesFilecoin.lean`](ProofOfSpace/FullSourcesFilecoin.lean)
+  is its deterministic Chung-8 instance.
 - [`ProofOfSpace.lean`](ProofOfSpace.lean) imports the complete development.
 
 ## Verification
