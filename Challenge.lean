@@ -94,11 +94,10 @@ noncomputable def chung8FailureBound (n : ℕ) (a b : ℝ) : ℝ≥0∞ :=
         chung8PortHitProb n k (chung8FailureProfile n k))
 
 /-- The exact Chung-8 union bound on `[a, b]` is at most two to the minus lambda. -/
-class ChungSecurityConditions (n : ℕ) (lambda a b : ℝ) : Prop where
+class ChungSecurityConditions (n : ℕ) (lambda : ℕ) (a b : ℝ) : Prop where
   n_pos : 0 < n
   a_pos : 0 < a
-  security :
-    chung8FailureBound n a b ≤ ENNReal.ofReal (Real.exp (-lambda * Real.log 2))
+  security : chung8FailureBound n a b ≤ (2 : ℝ≥0∞)⁻¹ ^ lambda
 
 /-- A static black/red pebbling position and its latency parameters on an `ℓ`-layer
 stacked graph of width `n`. The width is a parameter, not a field, so that one
@@ -170,34 +169,44 @@ def PebblingGame.LatencyEvent (ℓ n z : ℕ) (απ δ π ρ ζ σ : ℝ)
     ∀ S : Finset (ℕ × Fin n), S ⊆ G.layer 0 → ζ ≤ (S.card : ℝ) / n →
       G.HasUnpebbledPathTo S (G.latencyLength σ z) p
 
-/-- The parameter tuples for which Chung-8 expansion on `[a, b]` deterministically
-supplies `z` links. This is a semantic, proof-independent description of the covered
-region: it quantifies over every wiring that expands and every admissible game with
-the displayed fundamental parameters. -/
-def Chung8LatencyRegion (ℓ n z : ℕ) (απ δ π ρ ζ σ a b : ℝ) : Prop :=
-  σ < απ ∧
-    ∀ p : ChungInterlayer n, p.ExpandsOn a b →
-      PebblingGame.LatencyEvent ℓ n z απ δ π ρ ζ σ p
-
 -- The public challenge theorem bodies are intentionally omitted; see `README.md`.
 set_option warn.sorry false
 
-/-- The high-probability Chung-8 latency theorem for every tuple in the semantic
-latency region. All game parameters, the expansion range, and the certified link
-count remain symbolic. -/
+/-- **The Chung-8 latency theorem, over the parameter window the profile is certified
+on.**
+
+The wiring is sampled first, and the event quantifies over every admissible game with the
+displayed parameters and every challenge set of weight `ζ`.  All six game parameters, the
+link count and the layer count are symbolic; the certified window constrains them only by
+the displayed intervals and by the ledger's level condition
+
+    `0.6 + (z - 1) · 3.822 + 11.87 · ρ < ℓ`,
+
+whose three terms are the search head, the price of one further chain link, and the charge
+the black budget pays.  Read as a budget for `ℓ`, it says what a change of parameters
+buys: one more link costs `3.822` layers, and one more unit of black weight costs `11.87`.
+-/
 theorem chung8_pebbling_latency_whp
-    {ℓ n : ℕ} (lambda a b : ℝ) [ChungSecurityConditions n lambda a b]
-    (z : ℕ) (απ δ π ρ ζ σ : ℝ)
-    (hregion : Chung8LatencyRegion ℓ n z απ δ π ρ ζ σ a b) :
+    {ℓ n : ℕ} (lambda : ℕ) (a b : ℝ) [ChungSecurityConditions n lambda a b]
+    (hn : 1000 ≤ n) (ha : a ≤ 1 / 100) (hb : 24 / 25 ≤ b)
+    (απ δ π ρ ζ σ : ℝ) (z : ℕ) (hz : 1 ≤ z)
+    (hδ : δ ≤ 189 / 5000) (hπ : π ≤ 4 / 5)
+    (hζ : 9 / 10 ≤ ζ) (hζtop : ζ ≤ 49 / 50)
+    (hρ : 0 ≤ ρ) (hρtop : ρ ≤ 4 / 5)
+    (hentry : 5089 / 100000 + ρ < ζ - 189 / 5000)
+    (hσ : 74 / 625 ≤ σ) (hσtop : σ ≤ 3 / 5) (hσαπ : σ < απ)
+    (hlevels : 3 / 5 + ((z : ℝ) - 1) * (1911 / 500) + 1187 / 100 * ρ < (ℓ : ℝ)) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
       (PebblingGame.LatencyEvent ℓ n z απ δ π ρ ζ σ)
-      (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
+      ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
   sorry
 
 /-- The 14-layer Filecoin latency lower bound at `lambda` bits of security: an
-unpebbled path of length `0.2816 n`. -/
+unpebbled path of length `0.2816 n`.  It is the point
+`(απ, δ, π, ρ, ζ, σ, z, ℓ) = (0.2, 0.0378, 0.8, 0.8, 0.9, 0.1184, 2, 14)`
+of `chung8_pebbling_latency_whp`, whose level condition there reads `13.918 < 14`. -/
 theorem chung8_pebbling_latency_14
-    {n : ℕ} (lambda : ℝ) (hn : 1000 ≤ n)
+    {n : ℕ} (lambda : ℕ) (hn : 1000 ≤ n)
     [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
       (fun p : ChungInterlayer n =>
@@ -208,7 +217,7 @@ theorem chung8_pebbling_latency_14
           ∀ S : Finset (ℕ × Fin n), S ⊆ G.layer 0 →
             (9 : ℝ) / 10 ≤ (S.card : ℝ) / n →
               G.HasUnpebbledPathTo S ((176 : ℝ) / 625 * n) p)
-      (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
+      ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
   sorry
 
 end ProofOfSpaceStatement

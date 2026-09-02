@@ -22,16 +22,30 @@ with the wiring in hand, so the game may not be fixed before the sample. The
 width `n` is a parameter of `PebblingGame`, not a field, which is what lets one
 probability space `ChungInterlayer n` carry a quantifier over all games.
 
-[`chung8_pebbling_latency_whp`](Challenge.lean) is the reusable probabilistic
-Chung-8 theorem. Its game parameters, source weight `σ`, expansion range
-`[a, b]`, and link count `z` are all symbolic. `Chung8LatencyRegion` gives a
-semantic, proof-independent description of the covered scalar tuples: a tuple
-belongs to the region when every wiring that expands on `[a, b]` gives the
-deterministic `z`-link latency property, for every admissible game with those
-fundamental parameters. The theorem itself is the transfer from that
-deterministic hypothesis through the union bound; the latency content lives in
-the region-membership proof, which for the 14-layer tuple is discharged in
-`Solution.lean` from the analytic and potential-ledger certificates.
+[`chung8_pebbling_latency_whp`](Challenge.lean) is the theorem that carries the
+argument, and `chung8_pebbling_latency_14` is one point of it. Its six game
+parameters, the source weight `σ`, the expansion range `[a, b]`, the link count
+`z` and the layer count `ℓ` are symbolic, constrained by the intervals the
+Chung-8 profile is certified on and by the ledger's level condition
+
+```text
+0.6 + (z - 1)·3.822 + 11.87·ρ < ℓ
+```
+
+Its three terms are the search head, the price of one further chain link, and
+the charge the black budget pays; the whole latency argument — the union bound,
+the transfer of the public profile to the deterministic setting, the layered
+graph, the red-pebble removal from the challenge set and the potential ledger —
+is in its proof. The level condition is what a change of parameters has to buy:
+two links need `ℓ = 14` at `ρ = 4/5` (`13.918 < 14`), `ℓ = 13` at `ρ = 7/10`, and
+a third link at the Filecoin budget needs `ℓ = 18`. Worked points are checked in
+[`ChungFilecoinGeneral.lean`](ProofOfSpace/ChungFilecoinGeneral.lean).
+
+The red-pebble fraction `δ` and the depth-robustness threshold `π` enter the
+window one-sidedly (`δ ≤ 0.0378`, `π ≤ 4/5`): a game with fewer red pebbles, or
+a weaker robustness threshold, satisfies the certified one. Moving them upwards
+means re-certifying the curve constants `α_δ^min`, `α_δ^max`, `g_π` and `π̄`,
+which are the polygon evaluations of `ChungFilecoin.lean`.
 
 ## Expansion is assumed only on a density range
 
@@ -43,10 +57,11 @@ is, and near density `1` the union bound is vacuous. The deterministic argument
 only ever queries expansion at densities in `[αmin, αmax]`, and a set denser
 than `b` is handled by expanding a subset of the queried density.
 
-Both layer instances instantiate `[1/100, 24/25]`, which brackets the
+Both public theorems use a range containing `[1/100, 24/25]`, which brackets the
 Filecoin `[αmin, αmax] = [0.0129…, 0.9493…]`, and assumes `1000 ≤ n` so that the
 rounding of a subset back into the range fits. `ChungSecurityConditions n lambda
-a b` remains an assumption on the width: it is satisfiable at the deployed
+a b` remains an assumption on the width, with `lambda` a number of bits and the
+failure probability `2⁻ˡᵃᵐᵇᵈᵃ`: it is satisfiable at the deployed
 `lambda = 128` only for `n` around `2^35`, because the public margin
 `chung8Level` scales the entropy by `2^-23`. The library's polygon route
 ([`expansionFailureBound_le_security`](ProofOfSpace/ChungFilecoinExpansion.lean))

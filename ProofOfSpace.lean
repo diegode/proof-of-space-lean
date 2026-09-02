@@ -1,2 +1,3 @@
 import ProofOfSpace.ChungFilecoin
+import ProofOfSpace.ChungFilecoinGeneral
 import ProofOfSpace.ChungFilecoinExpansion

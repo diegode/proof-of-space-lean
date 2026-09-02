@@ -51,14 +51,18 @@ related_formalizations: []
 
 status:
   scope: >-
+    ProofOfSpaceStatement.chung8_pebbling_latency_whp is the latency theorem: all six
+    game parameters, the source weight, the link count and the layer count are symbolic
+    within the window the Chung-8 profile is certified on, related by the potential
+    ledger's level condition 0.6 + (z-1)*3.822 + 11.87*rho < ell.
     ProofOfSpaceStatement.chung8_pebbling_latency_14 is the registered probabilistic
-    latency theorem and returns an explicit unpebbled-path event in a static
-    red/black pebbling snapshot. The vertical graph is constructed from one
+    latency theorem, the point (0.2, 0.0378, 0.8, 0.8, 0.9, 0.1184, 2, 14) of it, and
+    returns an explicit unpebbled-path event in a static red/black pebbling snapshot. The vertical graph is constructed from one
     uniformly sampled permutation of all 8n Chung ports. Its expansion failure
     is bounded by exp(1/8)/(2*pi*alpha*sqrt(delta_n))*2^(-n*epsilon_chung),
     a simplified exponential union-bound expression. The statement exposes the
     required positivity, grid-rounding, and security condition on n and
-    epsilon_chung = 2^-22. Its integer failure profile is defined only from
+    epsilon_chung = 2^-22. The security parameter lambda is a number of bits and the failure probability is 2^-lambda. Its integer failure profile is defined only from
     Reyzin's exponent and the finite-grid margin conditions; the rational polygon
     is used only in the proof. Intra-layer depth robustness and pebbling budgets
     remain explicit. The formalization does not include the reduction to a
@@ -68,6 +72,12 @@ status:
   sorry_in_definitions: 0
   axioms: ["propext", "Classical.choice", "Quot.sound"]
   main_results:
+    - declaration: "ProofOfSpaceStatement.chung8_pebbling_latency_whp"
+      file: "Solution.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
     - declaration: "ProofOfSpaceStatement.chung8_pebbling_latency_14"
       file: "Solution.lean"
       sorry_count: 0

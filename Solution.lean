@@ -1,4 +1,5 @@
 import ProofOfSpace.ChungFilecoinExpansion
+import ProofOfSpace.ChungFilecoinGeneral
 import ProofOfSpace.ChungRelative
 
 namespace ProofOfSpaceStatement
@@ -68,11 +69,10 @@ noncomputable def chung8FailureBound (n : ℕ) (a b : ℝ) : ℝ≥0∞ :=
       ((n.choose (chung8FailureProfile n k) : ℝ≥0∞) *
         chung8PortHitProb n k (chung8FailureProfile n k))
 
-class ChungSecurityConditions (n : ℕ) (lambda a b : ℝ) : Prop where
+class ChungSecurityConditions (n : ℕ) (lambda : ℕ) (a b : ℝ) : Prop where
   n_pos : 0 < n
   a_pos : 0 < a
-  security :
-    chung8FailureBound n a b ≤ ENNReal.ofReal (Real.exp (-lambda * Real.log 2))
+  security : chung8FailureBound n a b ≤ (2 : ℝ≥0∞)⁻¹ ^ lambda
 
 /-- A static black/red pebbling position on an `ℓ`-layer stacked graph of width `n`. -/
 structure PebblingGame (ℓ n : ℕ) where
@@ -137,11 +137,6 @@ def PebblingGame.LatencyEvent (ℓ n z : ℕ) (απ δ π ρ ζ σ : ℝ)
     PebblingGame.IsAdmissible M →
     ∀ A : Finset (ℕ × Fin n), A ⊆ M.layer 0 → ζ ≤ (A.card : ℝ) / n →
       M.HasUnpebbledPathTo A (M.latencyLength σ z) P
-
-def Chung8LatencyRegion (ℓ n z : ℕ) (απ δ π ρ ζ σ a b : ℝ) : Prop :=
-  σ < απ ∧
-    ∀ P : ChungInterlayer n, P.ExpandsOn a b →
-      PebblingGame.LatencyEvent ℓ n z απ δ π ρ ζ σ P
 
 /-! ### Bridges to the proved library -/
 
@@ -323,153 +318,143 @@ private theorem chung8_whp_raw (a b : ℝ) (ha : 0 < a)
   rw [public_profile_iff _ a b]
   simpa using hP
 
-private theorem chung8_of_expands_whp (lambda a b : ℝ)
+private theorem chung8_of_expands_whp (lambda : ℕ) (a b : ℝ)
     [C : ChungSecurityConditions n lambda a b]
     (Q : ChungInterlayer n → Prop)
     (hdet : ∀ P : ChungInterlayer n, P.ExpandsOn a b → Q P) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n) Q
-      (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
+      ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
   have hgeneric := chung8_whp_raw a b C.a_pos Q hdet
   rw [HoldsWithFailureAtMost] at hgeneric ⊢
   exact (tsub_le_tsub_left C.security 1).trans hgeneric
 
+/-- **The Chung-8 latency theorem, over the parameter window the profile is certified
+on.**  Its proof is the whole argument: the port-model union bound, the transfer of the
+public expansion profile to the deterministic setting, the layered-graph bridge, the
+removal of the red pebbles from the challenge set, and the potential ledger at the
+symbolic budget, challenge weight and source weight. -/
 theorem chung8_pebbling_latency_whp
-    {ℓ n : ℕ} (lambda a b : ℝ) [ChungSecurityConditions n lambda a b]
-    (z : ℕ) (απ δ π ρ ζ σ : ℝ)
-    (hregion : Chung8LatencyRegion ℓ n z απ δ π ρ ζ σ a b) :
+    {ℓ n : ℕ} (lambda : ℕ) (a b : ℝ) [ChungSecurityConditions n lambda a b]
+    (hn : 1000 ≤ n) (ha : a ≤ 1 / 100) (hb : 24 / 25 ≤ b)
+    (απ δ π ρ ζ σ : ℝ) (z : ℕ) (hz : 1 ≤ z)
+    (hδ : δ ≤ 189 / 5000) (hπ : π ≤ 4 / 5)
+    (hζ : 9 / 10 ≤ ζ) (hζtop : ζ ≤ 49 / 50)
+    (hρ : 0 ≤ ρ) (hρtop : ρ ≤ 4 / 5)
+    (hentry : 5089 / 100000 + ρ < ζ - 189 / 5000)
+    (hσ : 74 / 625 ≤ σ) (hσtop : σ ≤ 3 / 5) (hσαπ : σ < απ)
+    (hlevels : 3 / 5 + ((z : ℝ) - 1) * (1911 / 500) + 1187 / 100 * ρ < (ℓ : ℝ)) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
       (PebblingGame.LatencyEvent ℓ n z απ δ π ρ ζ σ)
-      (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) :=
-  chung8_of_expands_whp lambda a b _ hregion.2
-
-theorem chung8_pebbling_latency_at
-    {ℓ n : ℕ} (hℓ : 14 ≤ ℓ) (lambda : ℝ) (hn : 1000 ≤ n)
-    [C : ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
-    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
-      (fun P : ChungInterlayer n =>
-        ∀ M : PebblingGame ℓ n,
-          M.απ = (1 : ℝ) / 5 → M.δ = (189 : ℝ) / 5000 → M.π = (4 : ℝ) / 5 →
-          M.ρ = (4 : ℝ) / 5 → M.ζ = (9 : ℝ) / 10 →
-          PebblingGame.IsAdmissible M →
-          ∀ A : Finset (ℕ × Fin n), A ⊆ M.layer 0 →
-            (9 : ℝ) / 10 ≤ (A.card : ℝ) / n →
-              M.HasUnpebbledPathTo A ((176 : ℝ) / 625 * n) P)
-      (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
+      ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
   classical
-  have hregion : Chung8LatencyRegion ℓ n 2 ((1 : ℝ) / 5)
-      ((189 : ℝ) / 5000) ((4 : ℝ) / 5) ((4 : ℝ) / 5) ((9 : ℝ) / 10)
-      ((74 : ℝ) / 625) (1 / 100) (24 / 25) := by
-    refine ⟨by norm_num, ?_⟩
-    intro P hP N hNαπ hNδ hNπ hNρ hNζ hN B hB hBweight
-    let Pc : Concrete.PortInterlayer n := interlayerEquiv n P
-    have hamin : (1 : ℝ) / 100 ≤ ChungCurve.chung8Setting.αmin := by
-      change (1 : ℝ) / 100 ≤ ChungCurve.FiniteSizeProfile.αmin
-      norm_num [ChungCurve.FiniteSizeProfile.αmin, ChungCurve.filecoinAlphaMin]
-    have hamax : ChungCurve.chung8Setting.αmax + 1 / (n : ℝ) ≤ 24 / 25 := by
-      have hn1000 : (1000 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn
-      have h1 : (1 : ℝ) / n ≤ 1 / 1000 :=
-        one_div_le_one_div_of_le (by norm_num) hn1000
-      have h2 : ChungCurve.chung8Setting.αmax = (14155 : ℝ) / 14911 := by
-        change ChungCurve.FiniteSizeProfile.αmax = _
-        norm_num [ChungCurve.FiniteSizeProfile.αmax, ChungCurve.filecoinAlphaMax]
-      rw [h2]
+  refine chung8_of_expands_whp lambda a b _ ?_
+  intro P hP N hNαπ hNδ hNπ hNρ hNζ hN B hB hBweight
+  have hnR : (0 : ℝ) < n := by exact_mod_cast hN.n_pos
+  have hn1000 : (1000 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn
+  let Pc : Concrete.PortInterlayer n := interlayerEquiv n P
+  let S := ChungCurve.chung8SettingAt ρ (ζ - 189 / 5000) hρ
+  have hamin : a ≤ S.αmin := by
+    refine ha.trans ?_
+    change (1 : ℝ) / 100 ≤ ChungCurve.filecoinAlphaMin
+    rw [ChungCurve.filecoinAlphaMin]; norm_num
+  have hamax : S.αmax + 1 / (n : ℝ) ≤ b := by
+    have h1 : (1 : ℝ) / n ≤ 1 / 1000 :=
+      one_div_le_one_div_of_le (by norm_num) hn1000
+    have h2 : S.αmax = (14155 : ℝ) / 14911 := by
+      change ChungCurve.filecoinAlphaMax = _
+      rw [ChungCurve.filecoinAlphaMax]
+    rw [h2]
+    linarith
+  have hPc : Pc.Expands S := by
+    apply portExpands_of_public P hN.n_pos S a b hamin hamax
+    · intro x t _ ht htpos hxt
+      change ChungCurve.filecoinBeta x ≤ chung8Beta t
+      by_cases htone : t = 1
+      · subst t
+        calc
+          ChungCurve.filecoinBeta x ≤ ChungCurve.filecoinBeta 1 :=
+            ChungCurve.filecoinBeta_strictMono.monotone hxt
+          _ = chung8Beta 1 := by simp [chung8Beta]
+      · have htlt : t < 1 := lt_of_le_of_ne ht.2 htone
+        exact (ChungCurve.filecoinBeta_strictMono.monotone hxt).trans
+          (filecoinBeta_le_chung8Beta htpos htlt)
+    · exact hP
+  let standalone : Concrete.StandaloneGraph n :=
+    { edge := N.intra, edge_lt := fun {_ _} h => hN.intra_rank h }
+  let G := Concrete.portStack standalone S ℓ N.απ hN.n_pos (fun _ => Pc) (fun _ _ => hPc)
+  let pebbling : Concrete.Pebbling G := {
+    black := N.black
+    red := N.red
+    black_subset := by
+      intro d v hv
+      exact hN.black_subset d hv
+    red_subset := by
+      intro d v hv
+      exact hN.red_subset d hv
+    black_total := by
+      intro m
+      have h := hN.black_total m
+      rw [hNρ] at h
+      exact h
+    red_bound := by
+      intro d
+      have h := hN.red_bound d
+      rw [hNδ] at h
+      have hmono : δ * (n : ℝ) ≤ 189 / 5000 * n :=
+        mul_le_mul_of_nonneg_right hδ hnR.le
+      exact h.trans hmono
+  }
+  have hDepth : G.DepthRobust G.αpi := by
+    apply Concrete.portStack_depthRobust_of_nodeDR
+    intro X hX
+    have hX' : ((X.card : ℝ)) ≤ (1 - N.π) * n := by
+      have hpi : ((X.card : ℝ)) ≤ (1 - (4 : ℝ) / 5) * n := hX
+      have hmono : (1 - (4 : ℝ) / 5) * n ≤ (1 - π) * n := by nlinarith
+      rw [hNπ]
       linarith
-    have hPc : Pc.Expands ChungCurve.chung8Setting := by
-      change (interlayerEquiv n P).Expands ChungCurve.chung8Setting
-      apply portExpands_of_public P hN.n_pos ChungCurve.chung8Setting (1 / 100) (24 / 25)
-        hamin hamax
-      · intro x t _ ht htpos hxt
-        change ChungCurve.filecoinBeta x ≤ chung8Beta t
-        by_cases htone : t = 1
-        · subst t
-          calc
-            ChungCurve.filecoinBeta x ≤ ChungCurve.filecoinBeta 1 :=
-              ChungCurve.filecoinBeta_strictMono.monotone hxt
-            _ = chung8Beta 1 := by simp [chung8Beta]
-        · have htlt : t < 1 := lt_of_le_of_ne ht.2 htone
-          exact (ChungCurve.filecoinBeta_strictMono.monotone hxt).trans
-            (filecoinBeta_le_chung8Beta htpos htlt)
-      · exact hP
-    let standalone : Concrete.StandaloneGraph n :=
-      { edge := N.intra, edge_lt := fun {_ _} h => hN.intra_rank h }
-    let G := Concrete.portStack standalone ChungCurve.chung8Setting ℓ N.απ hN.n_pos
-      (fun _ => Pc) (fun _ _ => hPc)
-    let pebbling : Concrete.Pebbling G := {
-      black := N.black
-      red := N.red
-      black_subset := by
-        intro d v hv
-        exact hN.black_subset d hv
-      red_subset := by
-        intro d v hv
-        exact hN.red_subset d hv
-      black_total := by
-        intro m
-        simpa only [ChungCurve.chung8Setting_rho, hNρ] using hN.black_total m
-      red_bound := by
-        intro d
-        simpa only [ChungCurve.chung8Setting_delta, hNδ] using hN.red_bound d
-    }
-    have hDepth : G.DepthRobust G.αpi := by
-      apply Concrete.portStack_depthRobust_of_nodeDR
-      intro X hX
-      apply hN.depth_robust X
-      simpa only [ChungCurve.chung8Setting_pi, hNπ] using hX
-    -- The challenge set is only assumed to have weight `ζ`; discarding its red
-    -- nodes leaves the red-free set of weight `ζ_δ = ζ - δ` that the deterministic
-    -- argument starts from, using the per-layer red bound `red_bound 0`.
-    have hB' : B \ N.red 0 ⊆ G.layer 0 := Finset.sdiff_subset.trans hB
-    have hBred : ∀ v ∈ B \ N.red 0, v ∉ N.red 0 := fun _ hv => (Finset.mem_sdiff.mp hv).2
-    have hweight' : ChungCurve.chung8Setting.ζδ ≤
-        Concrete.Pebbling.weight n (B \ N.red 0) := by
-      have hnpos : (0 : ℝ) < n := by exact_mod_cast hN.n_pos
-      have hred0 : ((N.red 0).card : ℝ) ≤ (189 : ℝ) / 5000 * n := by
-        simpa only [hNδ] using hN.red_bound 0
-      have hcardNat : B.card ≤ (B \ N.red 0).card + (N.red 0).card :=
-        (Finset.card_le_card Finset.subset_union_left).trans_eq
-          (Finset.card_sdiff_add_card B (N.red 0)).symm
-      have hcard : (B.card : ℝ) ≤ ((B \ N.red 0).card : ℝ) + ((N.red 0).card : ℝ) := by
-        exact_mod_cast hcardNat
-      rw [le_div_iff₀ hnpos] at hBweight
-      simp only [ChungCurve.chung8Setting_zetaDelta, Concrete.Pebbling.weight]
-      rw [le_div_iff₀ hnpos]
-      linarith
-    have hGαπ : G.αpi = (1 : ℝ) / 5 := by
-      change N.απ = (1 : ℝ) / 5
-      exact hNαπ
-    have hpath := ChungCurve.chung8_latency_deterministic hℓ G pebbling hN.n_pos hGαπ
-      hDepth (B \ N.red 0) hB' hBred hweight'
-    rcases hpath with ⟨u, a, ha, Q, hfirst, hlast, hlength⟩
-    have hlatency : N.latencyLength ((74 : ℝ) / 625) 2 =
-        (1 : ℝ) / 5 * n + ((1 : ℝ) / 5 - (74 : ℝ) / 625) * n := by
-      simp only [PebblingGame.latencyLength, hNαπ]
-      push_cast
-      ring
-    refine ⟨a, (Finset.mem_sdiff.mp ha).1, Q.nodes, Q.nonempty, Q.chain,
-      Q.unpebbled', ?_, ?_⟩
-    · rw [List.getLast?_eq_some_getLast Q.nonempty]
-      exact congrArg some hlast
-    · rw [hlatency]
-      exact hlength
-  have hmain := chung8_pebbling_latency_whp (ℓ := ℓ) (n := n) lambda (1 / 100) (24 / 25) 2
-    ((1 : ℝ) / 5) ((189 : ℝ) / 5000) ((4 : ℝ) / 5) ((4 : ℝ) / 5) ((9 : ℝ) / 10)
-    ((74 : ℝ) / 625) hregion
-  rw [HoldsWithFailureAtMost] at hmain ⊢
-  refine hmain.trans (probabilityOf_mono _ ?_)
-  intro P hev M hαπ hδ hπ hρ hζ hAdm A hA hweight
-  have hlen : M.latencyLength ((74 : ℝ) / 625) 2 = (176 : ℝ) / 625 * n := by
-    simp only [PebblingGame.latencyLength, hαπ]
-    push_cast
-    ring
-  rw [← hlen]
-  exact hev M hαπ hδ hπ hρ hζ hAdm A hA hweight
-
+    exact hN.depth_robust X hX'
+  -- The challenge set has weight `ζ`; discarding its red nodes leaves the red-free set
+  -- of weight `ζ - δ ≥ ζ_δ` the deterministic argument starts from.
+  have hB' : B \ N.red 0 ⊆ G.layer 0 := Finset.sdiff_subset.trans hB
+  have hBred : ∀ v ∈ B \ N.red 0, v ∉ N.red 0 := fun _ hv => (Finset.mem_sdiff.mp hv).2
+  have hweight' : ζ - 189 / 5000 ≤ Concrete.Pebbling.weight n (B \ N.red 0) := by
+    have hred0 : ((N.red 0).card : ℝ) ≤ 189 / 5000 * n := by
+      have h := hN.red_bound 0
+      rw [hNδ] at h
+      exact h.trans (mul_le_mul_of_nonneg_right hδ hnR.le)
+    have hcardNat : B.card ≤ (B \ N.red 0).card + (N.red 0).card :=
+      (Finset.card_le_card Finset.subset_union_left).trans_eq
+        (Finset.card_sdiff_add_card B (N.red 0)).symm
+    have hcard : (B.card : ℝ) ≤ ((B \ N.red 0).card : ℝ) + ((N.red 0).card : ℝ) := by
+      exact_mod_cast hcardNat
+    rw [le_div_iff₀ hnR] at hBweight
+    simp only [Concrete.Pebbling.weight]
+    rw [le_div_iff₀ hnR]
+    linarith
+  have hσapi : σ < G.αpi := by
+    change σ < N.απ
+    rw [hNαπ]; exact hσαπ
+  have hpath := ChungCurve.chung8_latency_window (ρ := ρ) (ζδ := ζ - 189 / 5000)
+    (σ := σ) hρ hρtop (by linarith) (by linarith) hentry hσ hσtop hz hlevels G pebbling
+    hN.n_pos hσapi hDepth (B \ N.red 0) hB' hBred hweight'
+  rcases hpath with ⟨u, v, hv, Q, hfirst, hlast, hlength⟩
+  refine ⟨v, (Finset.mem_sdiff.mp hv).1, Q.nodes, Q.nonempty, Q.chain,
+    Q.unpebbled', ?_, ?_⟩
+  · rw [List.getLast?_eq_some_getLast Q.nonempty]
+    exact congrArg some hlast
+  · have hlat : N.latencyLength σ z = ProofOfSpace.latencyLength G.αpi σ n z := by
+      change N.απ * n + ((z : ℝ) - 1) * (N.απ - σ) * n = _
+      simp only [ProofOfSpace.latencyLength]
+      rfl
+    rw [hlat]
+    exact hlength
 
 /-- **The 14-layer Filecoin latency lower bound** at `lambda` bits of security: an
-unpebbled path of length `0.2816 n`, the `ℓ = 14` instance of
-`chung8_pebbling_latency_at`. -/
+unpebbled path of length `0.2816 n`.  It is the point
+`(απ, δ, π, ρ, ζ, σ, z, ℓ) = (0.2, 0.0378, 0.8, 0.8, 0.9, 0.1184, 2, 14)` of
+`chung8_pebbling_latency_whp`, whose level condition reads `0.6 + 3.822 + 9.496 < 14`. -/
 theorem chung8_pebbling_latency_14
-    {n : ℕ} (lambda : ℝ) (hn : 1000 ≤ n)
+    {n : ℕ} (lambda : ℕ) (hn : 1000 ≤ n)
     [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
       (fun P : ChungInterlayer n =>
@@ -480,7 +465,20 @@ theorem chung8_pebbling_latency_14
           ∀ A : Finset (ℕ × Fin n), A ⊆ M.layer 0 →
             (9 : ℝ) / 10 ≤ (A.card : ℝ) / n →
               M.HasUnpebbledPathTo A ((176 : ℝ) / 625 * n) P)
-      (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) :=
-  chung8_pebbling_latency_at (by norm_num) lambda hn
+      ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
+  have hmain := chung8_pebbling_latency_whp (ℓ := 14) (n := n) lambda (1 / 100) (24 / 25)
+    hn le_rfl le_rfl ((1 : ℝ) / 5) ((189 : ℝ) / 5000) ((4 : ℝ) / 5) ((4 : ℝ) / 5)
+    ((9 : ℝ) / 10) ((74 : ℝ) / 625) 2 (by norm_num) le_rfl le_rfl le_rfl (by norm_num)
+    (by norm_num) le_rfl (by norm_num) le_rfl (by norm_num) (by norm_num)
+    (by push_cast; norm_num)
+  rw [HoldsWithFailureAtMost] at hmain ⊢
+  refine hmain.trans (probabilityOf_mono _ ?_)
+  intro P hev M hαπ hδ hπ hρ hζ hAdm A hA hweight
+  have hlen : M.latencyLength ((74 : ℝ) / 625) 2 = (176 : ℝ) / 625 * n := by
+    simp only [PebblingGame.latencyLength, hαπ]
+    push_cast
+    ring
+  rw [← hlen]
+  exact hev M hαπ hδ hπ hρ hζ hAdm A hA hweight
 
 end ProofOfSpaceStatement
