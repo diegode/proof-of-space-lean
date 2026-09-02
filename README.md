@@ -24,7 +24,9 @@ probability space `ChungInterlayer n` carry a quantifier over all games.
 
 [`chung8_pebbling_latency_whp`](Challenge.lean) is the theorem that carries the
 argument, and it is generic: it holds for **any** expansion profile with a certified
-level budget, and `chung8_pebbling_latency_14` is one instance of it.
+level budget, and `chung8_pebbling_latency_14` is one instance of it. It is itself the
+`j = 0` case of [`chung8_pebbling_latency_mixed`](Challenge.lean), described under
+[one chain, one payoff parameter](#one-chain-one-payoff-parameter) below.
 
 An `ExpansionProfile` is the expansion calculus of the analysis — a map of the unit
 interval into itself fixing `0`, strictly increasing, concave, expanding, satisfying
@@ -118,7 +120,63 @@ whose slope is `α_π / L.linkCost` for any profile and certified budget, and
 hypothesis is the single inequality `π + σ ≤ E.π`, and the theorem above is one way of
 meeting it. Both are stated in
 [`Challenge.lean`](Challenge.lean), proved in [`Solution.lean`](Solution.lean), and
-registered in `comparator.json` alongside the other two public theorems.
+registered in `comparator.json` alongside the other public theorems.
+
+## One chain, one payoff parameter
+
+The chain is the same object whatever its source rule is: a sequence of ever-shallower
+source sets of weight `σ`, each reached from the one above through the footprint, ending
+in the challenge set. Only two numbers about it vary — what one completed link is worth,
+call it `y n`, and what the source rule assumes of the layer graph in order to deliver
+`y`. [`PayChain.lean`](ProofOfSpace/PayChain.lean) carries the chain itself, parameterized
+by `y` alone. A `SourceRule` is the whole of what the graph side supplies: at a fertile
+footprint, one intra-layer path of the depth-robust length `α_π n`, and a source set of
+weight `σ` every node of which begins a path of length `y n` inside that footprint. The
+ledger of [`PotentialLedger.lean`](ProofOfSpace/PotentialLedger.lean) prices the chain
+without ever seeing `y`, so `latency_pay` and its asymptotic form `latency_pay_asymptotic`
+are the whole deterministic engine, and every latency theorem in the development is one
+of their instances:
+
+| theorem | source rule | payoff `y` | graph assumption |
+| --- | --- | --- | --- |
+| `latency_potential`, `latency_general` | `sourceRule_prefix` | `α_π - σ` | `DepthRobust α_π` at `π` |
+| `latency_full`, `latency_full_asymptotic` | `sourceRule_full` | `α_π` | `DepthRobustThr (π - σ) α_π` |
+| — | `sourceRule_mixed j` | `α_π - σ + j/n` | `DepthRobustThr τ α_π`, `j ≤ (π - τ) n` |
+
+### The family between the two rules
+
+Nothing forces a layer graph to sit at either end. `sourceRule_mixed` reads the *slack*
+`π - τ` between the fertility threshold and the threshold the graph is actually robust
+at, spends `j ≤ (π - τ) n` of it on nodes that begin a whole `α_π n` path inside the
+footprint, and fills the source up to weight `σ` with a prefix of a path chosen to avoid
+them. The `j` full nodes carry `α_π n`; the prefix is `j` nodes shorter than it would
+otherwise be, so its last node carries `j` more. Either way a link is worth
+`(α_π - σ) n + j`. `j = 0` is the prefix rule; `j = σ n` is the full rule.
+
+[`chung8_pebbling_latency_mixed`](Challenge.lean) is that family on the sampled wiring,
+and `chung8_pebbling_latency_whp` is proved from it as the case `j = 0`. It buys the
+intermediate robustness thresholds that neither end covers. At the fourteen-layer
+certificate (`E.π = 0.8`, `σ = 0.1184`, span `3.8212`, head `10.0853`) a graph robust at
+
+```text
+π = 0.8      0.0816 n per link,  slope 0.02135   (chung8_pebbling_latency_whp)
+π = 0.75     0.1316 n per link,  slope 0.03444
+π = 0.70     0.1816 n per link,  slope 0.04752
+π = 0.6816   0.2000 n per link,  slope 0.05234
+```
+
+and at fourteen layers, where the certificate pays for two links, the bound at those
+thresholds is `0.2816 n`, `0.3316 n`, `0.3816 n`, `0.4 n`. At the raised-threshold
+certificate of [`ChungFilecoinMirror.lean`](ProofOfSpace/ChungFilecoinMirror.lean) the
+same family runs from slope `0.02371` at `π = 0.8886` to `0.04256` at `π = 0.8`, the
+latter being `chung8_pebbling_latency_asymptotic`.
+
+The full rule stays a separate statement rather than the `j = σ n` instance for one
+reason. At `j = σ n` the prefix is empty and the second depth-robustness call disappears
+with it, so no deletion budget is needed and the threshold can be read at `π + σ ≤ E.π`
+exactly; the mixed rule, which must delete `j` nodes before calling depth robustness
+again, would have to ask for `π n + ⌈σ n⌉ ≤ E.π n`. The gap is one node of `n`, and it is
+the only place where the family is not exact.
 
 ## Expansion is assumed only on a density range
 
@@ -157,8 +215,10 @@ port-permutation model.
 - [`Solution.lean`](Solution.lean) proves those statements from the library.
 - [`ProofOfSpace/`](ProofOfSpace/) contains the deterministic latency argument,
   the layer specializations, and the expansion probability bound.
+- [`ProofOfSpace/PayChain.lean`](ProofOfSpace/PayChain.lean) is the chain itself,
+  parameterized by the per-link payoff, together with the prefix source rule.
 - [`ProofOfSpace/FullSources.lean`](ProofOfSpace/FullSources.lean) is the
-  full-length path-source lemma and the full-payoff chain, and
+  full-length path-source lemma, the full and mixed source rules, and
   [`ProofOfSpace/FullSourcesFilecoin.lean`](ProofOfSpace/FullSourcesFilecoin.lean)
   is its deterministic Chung-8 instance.
 - [`ProofOfSpace/ChungFilecoinMirror.lean`](ProofOfSpace/ChungFilecoinMirror.lean) is the

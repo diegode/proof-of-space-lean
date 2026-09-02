@@ -9,15 +9,18 @@ The random interlayer is the model used by Reyzin: one uniform permutation of al
 `8n` ports. This file contains only the definitions needed to state the two generic
 high-probability latency theorems and their Filecoin specializations.
 
-`chung8_pebbling_latency_whp` prices a chosen number of chain links and its
-14-layer instance `chung8_pebbling_latency_14` gives `0.2816 n`;
-`chung8_pebbling_latency_full_asymptotic` eliminates the link count in favour of a
-slope in the layer count, and its instance `chung8_pebbling_latency_asymptotic`
-gives `0.0425 (ℓ - 21.2) n` for every `ℓ ≥ 22`. The generic pair differs only in the
-robustness threshold `π` at which `IsAdmissible.depth_robust` is read and in the
-payoff per link; neither implies the other.
+`chung8_pebbling_latency_mixed` is the generic statement: the slack between the
+robustness threshold `π` at which `IsAdmissible.depth_robust` is read and the profile's
+fertility threshold `E.π` is spent on `j` full-length source nodes, and a completed chain
+link is worth `j` nodes more than it would otherwise be.
+`chung8_pebbling_latency_whp` is its case `j = 0`, and the 14-layer instance
+`chung8_pebbling_latency_14` gives `0.2816 n`.
+`chung8_pebbling_latency_full_asymptotic` is the other end of the same family, `j = σ n`,
+stated separately because there the prefix and its depth-robustness call vanish; it
+eliminates the link count in favour of a slope in the layer count, and its instance
+`chung8_pebbling_latency_asymptotic` gives `0.0425 (ℓ - 21.2) n` for every `ℓ ≥ 22`.
 
-All four public theorems are *uniform*: the wiring is sampled first, and the event
+All five public theorems are *uniform*: the wiring is sampled first, and the event
 whose probability is bounded quantifies over every admissible pebbling position
 and every challenge set. The pebble sets are chosen with the wiring in hand, so
 the game may not be fixed before the sample.
@@ -282,6 +285,17 @@ def PebblingGame.depth (_G : PebblingGame ℓ n) (v : ℕ × Fin n) : ℕ := v.1
 def PebblingGame.latencyLength (G : PebblingGame ℓ n) (σ : ℝ) (z : ℕ) : ℝ :=
   G.απ * n + ((z : ℝ) - 1) * (G.απ - σ) * n
 
+/-- The path length of a chain whose source rule spends `j` full-length source nodes: a
+completed link is worth `j` nodes more than the `(α_π - σ) n` of `latencyLength`, which
+is the case `j = 0`. -/
+def PebblingGame.mixedLatencyLength (G : PebblingGame ℓ n) (σ : ℝ) (j z : ℕ) : ℝ :=
+  G.απ * n + ((z : ℝ) - 1) * ((G.απ - σ) * n + j)
+
+theorem PebblingGame.mixedLatencyLength_zero (G : PebblingGame ℓ n) (σ : ℝ) (z : ℕ) :
+    G.mixedLatencyLength σ 0 z = G.latencyLength σ z := by
+  simp only [mixedLatencyLength, latencyLength, Nat.cast_zero, add_zero]
+  ring
+
 def PebblingGame.intraEdge (G : PebblingGame ℓ n) (i : ℕ)
     (u v : ℕ × Fin n) : Prop :=
   u.1 = i ∧ v.1 = i ∧ i < ℓ ∧ G.intra u.2 v.2
@@ -328,8 +342,55 @@ def PebblingGame.LatencyEvent (ℓ n z : ℕ) (απ δ π ρ ζ σ : ℝ)
     ∀ S : Finset (ℕ × Fin n), S ⊆ G.layer 0 → ζ ≤ (S.card : ℝ) / n →
       G.HasUnpebbledPathTo S (G.latencyLength σ z) p
 
+/-- The same event at the mixed source rule, which pays `j` nodes more per link. -/
+def PebblingGame.MixedLatencyEvent (ℓ n j z : ℕ) (απ δ π ρ ζ σ : ℝ)
+    (p : ChungInterlayer n) : Prop :=
+  ∀ G : PebblingGame ℓ n, G.απ = απ → G.δ = δ → G.π = π → G.ρ = ρ → G.ζ = ζ →
+    PebblingGame.IsAdmissible G →
+    ∀ S : Finset (ℕ × Fin n), S ⊆ G.layer 0 → ζ ≤ (S.card : ℝ) / n →
+      G.HasUnpebbledPathTo S (G.mixedLatencyLength σ j z) p
+
 -- The public challenge theorem bodies are intentionally omitted; see `README.md`.
 set_option warn.sorry false
+
+/-- **The unified latency theorem: one source rule, one payoff parameter.**
+
+The two source constructions the argument can run are the two ends of one family, and this
+is the family.  `IsAdmissible.depth_robust` is read at the game's own threshold `π`; the
+*slack* `(E.π - π) n` between it and the profile's fertility threshold is what the source
+rule may spend.  Spending `j` of it buys `j` nodes of source that begin a whole `α_π n`
+path inside the footprint, so the prefix that fills the source up to weight `σ` stops `j`
+nodes early and its last node carries `j` more.  Either way a completed link is worth
+
+    `(α_π - σ) n + j`
+
+rather than `(α_π - σ) n`, which is `mixedLatencyLength`.  Everything else — the union
+bound, the profile, the level budget and its three prices — is untouched: the ledger never
+sees `j`.
+
+`j = 0` is `chung8_pebbling_latency_whp`, which is proved from this theorem.  Raising `j`
+to `σ n` is `chung8_pebbling_latency_full_asymptotic`; that end is stated separately
+because at `j = σ n` the prefix is empty and the second depth-robustness call disappears
+with it, which is what lets the threshold there be read at `π + σ ≤ E.π` exactly rather
+than at `π n + ⌈σ n⌉ ≤ E.π n`. -/
+theorem chung8_pebbling_latency_mixed
+    {ℓ n : ℕ} (lambda : ℕ) (a b : ℝ) [ChungSecurityConditions n lambda a b]
+    (E : ExpansionProfile) (σ : ℝ) (L : LevelBudget E σ)
+    (απ δ π ρ ζ : ℝ) (j z : ℕ) (hz : 1 ≤ z)
+    (ha : a ≤ E.αmin) (hb : E.αmax + 1 / n ≤ b)
+    (hδ : δ ≤ E.δ)
+    (hπ : π * n + j ≤ E.π * n) (hjσ : (j : ℝ) ≤ σ * n)
+    (hρ : 0 ≤ ρ) (hρtop : ρ ≤ L.ρmax)
+    (hentry : E.piBar + ρ < ζ - δ) (hζ : ζ - δ ≤ E.αmax)
+    (hnobreak : ρ < E.betaD E.π - E.floor σ)
+    (hslack : E.floor σ + (L.cs - 1) * E.trackingGain σ ≤ σ)
+    (hσαπ : σ ≤ απ)
+    (hlevels : L.searchCost (ζ - δ) + ((z : ℝ) - 1) * L.linkCost
+      + L.chargeRate * ρ < (ℓ : ℝ)) :
+    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
+      (PebblingGame.MixedLatencyEvent ℓ n j z απ δ π ρ ζ σ)
+      ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
+  sorry
 
 /-- **The latency theorem for any expansion profile with a certified level budget.**
 

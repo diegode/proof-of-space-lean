@@ -6,30 +6,37 @@ Authors: Diego de Estrada
 import ProofOfSpace.Latency
 
 /-!
-# Full-payoff links: `α_π n` of new path per chain link
+# Full-length path sources, and the family between them and the prefix
 
-The chain of `Concrete.lean` reaches a footprint of weight `π`, takes *one* depth-robust
-path of length `α_π n` inside it, and keeps the first `σ n` nodes of that path as the next
-source.  A source node is then the `i`-th node of a prefix, so the certificate it carries
-is only the suffix behind it: every link past the first contributes `(α_π - σ) n`, and the
-chain of `z` links realizes `α_π n + (z-1)(α_π - σ) n`.
+`PayChain.lean` carries the chain itself, parameterized by what one completed link is
+worth.  A `SourceRule` is the whole of what the graph side supplies, and this module
+proves the two rules that are not `sourceRule_prefix`.
 
-This module replaces the prefix by a set of *full-length path sources*.  If the footprint
-has weight `τ + σ` and the layer is depth robust at the lower threshold `τ`, then at least
-`σ n` distinct nodes of the footprint each *begin* a path of length `α_π n` inside it
-(`card_fullSources`).  Taking those as the source, every source node carries a whole
-`α_π n`, so a chain of `z` links realizes `z α_π n`: the payoff per link rises from
-`α_π - σ` to `α_π`.
+The prefix rule of `PayChain.lean` reaches a footprint of weight `π`, takes *one*
+depth-robust path of length `α_π n` inside it, and keeps the first `σ n` nodes of that
+path as the next source.  A source node is then the `i`-th node of a prefix, so the
+certificate it carries is only the suffix behind it and a link is worth `(α_π - σ) n`.
 
-The price is the threshold.  Everything the ledger prices is stated at `S.pi`, so `S.pi`
-is here the *superfertile* threshold the footprint must reach, and the graph assumption is
-depth robustness at `S.pi - T.σ`.  Nothing else in the accounting changes: `FullLink`
-carries the same source data as `Concrete.Link`, so `fullChainSystem` is a `ChainSystem`
-for the same `Setting`, `Budget` and `Tracking`, and the ledger of `PotentialLedger.lean`
-prices it unchanged.  The trade reads in two directions.  At a fixed certificate, keep
-`S.pi` and strengthen the graph assumption from depth robustness at `S.pi` to depth
-robustness at `S.pi - T.σ`.  At a fixed graph assumption, keep the depth-robustness
-threshold and raise `S.pi` to `threshold + σ`, which re-prices the certificate.
+`sourceRule_full` replaces the prefix by a set of *full-length path sources*.  If the
+footprint has weight `τ + σ` and the layer is depth robust at the lower threshold `τ`,
+then at least `σ n` distinct nodes of the footprint each *begin* a path of length `α_π n`
+inside it (`card_fullSources`).  Taking those as the source, every source node carries a
+whole `α_π n`, so a link is worth `α_π n`.  The price is the threshold: everything the
+ledger prices is stated at `S.pi`, so `S.pi` is here the *superfertile* threshold the
+footprint must reach, and the graph assumption is depth robustness at `S.pi - T.σ`.
+
+`sourceRule_mixed` is the family between the two.  It reads the *slack* `π - τ` between
+the fertility threshold and the threshold the graph is actually robust at, spends `j` of
+it on full-length source nodes, and fills the source up to weight `σ` with a prefix
+chosen to avoid them; a link is worth `(α_π - σ) n + j`.  `j = 0` is the prefix rule and
+`j = σ n` is the full rule, so no layer graph has to sit at either end.
+
+Nothing in the accounting changes with the rule: all three produce the same `SourceData`,
+so `payChainSystem` is a `ChainSystem` for the same `Setting`, `Budget` and `Tracking`,
+and the ledger of `PotentialLedger.lean` prices it unchanged.  The trade reads in two
+directions.  At a fixed certificate, keep `S.pi` and strengthen the graph assumption.  At
+a fixed graph assumption, raise `S.pi` to `threshold + σ`, which re-prices the
+certificate.
 
 `latency_full_asymptotic` is the statement the slope lives in: for every layer count the
 chain realizes `α_π/potSpan` of unpebbled path per layer past the head.
@@ -180,192 +187,207 @@ namespace Pebbling
 
 variable {S : Setting} {ℓ n : ℕ} {G : LayeredGraph V S ℓ n} {P : Pebbling G}
 
-/-- The scalar footprint recurrence started at a source set is dominated by the actual
-footprint of that set.  This is `Concrete.Pebbling.Link.scalar_le_actual` stated for the
-source data alone, so that both link types can use it. -/
-theorem sourceBound_le_actual (P : Pebbling G) (hn : 0 < n) {T : Tracking S}
-    {b : ℕ} {src : Finset V} (hlayer : src ⊆ G.layer b)
-    (havail : ∀ v ∈ src, P.unpebbled v) (hweight : T.σ ≤ weight n src) {d : ℕ}
-    (hactive : ∀ e, b ≤ e → e ≤ d →
-      P.footprintBound b T.σ e ∈ Set.Icc S.αmin S.αmax)
-    (hdepth : b ≤ d) (hd : d < ℓ) :
-    P.footprintBound b T.σ d ≤ weight n (P.layerFootprint src d) := by
-  have hstart : T.σ ≤ weight n (P.layerFootprint src b) :=
-    P.source_le_layerFootprint hlayer havail hweight
-  have go : ∀ e, b ≤ e → e ≤ d → e < ℓ →
-      P.footprintBound b T.σ e ≤ weight n (P.layerFootprint src e) := by
-    intro e hbe hed heℓ
-    induction e, hbe using Nat.le_induction with
-    | base => simpa using hstart
-    | succ e hbe ih =>
-        rw [P.footprintBound_isBound b T.σ e hbe]
-        exact P.layerFootprint_step hn heℓ (hactive e hbe (by omega))
-          (ih (by omega) (by omega))
-  exact go d hdepth le_rfl hd
-
-
-/-- The source set produced by the full-length path-source lemma at a *superfertile*
-footprint — one of weight `S.pi`, where the graph is depth robust at the lower threshold
-`S.pi - T.σ` — together with everything a link needs of it. -/
-theorem fullSource_data (P : Pebbling G) (T : Tracking S) (hn : 0 < n)
-    (hDepth : G.DepthRobustThr (S.pi - T.σ) G.αpi) {A : Finset V} {b : ℕ} (hb : b < ℓ)
-    (hfert : S.pi ≤ weight n (P.layerFootprint A b)) :
-    G.fullSources b (P.layerFootprint A b) G.αpi ⊆ G.layer b ∧
-      (∀ v ∈ G.fullSources b (P.layerFootprint A b) G.αpi, P.unpebbled v) ∧
-      T.σ ≤ weight n (G.fullSources b (P.layerFootprint A b) G.αpi) := by
+/-- **The full-length source rule.**  At a *superfertile* footprint — one of weight `S.pi`
+in a layer that is depth robust at the lower threshold `S.pi - T.σ` — the full-length
+path-source lemma already produces `σ n` nodes each beginning a whole `α_π n` path inside
+the footprint.  No prefix is taken, so nothing is lost to the suffix behind a source node
+and the payoff is `y = α_π`. -/
+noncomputable def sourceData_full [DecidableEq V] (P : Pebbling G) (T : Tracking S)
+    (hn : 0 < n) (hDepth : G.DepthRobustThr (S.pi - T.σ) G.αpi)
+    {b : ℕ} (hb : b < ℓ) (D : Finset V)
+    (hfert : S.pi ≤ weight n (P.layerFootprint D b)) :
+    SourceData P T G.αpi D b := by
+  classical
   have hnreal : (0 : ℝ) < n := by exact_mod_cast hn
-  have hFcard : ((S.pi - T.σ) + T.σ) * n ≤ (((P.layerFootprint A b)).card : ℝ) := by
-    have h : S.pi * n ≤ (((P.layerFootprint A b)).card : ℝ) := by
-      unfold weight at hfert; rwa [le_div_iff₀ hnreal] at hfert
+  have hcard : S.pi * n ≤ ((P.layerFootprint D b).card : ℝ) := by
+    unfold weight at hfert
+    rwa [le_div_iff₀ hnreal] at hfert
+  -- the long path: threshold `S.pi - T.σ` is stronger than the `S.pi` of ordinary
+  -- depth robustness
+  have hDR : G.DepthRobustAt b G.αpi :=
+    LayeredGraph.DepthRobustAtThr.mono G (by linarith [T.σ_pos]) (Nat.cast_nonneg n)
+      (hDepth hb)
+  let hpath :=
+    P.depthRobust_path hDR (P.layerFootprint_subset D b) Finset.Subset.rfl hcard
+  let Q := Classical.choose hpath
+  have hQspec := Classical.choose_spec hpath
+  have hFcard : ((S.pi - T.σ) + T.σ) * n ≤ (((P.layerFootprint D b)).card : ℝ) := by
     calc ((S.pi - T.σ) + T.σ) * n = S.pi * n := by ring
-      _ ≤ _ := h
-  have hcard : T.σ * n ≤ ((G.fullSources b (P.layerFootprint A b) G.αpi).card : ℝ) :=
-    G.card_fullSources (hDepth hb) (P.layerFootprint_subset A b) hFcard
-  refine ⟨(G.fullSources_subset).trans (P.layerFootprint_subset A b), ?_, ?_⟩
-  · intro v hv
-    exact P.footprint_available A
-      ((P.mem_layerFootprint A).mp (G.fullSources_subset hv)).2
-  · rw [weight, le_div_iff₀ hnreal]; exact hcard
+      _ ≤ _ := hcard
+  have hZcard : T.σ * n ≤ ((G.fullSources b (P.layerFootprint D b) G.αpi).card : ℝ) :=
+    G.card_fullSources (hDepth hb) (P.layerFootprint_subset D b) hFcard
+  refine { long := Q, long_mem := hQspec.1, long_length := hQspec.2,
+           Z := G.fullSources b (P.layerFootprint D b) G.αpi,
+           Z_sub := G.fullSources_subset, Z_weight := ?_, Z_path := ?_ }
+  · rw [weight, le_div_iff₀ hnreal]; exact hZcard
+  · intro u hu
+    obtain ⟨R, hRfirst, hRmem, hRlen⟩ := P.fullSource_path (A := D) Finset.Subset.rfl hu
+    exact ⟨R, hRfirst, hRmem, hRlen⟩
 
-/-- **A full-payoff chain link.**  Unlike `Concrete.Pebbling.Link`, whose source is a
-`σ n`-prefix of one long path and whose nodes therefore carry only the suffix behind them,
-*every* node of a `FullLink` source begins a path of length `count · α_π · n` ending in the
-challenge set. -/
-structure FullLink [DecidableEq V] (P : Pebbling G) (T : Tracking S) (A : Finset V)
-    (cs : ℝ) where
-  depth : ℕ
-  inside : depth < ℓ
-  source : Finset V
-  source_layer : source ⊆ G.layer depth
-  source_available : ∀ v ∈ source, P.unpebbled v
-  source_weight : T.σ ≤ weight n source
-  expandable : Expandable P.budget T.ghat depth cs
-  count : ℕ
-  count_pos : 1 ≤ count
-  /-- The full payoff: `α_π n` per link, not `(α_π - σ) n`. -/
-  tail : ∀ v ∈ source, P.PathTo A v ((count : ℝ) * G.αpi * n)
+set_option linter.unusedDecidableInType false in
+theorem sourceRule_full [DecidableEq V] (P : Pebbling G) (T : Tracking S) (hn : 0 < n)
+    (hDepth : G.DepthRobustThr (S.pi - T.σ) G.αpi) :
+    SourceRule P T G.αpi :=
+  fun _ hb D hfert => ⟨sourceData_full P T hn hDepth hb D hfert⟩
 
-namespace FullLink
+/-! ### Between the two rules
 
-variable [DecidableEq V] {T : Tracking S} {A : Finset V} {cs : ℝ}
+The prefix rule assumes ordinary depth robustness at the fertility threshold `π` and pays
+`(α_π - σ) n`; the full rule assumes it at `π - σ` and pays `α_π n`.  Nothing forces a
+layer graph to sit at either end.  `sourceData_mixed` reads the *slack* `π - τ` between
+the fertility threshold and the threshold the graph is actually robust at, spends it on
+`j ≤ (π - τ) n` full-length source nodes, and fills the source up to weight `σ` with a
+prefix of a path chosen to avoid them.  The `j` full nodes carry the whole `α_π n`; the
+prefix is `j` nodes shorter than it would otherwise be, so its last node carries `j` more.
+Either way a link is worth `(α_π - σ) n + j`.
 
-theorem source_nonempty (L : FullLink P T A cs) : L.source.Nonempty := by
-  rw [← Finset.card_pos]
-  by_contra hcon
-  have h0 : L.source.card = 0 := by omega
-  have hw := L.source_weight
-  rw [weight, h0] at hw
-  simp only [Nat.cast_zero, zero_div] at hw
-  exact absurd hw (not_le.mpr T.σ_pos)
+`j = 0` is the prefix rule, `sourceRule_prefix`.  As `j` grows to `σ n` the prefix
+vanishes and the second depth-robustness call with it, which is exactly `sourceRule_full`;
+that limit is stated separately because dropping the call is what lets it read the
+threshold at `π - σ` rather than at `π - ⌈σ n⌉ / n`.
+-/
 
-/-- The realized path of a link: any one source node already carries the whole chain. -/
-theorem realized (L : FullLink P T A cs) :
-    P.HasUnpebbledPathInFootprint A ((L.count : ℝ) * G.αpi * n) := by
-  obtain ⟨v, hv⟩ := L.source_nonempty
-  exact ⟨v, L.tail v hv⟩
+/-- `depthRobust_path` at an explicit robustness threshold. -/
+theorem depthRobustThr_path (P : Pebbling G) {A : Finset V} {d : ℕ} {F : Finset V} {τ : ℝ}
+    (hrobust : G.DepthRobustAtThr d τ G.αpi) (hF : F ⊆ G.layer d)
+    (hfoot : F ⊆ P.layerFootprint A d)
+    (hweight : τ * n ≤ (F.card : ℝ)) :
+    ∃ Q : Path G.edge P.unpebbled,
+      (∀ v ∈ Q.nodes, v ∈ F) ∧ G.αpi * n ≤ (Q.length : ℝ) := by
+  obtain ⟨q, hqne, hqchain, hqF, hqlen⟩ := hrobust F hF hweight
+  let Q : Path G.edge P.unpebbled := {
+    nodes := q
+    nonempty := hqne
+    chain := hqchain.imp fun _ _ h => Or.inl ⟨d, h⟩
+    unpebbled' := by
+      intro v hv
+      exact P.footprint_available A ((P.mem_layerFootprint A).mp (hfoot (hqF v hv)) |>.2)
+  }
+  exact ⟨Q, hqF, by simpa [Q, Path.length] using hqlen⟩
 
-theorem source_scalar_le (L : FullLink P T A cs) :
-    T.σ ≤ weight n (P.layerFootprint L.source L.depth) :=
-  P.source_le_layerFootprint L.source_layer L.source_available L.source_weight
+/-- The suffix behind the `i`-th node of a prefix that stops `j` nodes early. -/
+theorem mixed_suffix_length {σ' απ : ℝ} {j : ℕ} (P : Pebbling G)
+    (Q : Path G.edge P.unpebbled) (hQlen : απ * n ≤ (Q.length : ℝ))
+    {i : ℕ} (hi : ((i : ℝ) + j) < σ' * n) (hiQ : i ≤ Q.length) :
+    (απ - σ') * n + j ≤ ((Q.length - i : ℕ) : ℝ) := by
+  have hcast : ((Q.length - i : ℕ) : ℝ) = (Q.length : ℝ) - i := by
+    rw [Nat.cast_sub hiQ]
+  rw [hcast]
+  nlinarith
 
-/-- **The base link.**  A superfertile challenge footprint already yields `σ n` nodes each
-beginning a whole `α_π n` path, and each such path continues to the challenge set through
-the footprint. -/
-noncomputable def base (P : Pebbling G) (T : Tracking S) (A : Finset V) (hn : 0 < n)
-    (hDepth : G.DepthRobustThr (S.pi - T.σ) G.αpi) {b : ℕ} (hb : b < ℓ)
-    (hexp : Expandable P.budget T.ghat b cs)
-    (hfert : S.pi ≤ weight n (P.layerFootprint A b)) : FullLink P T A cs := by
+/-- **The mixed source.**  `j` nodes that begin a whole `α_π n` path, plus the first
+`⌈σ n⌉ - j` nodes of a path that avoids them.  The source has weight `σ` and every one of
+its nodes begins a path of length `(α_π - σ) n + j` inside the footprint. -/
+noncomputable def sourceData_mixed [DecidableEq V] (P : Pebbling G) (T : Tracking S)
+    (hn : 0 < n) (hσapi : T.σ ≤ G.αpi) {τ : ℝ} (j : ℕ)
+    (hDepth : G.DepthRobustThr τ G.αpi)
+    (hj : (j : ℝ) ≤ (S.pi - τ) * n) (hjσ : (j : ℝ) ≤ T.σ * n)
+    {b : ℕ} (hb : b < ℓ) (D : Finset V)
+    (hfert : S.pi ≤ weight n (P.layerFootprint D b)) :
+    SourceData P T (G.αpi - T.σ + (j : ℝ) / n) D b := by
   classical
-  have hdata := P.fullSource_data T hn hDepth hb hfert
-  refine { depth := b, inside := hb,
-           source := G.fullSources b (P.layerFootprint A b) G.αpi,
-           source_layer := hdata.1, source_available := hdata.2.1,
-           source_weight := hdata.2.2,
-           expandable := hexp, count := 1, count_pos := le_rfl, tail := ?_ }
-  intro v hv
-  obtain ⟨Q, hQfirst, hQF, hQlen⟩ := P.fullSource_path (A := A) Finset.Subset.rfl hv
-  have hlastF : Q.last ∈ P.layerFootprint A b := hQF Q.last Q.last_mem
-  obtain ⟨a, haA, R, hRfirst, hRlast⟩ := ((P.mem_layerFootprint A).mp hlastF).2
-  let QR := Q.append R hRfirst.symm
-  refine ⟨a, haA, QR, by simpa [QR] using hQfirst, by simpa [QR] using hRlast, ?_⟩
-  have hlen : Q.length ≤ QR.length := by
-    simp only [QR, Path.append_length]
-    have := R.length_pos
-    omega
-  have hlen' : (Q.length : ℝ) ≤ (QR.length : ℝ) := by exact_mod_cast hlen
-  simp only [Nat.cast_one, one_mul]
-  exact hQlen.trans hlen'
+  have hnreal : (0 : ℝ) < n := by exact_mod_cast hn
+  have hcard : S.pi * n ≤ ((P.layerFootprint D b).card : ℝ) := by
+    unfold weight at hfert
+    rwa [le_div_iff₀ hnreal] at hfert
+  -- `j` full-length sources, paid for by the robustness slack
+  have hFcard : (τ + (S.pi - τ)) * n ≤ (((P.layerFootprint D b)).card : ℝ) := by
+    calc (τ + (S.pi - τ)) * n = S.pi * n := by ring
+      _ ≤ _ := hcard
+  have hXcard : (S.pi - τ) * n
+      ≤ ((G.fullSources b (P.layerFootprint D b) G.αpi).card : ℝ) :=
+    G.card_fullSources (hDepth hb) (P.layerFootprint_subset D b) hFcard
+  have hjX : j ≤ (G.fullSources b (P.layerFootprint D b) G.αpi).card := by
+    have h : (j : ℝ) ≤ ((G.fullSources b (P.layerFootprint D b) G.αpi).card : ℝ) :=
+      hj.trans hXcard
+    exact_mod_cast h
+  let hYex := Finset.exists_subset_card_eq hjX
+  let Y := Classical.choose hYex
+  have hYspec := Classical.choose_spec hYex
+  have hYX : Y ⊆ G.fullSources b (P.layerFootprint D b) G.αpi := hYspec.1
+  have hYcard : Y.card = j := hYspec.2
+  have hYF : Y ⊆ P.layerFootprint D b := hYX.trans G.fullSources_subset
+  -- a depth-robust path avoiding them
+  have hbig : τ * n ≤ (((P.layerFootprint D b) \ Y).card : ℝ) := by
+    rw [Finset.card_sdiff_of_subset hYF, Nat.cast_sub (Finset.card_le_card hYF), hYcard]
+    linarith
+  let hQex := P.depthRobustThr_path (A := D) (hDepth hb)
+    (Finset.sdiff_subset.trans (P.layerFootprint_subset D b)) Finset.sdiff_subset hbig
+  let Q := Classical.choose hQex
+  have hQspec := Classical.choose_spec hQex
+  have hQF : ∀ v ∈ Q.nodes, v ∈ P.layerFootprint D b \ Y := hQspec.1
+  have hQlen : G.αpi * n ≤ (Q.length : ℝ) := hQspec.2
+  have hQmem : ∀ v ∈ Q.nodes, v ∈ P.layerFootprint D b :=
+    fun v hv => Finset.sdiff_subset (hQF v hv)
+  -- the prefix that tops the source up to weight `σ`
+  have hceilQ : ⌈T.σ * n⌉₊ ≤ Q.length := by
+    apply Nat.ceil_le.mpr
+    exact (mul_le_mul_of_nonneg_right hσapi (Nat.cast_nonneg n)).trans hQlen
+  have hk₂ : ⌈T.σ * n⌉₊ - j ≤ Q.length := le_trans (Nat.sub_le _ _) hceilQ
+  refine { long := Q, long_mem := hQmem, long_length := hQlen,
+           Z := Y ∪ prefixSource Q (⌈T.σ * n⌉₊ - j) hk₂,
+           Z_sub := ?_, Z_weight := ?_, Z_path := ?_ }
+  · exact Finset.union_subset hYF
+      ((prefixSource_subset_of_path Q _ hk₂ hQF).trans Finset.sdiff_subset)
+  · have hdisj : Disjoint Y (prefixSource Q (⌈T.σ * n⌉₊ - j) hk₂) := by
+      refine Finset.disjoint_left.mpr fun v hvY hvP => ?_
+      exact (Finset.mem_sdiff.mp
+        (prefixSource_subset_of_path Q _ hk₂ hQF hvP)).2 hvY
+    have hcard' : (Y ∪ prefixSource Q (⌈T.σ * n⌉₊ - j) hk₂).card
+        = j + (⌈T.σ * n⌉₊ - j) := by
+      rw [Finset.card_union_of_disjoint hdisj, hYcard, prefixSource_card Q _ hk₂]
+    have hge : ⌈T.σ * n⌉₊ ≤ j + (⌈T.σ * n⌉₊ - j) := by omega
+    have hgeR : T.σ * n ≤ ((j + (⌈T.σ * n⌉₊ - j) : ℕ) : ℝ) := by
+      refine le_trans (Nat.le_ceil _) ?_
+      exact_mod_cast hge
+    rw [weight, hcard', le_div_iff₀ hnreal]
+    exact hgeR
+  · intro u hu
+    have hyn : (G.αpi - T.σ + (j : ℝ) / n) * n = (G.αpi - T.σ) * n + j := by
+      field_simp
+    rcases Finset.mem_union.mp hu with huY | huP
+    · obtain ⟨R, hRfirst, hRmem, hRlen⟩ :=
+        P.fullSource_path (A := D) Finset.Subset.rfl (hYX huY)
+      refine ⟨R, hRfirst, hRmem, ?_⟩
+      rw [hyn]
+      nlinarith [hRlen]
+    · rcases (mem_prefixSource Q _ hk₂).mp huP with ⟨i, hi⟩
+      have hiQ : i.val < Q.length := lt_of_lt_of_le i.isLt hk₂
+      have hij : i.val + j < ⌈T.σ * n⌉₊ := by
+        have := i.isLt
+        omega
+      have hijR : ((i.val : ℝ) + j) < T.σ * n := by
+        have h := Nat.lt_ceil.mp hij
+        push_cast at h
+        exact h
+      refine ⟨Q.drop i.val hiQ, ?_, ?_, ?_⟩
+      · simpa using (Path.drop_first Q i.val hiQ).trans hi
+      · intro w hw
+        exact hQmem w (List.mem_of_mem_drop hw)
+      · rw [hyn]
+        have := P.mixed_suffix_length (σ' := T.σ) (απ := G.αpi) (j := j) Q hQlen hijR
+          (le_of_lt hiQ)
+        simpa using this
 
-/-- **The extension.**  At a later superfertile expandable depth every new source node
-begins a fresh `α_π n` path, whose end reaches the previous source through the footprint
-and there picks up the whole accumulated tail. -/
-noncomputable def extend (hn : 0 < n)
-    (hDepth : G.DepthRobustThr (S.pi - T.σ) G.αpi)
-    (L : FullLink P T A cs) {b : ℕ} (hdepth : L.depth < b) (hb : b < ℓ)
-    (hexp : Expandable P.budget T.ghat b cs)
-    (hfert : S.pi ≤ weight n (P.layerFootprint L.source b)) : FullLink P T A cs := by
-  classical
-  have hdata := P.fullSource_data T hn hDepth hb hfert
-  refine { depth := b, inside := hb,
-           source := G.fullSources b (P.layerFootprint L.source b) G.αpi,
-           source_layer := hdata.1, source_available := hdata.2.1,
-           source_weight := hdata.2.2,
-           expandable := hexp, count := L.count + 1, count_pos := by omega, tail := ?_ }
-  intro v hv
-  obtain ⟨Q, hQfirst, hQF, hQlen⟩ :=
-    P.fullSource_path (A := L.source) Finset.Subset.rfl hv
-  have hlastF : Q.last ∈ P.layerFootprint L.source b := hQF Q.last Q.last_mem
-  have hmem := (P.mem_layerFootprint L.source).mp hlastF
-  obtain ⟨y, hySource, R, hRfirst, hRlast⟩ := hmem.2
-  have hQdepth : G.depth Q.last = b := (G.layer_mem.mp hmem.1).1
-  have hyDepth : G.depth y = L.depth := (G.layer_mem.mp (L.source_layer hySource)).1
-  have hdepthNe : G.depth Q.last ≠ G.depth y := by rw [hQdepth, hyDepth]; omega
-  have hRlen : 2 ≤ R.length := reaches_path_length_two R hRfirst hRlast hdepthNe
-  obtain ⟨a, haA, O, hOfirst, hOlast, hOlen⟩ := L.tail y hySource
-  let QR := Q.append R hRfirst.symm
-  have hROjoin : QR.last = O.first := by simpa [QR] using hRlast.trans hOfirst.symm
-  let QRO := QR.append O hROjoin
-  refine ⟨a, haA, QRO, by simpa [QRO, QR] using hQfirst, by simpa [QRO] using hOlast, ?_⟩
-  have hlen : Q.length + O.length ≤ QRO.length := by
-    simp only [QRO, QR, Path.append_length]
-    have := Q.length_pos
-    have := O.length_pos
-    omega
-  have hlen' : (Q.length : ℝ) + (O.length : ℝ) ≤ (QRO.length : ℝ) := by exact_mod_cast hlen
-  push_cast
-  nlinarith [hQlen, hOlen, hlen']
+set_option linter.unusedDecidableInType false in
+/-- **The mixed source rule**: the graph is depth robust at threshold `τ`, and every
+node of `(π - τ) n` worth of slack buys one more node of payoff per link. -/
+theorem sourceRule_mixed [DecidableEq V] (P : Pebbling G) (T : Tracking S)
+    (hn : 0 < n) (hσapi : T.σ ≤ G.αpi) {τ : ℝ} (j : ℕ)
+    (hDepth : G.DepthRobustThr τ G.αpi)
+    (hj : (j : ℝ) ≤ (S.pi - τ) * n) (hjσ : (j : ℝ) ≤ T.σ * n) :
+    SourceRule P T (G.αpi - T.σ + (j : ℝ) / n) :=
+  fun _ hb D hfert => ⟨sourceData_mixed P T hn hσapi j hDepth hj hjσ hb D hfert⟩
 
-end FullLink
-
-/-- The chain system of full-payoff links.  It is a `ChainSystem` for the *same* `Setting`,
-`Budget` and `Tracking` as `Concrete.Pebbling.chainSystem`, so the ledger of
-`PotentialLedger.lean` prices it unchanged.  What differs is the realized length —
-`z · α_π · n` rather than `α_π n + (z-1)(α_π - σ) n` — and the graph assumption, depth
-robustness at `S.pi - T.σ` rather than at `S.pi`. -/
-noncomputable def fullChainSystem [DecidableEq V] (P : Pebbling G) (T : Tracking S)
-    (A : Finset V) (hn : 0 < n) (hDepth : G.DepthRobustThr (S.pi - T.σ) G.αpi)
-    (cs : ℝ) (hcs : 1 ≤ cs) (hslack : T.lam + (cs - 1) * T.ghat ≤ T.σ) :
-    ChainSystem S P.budget T cs ℓ
-      (fun z => P.HasUnpebbledPathInFootprint A ((z : ℝ) * G.αpi * n)) where
-  one_le_cs := hcs
-  cs_slack := hslack
-  Link := FullLink P T A cs
-  depth := FullLink.depth
-  wt := fun L => P.footprintBound L.depth T.σ
-  bound := fun L => P.footprintBound_isBound L.depth T.σ
-  init := fun L => P.footprintBound_start L.depth T.σ
-  expandable := FullLink.expandable
-  inside := FullLink.inside
-  count := FullLink.count
-  count_pos := FullLink.count_pos
-  realizes := fun L => L.realized
-  extend := by
-    intro L b hdepth hb hfert hexp hactive
-    have hactual : P.footprintBound L.depth T.σ b ≤
-        weight n (P.layerFootprint L.source b) :=
-      P.sourceBound_le_actual hn L.source_layer L.source_available L.source_weight
-        hactive (le_of_lt hdepth) hb
-    exact ⟨FullLink.extend hn hDepth L hdepth hb hexp (hfert.trans hactual), rfl, rfl⟩
+set_option linter.unusedDecidableInType false in
+/-- The prefix rule of `PayChain.lean` is the mixed rule at `j = 0`: no slack is spent, so
+the whole source is the `⌈σ n⌉`-prefix and the threshold is the fertility threshold. -/
+theorem sourceRule_prefix_eq_mixed_zero [DecidableEq V] (P : Pebbling G) (T : Tracking S)
+    (hn : 0 < n) (hσapi : T.σ ≤ G.αpi) (hDepth : G.DepthRobust G.αpi) :
+    SourceRule P T (G.αpi - T.σ) := by
+  have h := sourceRule_mixed P T hn hσapi (τ := S.pi) 0 hDepth (by simp)
+    (by simpa using mul_nonneg T.σ_pos.le (Nat.cast_nonneg n : (0 : ℝ) ≤ n))
+  simpa using h
 
 end Pebbling
 
@@ -373,11 +395,16 @@ end Concrete
 
 /-! ### The latency theorems -/
 
-/-- **The full-payoff latency bound.**  Every completed chain link contributes a whole
-`α_π n`, so `z` links realize `z α_π n`.  The hypotheses are exactly those of
-`latency_potential`, with one replacement: depth robustness is required at the threshold
-`S.pi - T.σ`, and `S.pi` is correspondingly the weight the footprint must reach for the
-search to stop. -/
+/-- The full payoff realizes `z α_π n`, which is `payLength` at `y = α_π`. -/
+theorem payLength_full {V : Type u} {S : Setting} {ℓ n : ℕ}
+    (G : Concrete.LayeredGraph V S ℓ n) (z : ℕ) :
+    Concrete.Pebbling.payLength G G.αpi z = (z : ℝ) * G.αpi * n := by
+  simp only [Concrete.Pebbling.payLength]; ring
+
+/-- **The full-payoff latency bound.**  `latency_pay` at the full-length source rule:
+every completed chain link contributes a whole `α_π n`, so `z` links realize `z α_π n`.
+The hypotheses are exactly those of `latency_potential`, with one replacement — depth
+robustness is required at the threshold `S.pi - T.σ` rather than at `S.pi`. -/
 theorem latency_full {V : Type u}
     {S : Setting} {ℓ n : ℕ} (G : Concrete.LayeredGraph V S ℓ n)
     (P : Concrete.Pebbling G) (T : Tracking S)
@@ -395,22 +422,10 @@ theorem latency_full {V : Type u}
     (hweight : S.ζδ ≤ Concrete.Pebbling.weight n A) :
     P.HasUnpebbledPathInFootprint A ((z : ℝ) * G.αpi * n) := by
   classical
-  have hζ : 0 ≤ S.ζδ := by
-    have h1 := S.piBar_pos
-    have h2 := S.ρ_nonneg
-    linarith
-  let CS := P.fullChainSystem T A hn hDepth Cert.cs Cert.one_le_cs hslack
-  let Ch := P.challengeBound_struct hζ
-  have hrestart : ∀ b : ℕ, b < ℓ → S.pi ≤ Ch.f b → Expandable P.budget T.ghat b Cert.cs →
-      ∃ L : CS.Link, CS.depth L = b ∧ CS.count L = 1 := fun b hb hfertScalar hexp =>
-    ⟨Concrete.Pebbling.FullLink.base P T A hn hDepth hb hexp
-      (P.challenge_fertile hn hζ hζmax hentry hA hred hweight hb hfertScalar), rfl, rfl⟩
-  obtain ⟨L, hL⟩ := LedgerCert.ChainSystem.potential_count Cert CS Ch hζmax hentry
-    (fun L => CS.link_floor hnobreak L) (fun L => CS.link_le_αmax L) hrestart hz1 hz
-  refine P.hasPath_mono A ?_ (CS.realizes L)
-  have hcast : (z : ℝ) ≤ ((CS.count L : ℕ) : ℝ) := by exact_mod_cast hL
-  have hnn : (0 : ℝ) ≤ G.αpi * n := mul_nonneg hαpi (Nat.cast_nonneg n)
-  nlinarith
+  rw [← payLength_full G z]
+  exact latency_pay G P T Cert hn hαpi
+    (Concrete.Pebbling.sourceRule_full P T hn hDepth)
+    hζmax hentry hnobreak hslack hz1 hz A hA hred hweight
 
 /-- **The asymptotic latency bound.**  Past a fixed head — the initial search plus the
 whole black budget, both priced by the ledger — every further layer buys `α_π / potSpan`
@@ -434,31 +449,11 @@ theorem latency_full_asymptotic {V : Type u}
       ((((ℓ : ℝ) - LedgerCert.potHead C Cert - Cert.lam * S.ρ / T.ghat)
         / LedgerCert.potSpan C Cert) * G.αpi * n) := by
   classical
-  set Sp := LedgerCert.potSpan C Cert with hSp
-  set r : ℝ := ((ℓ : ℝ) - LedgerCert.potHead C Cert - Cert.lam * S.ρ / T.ghat) / Sp with hr
-  have hnum : 0 < (ℓ : ℝ) - LedgerCert.potHead C Cert - Cert.lam * S.ρ / T.ghat := by
-    linarith
-  have hr0 : (0 : ℝ) < r := div_pos hnum hspan
-  set z : ℕ := ⌈r⌉₊ with hzdef
-  have hz1 : 1 ≤ z := Nat.ceil_pos.mpr hr0
-  have hzr : r ≤ (z : ℝ) := Nat.le_ceil r
-  have hzlt : (z : ℝ) - 1 < r := by
-    have := Nat.ceil_lt_add_one hr0.le
-    rw [← hzdef] at this
-    linarith
-  have hz : LedgerCert.potHead C Cert + ((z : ℝ) - 1) * LedgerCert.potSpan C Cert
-      + Cert.lam * S.ρ / T.ghat < (ℓ : ℝ) := by
-    rw [← hSp]
-    have hmul : ((z : ℝ) - 1) * Sp < r * Sp := by
-      exact mul_lt_mul_of_pos_right hzlt hspan
-    have hrS : r * Sp = (ℓ : ℝ) - LedgerCert.potHead C Cert
-        - Cert.lam * S.ρ / T.ghat := by
-      rw [hr]; field_simp
-    linarith
-  have hmain := latency_full G P T Cert hn hαpi hDepth hζmax hentry hnobreak hslack
-    hz1 hz A hA hred hweight
+  have hmain := latency_pay_asymptotic G P T Cert hn hαpi
+    (Concrete.Pebbling.sourceRule_full P T hn hDepth)
+    hζmax hentry hnobreak hslack hspan hlong A hA hred hweight
   refine P.hasPath_mono A ?_ hmain
-  have hnn : (0 : ℝ) ≤ G.αpi * n := mul_nonneg hαpi (Nat.cast_nonneg n)
-  nlinarith
+  ring_nf
+  nlinarith [hmain]
 
 end ProofOfSpace

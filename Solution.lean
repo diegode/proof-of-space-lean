@@ -248,6 +248,17 @@ def PebblingGame.depth (_M : PebblingGame ℓ n) (v : ℕ × Fin n) : ℕ := v.1
 def PebblingGame.latencyLength (M : PebblingGame ℓ n) (σ : ℝ) (z : ℕ) : ℝ :=
   M.απ * n + ((z : ℝ) - 1) * (M.απ - σ) * n
 
+/-- The path length of a chain whose source rule spends `j` full-length source nodes: a
+completed link is worth `j` nodes more than the `(α_π - σ) n` of `latencyLength`, which
+is the case `j = 0`. -/
+def PebblingGame.mixedLatencyLength (M : PebblingGame ℓ n) (σ : ℝ) (j z : ℕ) : ℝ :=
+  M.απ * n + ((z : ℝ) - 1) * ((M.απ - σ) * n + j)
+
+theorem PebblingGame.mixedLatencyLength_zero (M : PebblingGame ℓ n) (σ : ℝ) (z : ℕ) :
+    M.mixedLatencyLength σ 0 z = M.latencyLength σ z := by
+  simp only [mixedLatencyLength, latencyLength, Nat.cast_zero, add_zero]
+  ring
+
 def PebblingGame.intraEdge (M : PebblingGame ℓ n) (d : ℕ)
     (u v : ℕ × Fin n) : Prop :=
   u.1 = d ∧ v.1 = d ∧ d < ℓ ∧ M.intra u.2 v.2
@@ -290,6 +301,14 @@ def PebblingGame.LatencyEvent (ℓ n z : ℕ) (απ δ π ρ ζ σ : ℝ)
     PebblingGame.IsAdmissible M →
     ∀ A : Finset (ℕ × Fin n), A ⊆ M.layer 0 → ζ ≤ (A.card : ℝ) / n →
       M.HasUnpebbledPathTo A (M.latencyLength σ z) P
+
+/-- The same event at the mixed source rule, which pays `j` nodes more per link. -/
+def PebblingGame.MixedLatencyEvent (ℓ n j z : ℕ) (απ δ π ρ ζ σ : ℝ)
+    (P : ChungInterlayer n) : Prop :=
+  ∀ M : PebblingGame ℓ n, M.απ = απ → M.δ = δ → M.π = π → M.ρ = ρ → M.ζ = ζ →
+    PebblingGame.IsAdmissible M →
+    ∀ A : Finset (ℕ × Fin n), A ⊆ M.layer 0 → ζ ≤ (A.card : ℝ) / n →
+      M.HasUnpebbledPathTo A (M.mixedLatencyLength σ j z) P
 
 /-! ### Bridges to the proved library -/
 
@@ -481,26 +500,29 @@ private theorem chung8_of_expands_whp (lambda : ℕ) (a b : ℝ)
   rw [HoldsWithFailureAtMost] at hgeneric ⊢
   exact (tsub_le_tsub_left C.security 1).trans hgeneric
 
-/-- **The Chung-8 latency theorem, over the parameter window the profile is certified
-on.**  Its proof is the whole argument: the port-model union bound, the transfer of the
-public expansion profile to the deterministic setting, the layered-graph bridge, the
-removal of the red pebbles from the challenge set, and the potential ledger at the
-symbolic budget, challenge weight and source weight. -/
-theorem chung8_pebbling_latency_whp
+/-- **The unified latency theorem.**  `latency_pay` at the mixed source rule: the slack
+between the game's robustness threshold `π` and the profile's fertility threshold `E.π`
+is spent on `j` full-length source nodes, and each completed link is worth `j` nodes more
+than it would otherwise be.  The ledger is untouched — it never sees `j`.
+
+This is `Challenge.lean`'s `chung8_pebbling_latency_mixed`, and
+`chung8_pebbling_latency_whp` below is its `j = 0` case. -/
+theorem chung8_pebbling_latency_mixed
     {ℓ n : ℕ} (lambda : ℕ) (a b : ℝ) [ChungSecurityConditions n lambda a b]
     (E : ExpansionProfile) (σ : ℝ) (L : LevelBudget E σ)
-    (απ δ π ρ ζ : ℝ) (z : ℕ) (hz : 1 ≤ z)
+    (απ δ π ρ ζ : ℝ) (j z : ℕ) (hz : 1 ≤ z)
     (ha : a ≤ E.αmin) (hb : E.αmax + 1 / n ≤ b)
-    (hδ : δ ≤ E.δ) (hπ : π ≤ E.π)
+    (hδ : δ ≤ E.δ)
+    (hπ : π * n + j ≤ E.π * n) (hjσ : (j : ℝ) ≤ σ * n)
     (hρ : 0 ≤ ρ) (hρtop : ρ ≤ L.ρmax)
     (hentry : E.piBar + ρ < ζ - δ) (hζ : ζ - δ ≤ E.αmax)
     (hnobreak : ρ < E.betaD E.π - E.floor σ)
     (hslack : E.floor σ + (L.cs - 1) * E.trackingGain σ ≤ σ)
-    (hσαπ : σ < απ)
+    (hσαπ : σ ≤ απ)
     (hlevels : L.searchCost (ζ - δ) + ((z : ℝ) - 1) * L.linkCost
       + L.chargeRate * ρ < (ℓ : ℝ)) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
-      (PebblingGame.LatencyEvent ℓ n z απ δ π ρ ζ σ)
+      (PebblingGame.MixedLatencyEvent ℓ n j z απ δ π ρ ζ σ)
       ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
   classical
   refine chung8_of_expands_whp lambda a b _ ?_
@@ -562,14 +584,13 @@ theorem chung8_pebbling_latency_whp
       rw [hNδ] at h
       exact h.trans (mul_le_mul_of_nonneg_right hδ hnR.le)
   }
-  have hDepth : G.DepthRobust G.αpi := by
-    apply Concrete.portStack_depthRobust_of_nodeDR
+  -- The graph hypothesis is read at the game's own threshold `π`.
+  have hDepth : G.DepthRobustThr π G.αpi := by
+    apply Concrete.portStack_depthRobustThr_of_nodeDR
     intro X hX
     refine hN.depth_robust X ?_
-    have hmono : (1 - E.π) * n ≤ (1 - π) * n :=
-      mul_le_mul_of_nonneg_right (by linarith) hnR.le
     rw [hNπ]
-    exact le_trans hX hmono
+    exact hX
   -- The challenge set has weight `ζ`; discarding its red nodes leaves a red-free set of
   -- weight at least `ζ - δ`, which is what the deterministic argument starts from.
   have hB' : B \ N.red 0 ⊆ G.layer 0 := Finset.sdiff_subset.trans hB
@@ -589,9 +610,16 @@ theorem chung8_pebbling_latency_whp
     simp only [Concrete.Pebbling.weight]
     rw [le_div_iff₀ hnR]
     linarith
-  have hσapi : T.σ < G.αpi := by
-    change σ < N.απ
+  have hσapi : T.σ ≤ G.αpi := by
+    change σ ≤ N.απ
     rw [hNαπ]; exact hσαπ
+  have hj : (j : ℝ) ≤ (S.pi - π) * n := by
+    change (j : ℝ) ≤ (E.π - π) * n
+    nlinarith [hπ]
+  have hjσ' : (j : ℝ) ≤ T.σ * n := hjσ
+  have hy : (0 : ℝ) ≤ G.αpi - T.σ + (j : ℝ) / n := by
+    have h1 : (0 : ℝ) ≤ (j : ℝ) / n := div_nonneg (Nat.cast_nonneg j) hnR.le
+    linarith [hσapi]
   have hzcond : LedgerCert.potHead C Cert + ((z : ℝ) - 1) * LedgerCert.potSpan C Cert
       + Cert.lam * S.ρ / T.ghat < (ℓ : ℝ) := by
     have hcharge : Cert.lam * S.ρ / T.ghat = L.chargeRate * ρ := by
@@ -599,7 +627,8 @@ theorem chung8_pebbling_latency_whp
       ring
     rw [hcharge]
     exact hlevels
-  have hpath := latency_potential G pebbling T Cert hN.n_pos hσapi hDepth
+  have hpath := latency_pay G pebbling T Cert hN.n_pos hy
+    (Concrete.Pebbling.sourceRule_mixed pebbling T hN.n_pos hσapi j hDepth hj hjσ')
     (show S.ζδ ≤ S.αmax from hζ) (show S.piBar < S.ζδ - S.ρ from by
       change E.piBar < ζ - δ - ρ
       linarith [hentry])
@@ -611,12 +640,52 @@ theorem chung8_pebbling_latency_whp
     Q.unpebbled', ?_, ?_⟩
   · rw [List.getLast?_eq_some_getLast Q.nonempty]
     exact congrArg some hlast
-  · have hlat : N.latencyLength σ z = ProofOfSpace.latencyLength G.αpi σ n z := by
-      change N.απ * n + ((z : ℝ) - 1) * (N.απ - σ) * n = _
-      simp only [ProofOfSpace.latencyLength]
-      rfl
+  · have hlat : N.mixedLatencyLength σ j z
+        = Concrete.Pebbling.payLength G (G.αpi - T.σ + (j : ℝ) / n) z := by
+      have hn0 : (n : ℝ) ≠ 0 := ne_of_gt hnR
+      change N.απ * n + ((z : ℝ) - 1) * ((N.απ - σ) * n + j)
+        = N.απ * n + ((z : ℝ) - 1) * (N.απ - σ + (j : ℝ) / n) * n
+      field_simp
     rw [hlat]
     exact hlength
+
+/-- **The Chung-8 latency theorem, over the parameter window the profile is certified
+on.**  Its proof is the whole argument: the port-model union bound, the transfer of the
+public expansion profile to the deterministic setting, the layered-graph bridge, the
+removal of the red pebbles from the challenge set, and the potential ledger at the
+symbolic budget, challenge weight and source weight. -/
+theorem chung8_pebbling_latency_whp
+    {ℓ n : ℕ} (lambda : ℕ) (a b : ℝ) [ChungSecurityConditions n lambda a b]
+    (E : ExpansionProfile) (σ : ℝ) (L : LevelBudget E σ)
+    (απ δ π ρ ζ : ℝ) (z : ℕ) (hz : 1 ≤ z)
+    (ha : a ≤ E.αmin) (hb : E.αmax + 1 / n ≤ b)
+    (hδ : δ ≤ E.δ) (hπ : π ≤ E.π)
+    (hρ : 0 ≤ ρ) (hρtop : ρ ≤ L.ρmax)
+    (hentry : E.piBar + ρ < ζ - δ) (hζ : ζ - δ ≤ E.αmax)
+    (hnobreak : ρ < E.betaD E.π - E.floor σ)
+    (hslack : E.floor σ + (L.cs - 1) * E.trackingGain σ ≤ σ)
+    (hσαπ : σ < απ)
+    (hlevels : L.searchCost (ζ - δ) + ((z : ℝ) - 1) * L.linkCost
+      + L.chargeRate * ρ < (ℓ : ℝ)) :
+    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
+      (PebblingGame.LatencyEvent ℓ n z απ δ π ρ ζ σ)
+      ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
+  classical
+  -- `j = 0` of the mixed rule: no robustness slack is spent, so the source is the whole
+  -- `⌈σ n⌉`-prefix of one depth-robust path and a link is worth `(α_π - σ) n`.
+  have hπ' : π * n + ((0 : ℕ) : ℝ) ≤ E.π * n := by
+    have h := mul_le_mul_of_nonneg_right hπ (Nat.cast_nonneg n : (0 : ℝ) ≤ n)
+    simpa using h
+  have hσpos : (0 : ℝ) < σ := lt_of_le_of_lt E.αmin_mem.1 L.σ_gt
+  have hjσ : ((0 : ℕ) : ℝ) ≤ σ * n := by
+    simpa using mul_nonneg hσpos.le (Nat.cast_nonneg n : (0 : ℝ) ≤ n)
+  have h := chung8_pebbling_latency_mixed lambda a b E σ L απ δ π ρ ζ 0 z hz ha hb hδ
+    hπ' hjσ hρ hρtop hentry hζ hnobreak hslack hσαπ.le hlevels
+  rw [HoldsWithFailureAtMost] at h ⊢
+  refine h.trans (probabilityOf_mono _ ?_)
+  intro P hev M hαπ hδ' hπ2 hρ2 hζ2 hAdm A hA hw
+  have hres := hev M hαπ hδ' hπ2 hρ2 hζ2 hAdm A hA hw
+  rwa [PebblingGame.mixedLatencyLength_zero] at hres
 
 /-- **The asymptotic latency theorem, at full link payoff.**
 

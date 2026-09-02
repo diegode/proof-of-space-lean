@@ -51,7 +51,11 @@ related_formalizations: []
 
 status:
   scope: >-
-    ProofOfSpaceStatement.chung8_pebbling_latency_whp is the latency theorem, generic in
+    ProofOfSpaceStatement.chung8_pebbling_latency_mixed is the generic latency theorem: it
+    reads the depth-robustness threshold at the game's own pi and spends the slack up to the
+    profile's fertility threshold on j full-length source nodes, so a completed chain link is
+    worth (alpha_pi - sigma) n + j. ProofOfSpaceStatement.chung8_pebbling_latency_whp is its
+    j = 0 case and is likewise generic in
     the expander: it quantifies over an expansion profile (a concave, strictly increasing,
     reversal-symmetric expansion function under the degree-eight Chung threshold) and a
     certified level budget for it, with all game parameters, the source weight, the link
@@ -74,6 +78,12 @@ status:
   sorry_in_definitions: 0
   axioms: ["propext", "Classical.choice", "Quot.sound"]
   main_results:
+    - declaration: "ProofOfSpaceStatement.chung8_pebbling_latency_mixed"
+      file: "Solution.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
     - declaration: "ProofOfSpaceStatement.chung8_pebbling_latency_whp"
       file: "Solution.lean"
       sorry_count: 0
