@@ -99,6 +99,53 @@ class ChungSecurityConditions (n : ℕ) (lambda : ℕ) (a b : ℝ) : Prop where
   a_pos : 0 < a
   security : chung8FailureBound n a b ≤ (2 : ℝ≥0∞)⁻¹ ^ lambda
 
+/-! ### The certified profile
+
+The degree-eight profile is analysed at one red-pebble fraction and one robustness
+threshold, and at one interval of source weights.  The constants below record that
+certification; they are not choices the latency theorem makes, and everything else it
+says is relative to them. -/
+
+/-- The red-pebble fraction the profile is certified at. -/
+noncomputable def chung8Delta : ℝ := 189 / 5000
+
+/-- The intra-layer robustness threshold it is certified at. -/
+noncomputable def chung8Pi : ℝ := 4 / 5
+
+/-- `π̄ = 1 - β(π)`: the floor a tracked footprint cannot be pushed below. -/
+noncomputable def chung8PiBar : ℝ := 5089 / 100000
+
+/-- The largest black-pebble weight the blocked-range certificate covers.  The
+certificate is tight there, so this bound is not slack that can be spent. -/
+noncomputable def chung8Rho : ℝ := 4 / 5
+
+/-- `α_δ^min`: the low end of the interval where the certified profile has nonnegative
+adjusted gain.  Expansion is queried exactly on that interval. -/
+noncomputable def chung8ActiveLo : ℝ := 961821 / 74555000
+
+/-- `α_δ^max`: its high end. -/
+noncomputable def chung8ActiveHi : ℝ := 14155 / 14911
+
+/-- The lowest certified source weight: `gain_δ(σ) ≥ 2 g_π` holds from here up, with
+equality at this point, and the tracking constant drops below it. -/
+noncomputable def chung8SourceLo : ℝ := 74 / 625
+
+/-- The highest certified source weight, the doubled-gain midpoint. -/
+noncomputable def chung8SourceHi : ℝ := 3 / 5
+
+/-- What the initial search costs, in layers, at red-free challenge weight `w = ζ - δ`:
+a saturation allowance of `0.43` layers, plus `6.46` layers for every unit of weight the
+challenge falls short of `0.89`, the weight from which the profile's own growth already
+saturates the ledger.  A thinner challenge set is paid for here. -/
+noncomputable def chung8SearchCost (w : ℝ) : ℝ :=
+  43 / 100 + 646 / 100 * max 0 (89 / 100 - w)
+
+/-- What one further chain link costs, in layers. -/
+noncomputable def chung8LinkCost : ℝ := 1911 / 500
+
+/-- What one unit of black-pebble weight costs, in layers. -/
+noncomputable def chung8ChargeRate : ℝ := 1187 / 100
+
 /-- A static black/red pebbling position and its latency parameters on an `ℓ`-layer
 stacked graph of width `n`. The width is a parameter, not a field, so that one
 probability space `ChungInterlayer n` serves every game. -/
@@ -172,30 +219,30 @@ def PebblingGame.LatencyEvent (ℓ n z : ℕ) (απ δ π ρ ζ σ : ℝ)
 -- The public challenge theorem bodies are intentionally omitted; see `README.md`.
 set_option warn.sorry false
 
-/-- **The Chung-8 latency theorem, over the parameter window the profile is certified
-on.**
+/-- **The Chung-8 latency theorem, over the parameters the profile is certified for.**
 
 The wiring is sampled first, and the event quantifies over every admissible game with the
-displayed parameters and every challenge set of weight `ζ`.  All six game parameters, the
-link count and the layer count are symbolic; the certified window constrains them only by
-the displayed intervals and by the ledger's level condition
+displayed parameters and every challenge set of weight `ζ`.  What ties the parameters
+together is one inequality in layers,
 
-    `0.6 + (z - 1) · 3.822 + 11.87 · ρ < ℓ`,
+    `chung8SearchCost (ζ - δ) + (z - 1) · chung8LinkCost + chung8ChargeRate · ρ < ℓ`,
 
-whose three terms are the search head, the price of one further chain link, and the charge
-the black budget pays.  Read as a budget for `ℓ`, it says what a change of parameters
-buys: one more link costs `3.822` layers, and one more unit of black weight costs `11.87`.
--/
+the initial search, one further chain link, and the black weight, each priced in layers.
+Reading it as a budget for `ℓ` is what the theorem is for: a thinner challenge set, a
+larger black budget or one more link each buy their cost in layers.  The remaining
+hypotheses are the certified ranges: `δ` and `π` may be anything the profile covers, `ρ`
+anything the blocked-range certificate covers, `ζ - δ` anything from the entry condition
+up to the active interval, and `σ` any certified source weight below `απ`. -/
 theorem chung8_pebbling_latency_whp
     {ℓ n : ℕ} (lambda : ℕ) (a b : ℝ) [ChungSecurityConditions n lambda a b]
-    (hn : 1000 ≤ n) (ha : a ≤ 1 / 100) (hb : 24 / 25 ≤ b)
+    (hn : 1000 ≤ n) (ha : a ≤ chung8ActiveLo) (hb : chung8ActiveHi + 1 / n ≤ b)
     (απ δ π ρ ζ σ : ℝ) (z : ℕ) (hz : 1 ≤ z)
-    (hδ : δ ≤ 189 / 5000) (hπ : π ≤ 4 / 5)
-    (hζ : 9 / 10 ≤ ζ) (hζtop : ζ ≤ 49 / 50)
-    (hρ : 0 ≤ ρ) (hρtop : ρ ≤ 4 / 5)
-    (hentry : 5089 / 100000 + ρ < ζ - 189 / 5000)
-    (hσ : 74 / 625 ≤ σ) (hσtop : σ ≤ 3 / 5) (hσαπ : σ < απ)
-    (hlevels : 3 / 5 + ((z : ℝ) - 1) * (1911 / 500) + 1187 / 100 * ρ < (ℓ : ℝ)) :
+    (hδ : δ ≤ chung8Delta) (hπ : π ≤ chung8Pi)
+    (hρ : 0 ≤ ρ) (hρtop : ρ ≤ chung8Rho)
+    (hentry : chung8PiBar + ρ < ζ - δ) (hζ : ζ - δ ≤ chung8ActiveHi)
+    (hσ : chung8SourceLo ≤ σ) (hσtop : σ ≤ chung8SourceHi) (hσαπ : σ < απ)
+    (hlevels : chung8SearchCost (ζ - δ) + ((z : ℝ) - 1) * chung8LinkCost
+      + chung8ChargeRate * ρ < (ℓ : ℝ)) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
       (PebblingGame.LatencyEvent ℓ n z απ δ π ρ ζ σ)
       ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
@@ -204,7 +251,7 @@ theorem chung8_pebbling_latency_whp
 /-- The 14-layer Filecoin latency lower bound at `lambda` bits of security: an
 unpebbled path of length `0.2816 n`.  It is the point
 `(απ, δ, π, ρ, ζ, σ, z, ℓ) = (0.2, 0.0378, 0.8, 0.8, 0.9, 0.1184, 2, 14)`
-of `chung8_pebbling_latency_whp`, whose level condition there reads `13.918 < 14`. -/
+of `chung8_pebbling_latency_whp`, whose level condition there reads `13.928 < 14`. -/
 theorem chung8_pebbling_latency_14
     {n : ℕ} (lambda : ℕ) (hn : 1000 ≤ n)
     [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :

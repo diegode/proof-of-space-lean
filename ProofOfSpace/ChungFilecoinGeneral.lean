@@ -18,14 +18,17 @@ both of which are *constant* on the window
 
 because `gain_δ(σ) ≥ 2 g_π` holds there by concavity between the two certified endpoints.
 
-So the whole ledger — chain, certificate, and the three prices it feeds
-`latency_potential` — is available with `ρ`, `ζ_δ` and `σ` left symbolic, and the level
-threshold becomes an inequality one can evaluate at other parameters:
+So the whole ledger — chain, certificate, and the prices it feeds `latency_potential` —
+is available with `ρ`, `ζ_δ` and `σ` left symbolic, and the level threshold becomes an
+inequality one can evaluate at other parameters:
 
-    `0.6 + (z - 1) · 3.822 + 11.87 · ρ < ℓ`.
+    `(0.43 + 6.46·(0.89 - ζ_δ)_+) + (z - 1) · 3.822 + 11.87 · ρ < ℓ`.
 
-At `ρ = 4/5` and `z = 2` its left side is `13.918 < 14`, which is what
-`chung8_pebbling_latency_14` uses; at `ρ = 7/10` two links already fit in `ℓ = 13`.
+The first term is the initial search: `refPot` climbs at the top-bucket rate `6.46` per
+unit of weight, so a thinner challenge set pays for itself here rather than being ruled
+out by a hypothesis.  At the Filecoin point its left side is `13.928 < 14`; at `ρ = 7/10`
+two links fit in `ℓ = 13`, and a challenge weight of `0.75` with half the space fits two
+links in `ℓ = 12`.
 -/
 
 namespace ProofOfSpace
@@ -230,25 +233,30 @@ noncomputable def chung8LedgerCertAt (hρ : 0 ≤ ρ) (hρmax : ρ ≤ 4 / 5)
 window they are bounded by their values at the low ends, and the budget charge is linear
 in `ρ`.  Rounded upwards, the prices are `0.6`, `3.822` and `11.87 ρ`. -/
 
-/-- The head of the ledger: at most `0.6` levels, for every challenge weight above
-`ζ_δ = 0.8622`. -/
-theorem chung8_potHead_le {hρ : 0 ≤ ρ} {hρmax : ρ ≤ 4 / 5}
-    (h1 : (74 : ℝ) / 625 ≤ σ) (h2 : σ ≤ (3 : ℝ) / 5) (hζ : (4311 : ℝ) / 5000 ≤ ζδ) :
+/-- **The search price as a function of the challenge weight.**  `potHead` is
+`m - refPot(ζ_δ) + loss`, and `refPot` climbs at the top-bucket rate `1/0.1548 = 6.46`
+per unit of weight up to the chain top, so a challenge weight `w` below `0.89` pays
+`6.46` levels per unit it is missing, and above it pays only the saturation allowance.
+Unlike a constant head this leaves `ζ` free: it is what lets the theorem answer what a
+thinner challenge set costs. -/
+theorem chung8_searchCost_le {hρ : 0 ≤ ρ} {hρmax : ρ ≤ 4 / 5}
+    (h1 : (74 : ℝ) / 625 ≤ σ) (h2 : σ ≤ (3 : ℝ) / 5) :
     LedgerCert.potHead (chung8RefChainAt (ζδ := ζδ) hρ h1 h2)
-      (chung8LedgerCertAt (ζδ := ζδ) hρ hρmax h1 h2) ≤ 3 / 5 := by
-  have hbase : (chung8RefChainAt (ζδ := ζδ) hρ h1 h2).refPot ((4311 : ℝ) / 5000)
-      = 3 + 642 / 774 := by
-    have h : chung8RefChain.refPot ((4311 : ℝ) / 5000) = 3 + 642 / 774 := by
-      rw [chainPot_b3 (t := (4311 : ℝ) / 5000) (by norm_num) (by norm_num)]; norm_num
-    exact h
-  have hmono : (chung8RefChainAt (ζδ := ζδ) hρ h1 h2).refPot ((4311 : ℝ) / 5000)
-      ≤ (chung8RefChainAt (ζδ := ζδ) hρ h1 h2).refPot ζδ :=
-    (chung8RefChainAt (ζδ := ζδ) hρ h1 h2).refPot_mono hζ
-  rw [hbase] at hmono
+      (chung8LedgerCertAt hρ hρmax h1 h2)
+      ≤ 43 / 100 + 646 / 100 * max 0 (89 / 100 - ζδ) := by
+  have hmax : (89 : ℝ) / 100 - ζδ ≤ max 0 (89 / 100 - ζδ) := le_max_right _ _
+  have hmax0 : (0 : ℝ) ≤ max 0 (89 / 100 - ζδ) := le_max_left _ _
   simp only [LedgerCert.potHead, chung8SettingAt_zetaDelta, chung8RefChainAt_m,
     chung8LedgerCertAt_loss]
   push_cast
-  linarith
+  rcases le_total ζδ ((4443 : ℝ) / 5000) with hle | hge
+  · have h : (4 : ℝ) - (chung8RefChainAt (ζδ := ζδ) hρ h1 h2).refPot ζδ
+        ≤ (4443 / 5000 - ζδ) / (387 / 2500) := chainPot_topLip_le hle
+    have hlin := (le_div_iff₀ (by norm_num : (0:ℝ) < 387 / 2500)).mp h
+    linarith [hlin, hmax, hmax0]
+  · have h : (chung8RefChainAt (ζδ := ζδ) hρ h1 h2).refPot ζδ = 4 := chainPot_sat hge
+    rw [h]
+    linarith
 
 /-- The per-link span of the ledger: at most `3.822` levels, for every source weight of
 the window. -/
@@ -285,11 +293,12 @@ input is the window itself.  The level condition is the ledger's, with its three
 rounded upwards, so it can be evaluated at other budgets and link counts directly. -/
 theorem chung8_latency_window {V : Type u} {ℓ n z : ℕ}
     (hρ : 0 ≤ ρ) (hρmax : ρ ≤ 4 / 5)
-    (hζlo : (4311 : ℝ) / 5000 ≤ ζδ) (hζhi : ζδ ≤ (4711 : ℝ) / 5000)
+    (hζhi : ζδ ≤ (14155 : ℝ) / 14911)
     (hentry : (5089 : ℝ) / 100000 + ρ < ζδ)
     (h1 : (74 : ℝ) / 625 ≤ σ) (h2 : σ ≤ (3 : ℝ) / 5)
     (hz1 : 1 ≤ z)
-    (hlevels : 3 / 5 + ((z : ℝ) - 1) * (1911 / 500) + 1187 / 100 * ρ < (ℓ : ℝ))
+    (hlevels : 43 / 100 + 646 / 100 * max 0 (89 / 100 - ζδ)
+      + ((z : ℝ) - 1) * (1911 / 500) + 1187 / 100 * ρ < (ℓ : ℝ))
     (G : Concrete.LayeredGraph V (chung8SettingAt ρ ζδ hρ) ℓ n)
     (P : Concrete.Pebbling G) (hn : 0 < n)
     (hσαpi : σ < G.αpi) (hDepth : G.DepthRobust G.αpi)
@@ -325,7 +334,7 @@ theorem chung8_latency_window {V : Type u} {ℓ n z : ℕ}
         (chung8LedgerCertAt (ζδ := ζδ) hρ hρmax h1 h2)
       + (chung8LedgerCertAt (ζδ := ζδ) hρ hρmax h1 h2).lam * (chung8SettingAt ρ ζδ hρ).ρ
         / (chung8TrackingAt (ζδ := ζδ) hρ h1 h2).ghat < (ℓ : ℝ) := by
-    have hhead := chung8_potHead_le (hρ := hρ) (hρmax := hρmax) h1 h2 hζlo
+    have hhead := chung8_searchCost_le (ζδ := ζδ) (hρ := hρ) (hρmax := hρmax) h1 h2
     have hspan := chung8_potSpan_le (ζδ := ζδ) (hρ := hρ) (hρmax := hρmax) h1 h2
     have hcharge := chung8_ledgerCharge_le (ζδ := ζδ) (hρ := hρ) (hρmax := hρmax) h1 h2
     have hspan' : ((z : ℝ) - 1)
@@ -341,24 +350,37 @@ theorem chung8_latency_window {V : Type u} {ℓ n z : ℕ}
 
 /-! ### Reading the level condition
 
-`0.6 + (z - 1) · 3.822 + 11.87 ρ < ℓ` is the whole trade-off: the search head costs `0.6`
-layers, each chain link past the first costs `3.822`, and each unit of black weight the
-adversary is allowed costs `11.87`.  Four points of the window, checked by `norm_num`. -/
+`(0.43 + 6.46·(0.89 - ζ_δ)_+) + (z - 1)·3.822 + 11.87·ρ < ℓ` is the whole trade-off: the
+initial search costs `6.46` layers per unit of missing challenge weight, each chain link
+past the first costs `3.822`, and each unit of black weight costs `11.87`.  Five points,
+checked by `norm_num`. -/
 
-/-- Two links at the Filecoin budget need fourteen layers: `13.918 < 14`. -/
-example : (3 : ℝ) / 5 + (2 - 1) * (1911 / 500) + 1187 / 100 * (4 / 5) < 14 := by norm_num
+/-- Two links at the Filecoin parameters need fourteen layers: `13.928 < 14`. -/
+example : 43 / 100 + 646 / 100 * max 0 (89 / 100 - (4311 : ℝ) / 5000)
+    + (2 - 1) * (1911 / 500) + 1187 / 100 * (4 / 5) < 14 := by
+  rw [max_eq_right (by norm_num : (0:ℝ) ≤ 89 / 100 - (4311 : ℝ) / 5000)]; norm_num
 
-/-- Taking a tenth of the space back buys a layer: at `ρ = 0.7`, `12.731 < 13`. -/
-example : (3 : ℝ) / 5 + (2 - 1) * (1911 / 500) + 1187 / 100 * (7 / 10) < 13 := by norm_num
+/-- Taking a tenth of the space back buys a layer: at `ρ = 0.7`, `12.741 < 13`. -/
+example : 43 / 100 + 646 / 100 * max 0 (89 / 100 - (4311 : ℝ) / 5000)
+    + (2 - 1) * (1911 / 500) + 1187 / 100 * (7 / 10) < 13 := by
+  rw [max_eq_right (by norm_num : (0:ℝ) ≤ 89 / 100 - (4311 : ℝ) / 5000)]; norm_num
 
-/-- At `ρ = 0.6` two links fit in twelve layers: `11.544 < 12`. -/
-example : (3 : ℝ) / 5 + (2 - 1) * (1911 / 500) + 1187 / 100 * (3 / 5) < 12 := by norm_num
+/-- A thinner challenge set is paid for by the search, not forbidden: challenge weight
+`0.75` against half the space still gives two links in twelve layers, `11.336 < 12`. -/
+example : 43 / 100 + 646 / 100 * max 0 (89 / 100 - ((3 : ℝ) / 4 - 189 / 5000))
+    + (2 - 1) * (1911 / 500) + 1187 / 100 * (1 / 2) < 12 := by
+  rw [max_eq_right (by norm_num : (0:ℝ) ≤ 89 / 100 - ((3 : ℝ) / 4 - 189 / 5000))]
+  norm_num
 
-/-- A third link at the Filecoin budget needs eighteen layers: `17.740 < 18`. -/
-example : (3 : ℝ) / 5 + (3 - 1) * (1911 / 500) + 1187 / 100 * (4 / 5) < 18 := by norm_num
+/-- A third link at the Filecoin budget needs eighteen layers: `17.750 < 18`. -/
+example : 43 / 100 + 646 / 100 * max 0 (89 / 100 - (4311 : ℝ) / 5000)
+    + (3 - 1) * (1911 / 500) + 1187 / 100 * (4 / 5) < 18 := by
+  rw [max_eq_right (by norm_num : (0:ℝ) ≤ 89 / 100 - (4311 : ℝ) / 5000)]; norm_num
 
-/-- Asymptotically the payoff is one link per `3.822` layers: six links at `ℓ = 30`. -/
-example : (3 : ℝ) / 5 + (6 - 1) * (1911 / 500) + 1187 / 100 * (4 / 5) < 30 := by norm_num
+/-- Asymptotically one link per `3.822` layers: six links at `ℓ = 30`. -/
+example : 43 / 100 + 646 / 100 * max 0 (89 / 100 - (4311 : ℝ) / 5000)
+    + (6 - 1) * (1911 / 500) + 1187 / 100 * (4 / 5) < 30 := by
+  rw [max_eq_right (by norm_num : (0:ℝ) ≤ 89 / 100 - (4311 : ℝ) / 5000)]; norm_num
 
 
 end ChungCurve

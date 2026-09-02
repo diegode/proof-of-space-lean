@@ -74,6 +74,53 @@ class ChungSecurityConditions (n : ℕ) (lambda : ℕ) (a b : ℝ) : Prop where
   a_pos : 0 < a
   security : chung8FailureBound n a b ≤ (2 : ℝ≥0∞)⁻¹ ^ lambda
 
+/-! ### The certified profile
+
+The degree-eight profile is analysed at one red-pebble fraction and one robustness
+threshold, and at one interval of source weights.  The constants below record that
+certification; they are not choices the latency theorem makes, and everything else it
+says is relative to them. -/
+
+/-- The red-pebble fraction the profile is certified at. -/
+noncomputable def chung8Delta : ℝ := 189 / 5000
+
+/-- The intra-layer robustness threshold it is certified at. -/
+noncomputable def chung8Pi : ℝ := 4 / 5
+
+/-- `π̄ = 1 - β(π)`: the floor a tracked footprint cannot be pushed below. -/
+noncomputable def chung8PiBar : ℝ := 5089 / 100000
+
+/-- The largest black-pebble weight the blocked-range certificate covers.  The
+certificate is tight there, so this bound is not slack that can be spent. -/
+noncomputable def chung8Rho : ℝ := 4 / 5
+
+/-- `α_δ^min`: the low end of the interval where the certified profile has nonnegative
+adjusted gain.  Expansion is queried exactly on that interval. -/
+noncomputable def chung8ActiveLo : ℝ := 961821 / 74555000
+
+/-- `α_δ^max`: its high end. -/
+noncomputable def chung8ActiveHi : ℝ := 14155 / 14911
+
+/-- The lowest certified source weight: `gain_δ(σ) ≥ 2 g_π` holds from here up, with
+equality at this point, and the tracking constant drops below it. -/
+noncomputable def chung8SourceLo : ℝ := 74 / 625
+
+/-- The highest certified source weight, the doubled-gain midpoint. -/
+noncomputable def chung8SourceHi : ℝ := 3 / 5
+
+/-- What the initial search costs, in layers, at red-free challenge weight `w = ζ - δ`:
+a saturation allowance of `0.43` layers, plus `6.46` layers for every unit of weight the
+challenge falls short of `0.89`, the weight from which the profile's own growth already
+saturates the ledger.  A thinner challenge set is paid for here. -/
+noncomputable def chung8SearchCost (w : ℝ) : ℝ :=
+  43 / 100 + 646 / 100 * max 0 (89 / 100 - w)
+
+/-- What one further chain link costs, in layers. -/
+noncomputable def chung8LinkCost : ℝ := 1911 / 500
+
+/-- What one unit of black-pebble weight costs, in layers. -/
+noncomputable def chung8ChargeRate : ℝ := 1187 / 100
+
 /-- A static black/red pebbling position on an `ℓ`-layer stacked graph of width `n`. -/
 structure PebblingGame (ℓ n : ℕ) where
   απ : ℝ
@@ -335,14 +382,14 @@ removal of the red pebbles from the challenge set, and the potential ledger at t
 symbolic budget, challenge weight and source weight. -/
 theorem chung8_pebbling_latency_whp
     {ℓ n : ℕ} (lambda : ℕ) (a b : ℝ) [ChungSecurityConditions n lambda a b]
-    (hn : 1000 ≤ n) (ha : a ≤ 1 / 100) (hb : 24 / 25 ≤ b)
+    (hn : 1000 ≤ n) (ha : a ≤ chung8ActiveLo) (hb : chung8ActiveHi + 1 / n ≤ b)
     (απ δ π ρ ζ σ : ℝ) (z : ℕ) (hz : 1 ≤ z)
-    (hδ : δ ≤ 189 / 5000) (hπ : π ≤ 4 / 5)
-    (hζ : 9 / 10 ≤ ζ) (hζtop : ζ ≤ 49 / 50)
-    (hρ : 0 ≤ ρ) (hρtop : ρ ≤ 4 / 5)
-    (hentry : 5089 / 100000 + ρ < ζ - 189 / 5000)
-    (hσ : 74 / 625 ≤ σ) (hσtop : σ ≤ 3 / 5) (hσαπ : σ < απ)
-    (hlevels : 3 / 5 + ((z : ℝ) - 1) * (1911 / 500) + 1187 / 100 * ρ < (ℓ : ℝ)) :
+    (hδ : δ ≤ chung8Delta) (hπ : π ≤ chung8Pi)
+    (hρ : 0 ≤ ρ) (hρtop : ρ ≤ chung8Rho)
+    (hentry : chung8PiBar + ρ < ζ - δ) (hζ : ζ - δ ≤ chung8ActiveHi)
+    (hσ : chung8SourceLo ≤ σ) (hσtop : σ ≤ chung8SourceHi) (hσαπ : σ < απ)
+    (hlevels : chung8SearchCost (ζ - δ) + ((z : ℝ) - 1) * chung8LinkCost
+      + chung8ChargeRate * ρ < (ℓ : ℝ)) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
       (PebblingGame.LatencyEvent ℓ n z απ δ π ρ ζ σ)
       ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
@@ -352,19 +399,17 @@ theorem chung8_pebbling_latency_whp
   have hnR : (0 : ℝ) < n := by exact_mod_cast hN.n_pos
   have hn1000 : (1000 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn
   let Pc : Concrete.PortInterlayer n := interlayerEquiv n P
-  let S := ChungCurve.chung8SettingAt ρ (ζ - 189 / 5000) hρ
+  let S := ChungCurve.chung8SettingAt ρ (ζ - δ) hρ
   have hamin : a ≤ S.αmin := by
     refine ha.trans ?_
-    change (1 : ℝ) / 100 ≤ ChungCurve.filecoinAlphaMin
-    rw [ChungCurve.filecoinAlphaMin]; norm_num
+    change chung8ActiveLo ≤ ChungCurve.filecoinAlphaMin
+    rw [ChungCurve.filecoinAlphaMin, chung8ActiveLo]
   have hamax : S.αmax + 1 / (n : ℝ) ≤ b := by
-    have h1 : (1 : ℝ) / n ≤ 1 / 1000 :=
-      one_div_le_one_div_of_le (by norm_num) hn1000
-    have h2 : S.αmax = (14155 : ℝ) / 14911 := by
+    have h2 : S.αmax = chung8ActiveHi := by
       change ChungCurve.filecoinAlphaMax = _
-      rw [ChungCurve.filecoinAlphaMax]
+      rw [ChungCurve.filecoinAlphaMax, chung8ActiveHi]
     rw [h2]
-    linarith
+    exact hb
   have hPc : Pc.Expands S := by
     apply portExpands_of_public P hN.n_pos S a b hamin hamax
     · intro x t _ ht htpos hxt
@@ -400,7 +445,7 @@ theorem chung8_pebbling_latency_whp
       intro d
       have h := hN.red_bound d
       rw [hNδ] at h
-      have hmono : δ * (n : ℝ) ≤ 189 / 5000 * n :=
+      have hmono : δ * (n : ℝ) ≤ chung8Delta * n :=
         mul_le_mul_of_nonneg_right hδ hnR.le
       exact h.trans hmono
   }
@@ -409,6 +454,7 @@ theorem chung8_pebbling_latency_whp
     intro X hX
     have hX' : ((X.card : ℝ)) ≤ (1 - N.π) * n := by
       have hpi : ((X.card : ℝ)) ≤ (1 - (4 : ℝ) / 5) * n := hX
+      have hπ' : π ≤ (4 : ℝ) / 5 := by rw [chung8Pi] at hπ; exact hπ
       have hmono : (1 - (4 : ℝ) / 5) * n ≤ (1 - π) * n := by nlinarith
       rw [hNπ]
       linarith
@@ -417,11 +463,11 @@ theorem chung8_pebbling_latency_whp
   -- of weight `ζ - δ ≥ ζ_δ` the deterministic argument starts from.
   have hB' : B \ N.red 0 ⊆ G.layer 0 := Finset.sdiff_subset.trans hB
   have hBred : ∀ v ∈ B \ N.red 0, v ∉ N.red 0 := fun _ hv => (Finset.mem_sdiff.mp hv).2
-  have hweight' : ζ - 189 / 5000 ≤ Concrete.Pebbling.weight n (B \ N.red 0) := by
-    have hred0 : ((N.red 0).card : ℝ) ≤ 189 / 5000 * n := by
+  have hweight' : ζ - δ ≤ Concrete.Pebbling.weight n (B \ N.red 0) := by
+    have hred0 : ((N.red 0).card : ℝ) ≤ δ * n := by
       have h := hN.red_bound 0
       rw [hNδ] at h
-      exact h.trans (mul_le_mul_of_nonneg_right hδ hnR.le)
+      exact h
     have hcardNat : B.card ≤ (B \ N.red 0).card + (N.red 0).card :=
       (Finset.card_le_card Finset.subset_union_left).trans_eq
         (Finset.card_sdiff_add_card B (N.red 0)).symm
@@ -434,9 +480,14 @@ theorem chung8_pebbling_latency_whp
   have hσapi : σ < G.αpi := by
     change σ < N.απ
     rw [hNαπ]; exact hσαπ
-  have hpath := ChungCurve.chung8_latency_window (ρ := ρ) (ζδ := ζ - 189 / 5000)
-    (σ := σ) hρ hρtop (by linarith) (by linarith) hentry hσ hσtop hz hlevels G pebbling
-    hN.n_pos hσapi hDepth (B \ N.red 0) hB' hBred hweight'
+  have hpath := ChungCurve.chung8_latency_window (ρ := ρ) (ζδ := ζ - δ) (σ := σ)
+    hρ (by rw [chung8Rho] at hρtop; exact hρtop)
+    (by rw [chung8ActiveHi] at hζ; exact hζ)
+    (by rw [chung8PiBar] at hentry; exact hentry)
+    (by rw [chung8SourceLo] at hσ; exact hσ)
+    (by rw [chung8SourceHi] at hσtop; exact hσtop) hz
+    (by rw [chung8SearchCost, chung8LinkCost, chung8ChargeRate] at hlevels; exact hlevels)
+    G pebbling hN.n_pos hσapi hDepth (B \ N.red 0) hB' hBred hweight'
   rcases hpath with ⟨u, v, hv, Q, hfirst, hlast, hlength⟩
   refine ⟨v, (Finset.mem_sdiff.mp hv).1, Q.nodes, Q.nonempty, Q.chain,
     Q.unpebbled', ?_, ?_⟩
@@ -466,11 +517,27 @@ theorem chung8_pebbling_latency_14
             (9 : ℝ) / 10 ≤ (A.card : ℝ) / n →
               M.HasUnpebbledPathTo A ((176 : ℝ) / 625 * n) P)
       ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
+  have hb : chung8ActiveHi + 1 / (n : ℝ) ≤ 24 / 25 := by
+    have hn1000 : (1000 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn
+    have h1 : (1 : ℝ) / n ≤ 1 / 1000 :=
+      one_div_le_one_div_of_le (by norm_num) hn1000
+    rw [chung8ActiveHi]
+    linarith
+  have hlevels : chung8SearchCost ((9 : ℝ) / 10 - 189 / 5000)
+      + (((2 : ℕ) : ℝ) - 1) * chung8LinkCost + chung8ChargeRate * (4 / 5)
+      < ((14 : ℕ) : ℝ) := by
+    rw [chung8SearchCost, chung8LinkCost, chung8ChargeRate,
+      max_eq_right (by norm_num : (0 : ℝ) ≤ 89 / 100 - (9 / 10 - 189 / 5000))]
+    push_cast
+    norm_num
   have hmain := chung8_pebbling_latency_whp (ℓ := 14) (n := n) lambda (1 / 100) (24 / 25)
-    hn le_rfl le_rfl ((1 : ℝ) / 5) ((189 : ℝ) / 5000) ((4 : ℝ) / 5) ((4 : ℝ) / 5)
-    ((9 : ℝ) / 10) ((74 : ℝ) / 625) 2 (by norm_num) le_rfl le_rfl le_rfl (by norm_num)
-    (by norm_num) le_rfl (by norm_num) le_rfl (by norm_num) (by norm_num)
-    (by push_cast; norm_num)
+    hn (by rw [chung8ActiveLo]; norm_num) hb
+    ((1 : ℝ) / 5) ((189 : ℝ) / 5000) ((4 : ℝ) / 5) ((4 : ℝ) / 5) ((9 : ℝ) / 10)
+    ((74 : ℝ) / 625) 2 (by norm_num)
+    (by rw [chung8Delta]) (by rw [chung8Pi]) (by norm_num) (by rw [chung8Rho])
+    (by rw [chung8PiBar]; norm_num) (by rw [chung8ActiveHi]; norm_num)
+    (by rw [chung8SourceLo]) (by rw [chung8SourceHi]; norm_num) (by norm_num)
+    hlevels
   rw [HoldsWithFailureAtMost] at hmain ⊢
   refine hmain.trans (probabilityOf_mono _ ?_)
   intro P hev M hαπ hδ hπ hρ hζ hAdm A hA hweight
