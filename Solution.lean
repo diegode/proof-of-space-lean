@@ -2,6 +2,7 @@ import ProofOfSpace.ChungFilecoinExpansion
 import ProofOfSpace.ChungFilecoinGeneral
 import ProofOfSpace.ChungRelative
 import ProofOfSpace.FullSourcesFilecoin
+import ProofOfSpace.ChungFilecoinMirror
 
 namespace ProofOfSpaceStatement
 
@@ -915,6 +916,101 @@ example : chung8Budget.searchCost ((4311 : ℝ) / 5000)
   rw [chung8Budget_searchCost, chung8Budget_chargeRate]
   linarith [chung8Budget_linkCost]
 
+/-! ### The raised-threshold budget
+
+`chung8_pebbling_latency_full_asymptotic` needs `π + σ ≤ E.π`, and the fourteen-layer
+profile has `E.π = 4/5`, so at that profile the *game's* robustness threshold has to drop.
+The profile below keeps the game at Filecoin's `π = 4/5` and raises the profile's
+fertility threshold instead, to `E.π = 4443/5000 = 0.8886` at source weight
+`σ = 443/5000 = 0.0886`, so that `π + σ = E.π` on the nose.
+
+Everything the ledger prices moves with `E.π`.  What makes the certificate cheap is the
+reversal symmetry `β(1 - β x) = 1 - x` of the polygon: the `β_δ` orbit of the new tracking
+floor `1 - β(0.8886) = 0.02834573` is the old chain's `β`-values read backwards, so its
+five points `0.02834573, 0.0736, 0.2284, 0.5337, 0.8` are certified breakpoints already.
+`ChungFilecoinMirror.lean` carries the chain and its ledger certificate. -/
+
+/-- The degree-eight profile at the raised fertility threshold `0.8886`.  Only `π` moves;
+`β`, `δ`, `αg`, `αmin` and `αmax` are `chung8Profile`'s. -/
+noncomputable def chung8ProfileHi : ExpansionProfile where
+  β := ChungCurve.chungBeta8
+  δ := 189 / 5000
+  π := 4443 / 5000
+  αg := ChungCurve.filecoinAlphaG
+  αmin := ChungCurve.FiniteSizeProfile.αmin
+  αmax := ChungCurve.FiniteSizeProfile.αmax
+  β_maps := fun _ hx => ChungCurve.chungBeta8_maps hx
+  β_zero := ChungCurve.chungBeta8_zero
+  β_strictMonoOn := ChungCurve.chungBeta8_strictMonoOn
+  β_concaveOn := ChungCurve.filecoinBeta_concaveOn
+  β_expands := fun _ hx => ChungCurve.chungBeta8_expands hx
+  β_reversal := fun _ hx => ChungCurve.chungBeta8_reversal hx
+  αg_mem := ChungCurve.filecoinAlphaG_mem
+  αg_max := fun _ hx hne => ChungCurve.filecoinAlphaG_max hx hne
+  δ_nonneg := by norm_num
+  π_mem := by norm_num
+  αg_lt_π := by norm_num [ChungCurve.filecoinAlphaG]
+  gpi_pos := by norm_num [ChungCurve.chungBeta8]
+  αmin_mem := ChungCurve.FiniteSizeProfile.αmin_mem
+  αmax_mem := ChungCurve.FiniteSizeProfile.αmax_mem
+  gainD_αmin := ChungCurve.FiniteSizeProfile.gainD_αmin
+  gainD_αmax := ChungCurve.FiniteSizeProfile.gainD_αmax
+  le_chung8 := chung8Profile.le_chung8
+
+/-- **The raised-threshold level budget**, at source weight `σ = 0.0886`.  It is
+`ChungFilecoinMirror.lean`'s reference chain and ledger certificate, repackaged: the
+`LevelBudget` fields are definitionally the `RefChain` and `LedgerCert` ones. -/
+noncomputable def chung8BudgetHi : LevelBudget chung8ProfileHi ((443 : ℝ) / 5000) where
+  ρmax := 4 / 5
+  σ_gt := ChungCurve.chung8TrackingHi.σ_gt
+  σ_lt := ChungCurve.chung8TrackingHi.σ_lt
+  mid := 3 / 5
+  mid_ge := by norm_num
+  mid_le := by change (3 : ℝ) / 5 ≤ 4443 / 5000; norm_num
+  mid_gain := ChungCurve.chung8TrackingHi.mid_gain
+  m := 5
+  x := ChungCurve.chainXHi
+  m_pos := by norm_num
+  base := ChungCurve.chung8RefChainHi.base
+  width := ChungCurve.chung8RefChainHi.width
+  step := ChungCurve.chung8RefChainHi.step
+  mem := ChungCurve.chung8RefChainHi.mem
+  top := ChungCurve.chung8RefChainHi.top
+  lam := 9 / 8
+  loss := 8860 / 11131
+  cs := 233 / 100
+  wtop := 11131 / 100000
+  kappa := 283 / 10000
+  a2 := 4
+  b2 := 1 / 2
+  one_le_lam := by norm_num
+  loss_nonneg := by norm_num
+  one_le_cs := by norm_num
+  wtop_pos := by norm_num
+  kappa_nonneg := by norm_num
+  loss_ge := ChungCurve.chung8LedgerCertHi.loss_ge
+  topLip := ChungCurve.chung8LedgerCertHi.topLip
+  chord := ChungCurve.chung8LedgerCertHi.chord
+  ghat_le_lam_wtop := ChungCurve.chung8LedgerCertHi.ghat_le_lam_wtop
+  inf_rate := ChungCurve.chung8LedgerCertHi.inf_rate
+  blockDrop := ChungCurve.chung8LedgerCertHi.blockDrop
+  blockDrop_one := ChungCurve.chung8LedgerCertHi.blockDrop_one
+  blk_rate := ChungCurve.chung8LedgerCertHi.blk_rate
+
+theorem chung8BudgetHi_searchCost :
+    chung8BudgetHi.searchCost ((4311 : ℝ) / 5000) = 1 + 2640 / 11131 :=
+  ChungCurve.chung8Hi_potHead_eq
+
+theorem chung8BudgetHi_linkCost :
+    chung8BudgetHi.linkCost = 4 - 25 / 258 + 8860 / 11131 :=
+  ChungCurve.chung8Hi_potSpan_eq
+
+theorem chung8BudgetHi_chargeRate :
+    chung8BudgetHi.chargeRate = 112500000 / 4525427 := by
+  change (9 : ℝ) / 8 / ChungCurve.chung8TrackingHi.ghat = _
+  rw [ChungCurve.chung8Hi_ghat]
+  norm_num
+
 /-- **The 14-layer Filecoin latency lower bound** at `lambda` bits of security: an
 unpebbled path of length `0.2816 n`.  It is `chung8_pebbling_latency_whp` at the
 degree-eight profile and its level budget, whose level condition reads
@@ -980,96 +1076,82 @@ theorem chung8_pebbling_latency_14
   rw [← hlen]
   exact hev M hαπ hδ hπ hρ hζ hAdm A hA hweight
 
-/-- **The asymptotic Filecoin latency bound at `lambda` bits of security.**
+/-- **The asymptotic Filecoin latency bound at Filecoin's own robustness threshold.**
 
-The point `(απ, δ, π, ρ, ζ, σ) = (0.2, 0.0378, 0.6816, 0.8, 0.9, 0.1184)` of
-`chung8_pebbling_latency_full_asymptotic`, at every layer count from eleven on.  It is
-`chung8_pebbling_latency_14` with the robustness threshold lowered from `0.8` to
-`426/625 = 0.6816` — in deletion form, `0.3184 n` nodes removed instead of `0.2 n` — and
-the payoff correspondingly raised from `(απ - σ) n` to `απ n` per link.
+The point `(απ, δ, π, ρ, ζ, σ) = (0.2, 0.0378, 0.8, 0.8, 0.9, 0.0886)` of
+`chung8_pebbling_latency_full_asymptotic`, at every layer count from twenty-two on.  The
+game's depth-robustness hypothesis is exactly `chung8_pebbling_latency_14`'s — deleting
+any `0.2 n` nodes of a layer must leave an intra-layer path on `0.2 n` nodes — and every
+completed chain link still pays the whole `απ n = 0.2 n` rather than `(απ - σ) n`.
 
-The certified slope is `523/10000` of `n` per layer, against the `0.02135` of
-`chung8_pebbling_latency_14`; the offset `10.1` absorbs the ledger head
-`463/774 + 105600/11131 < 10.0853`.  At `ℓ = 14` it already gives `0.204 n`. -/
+What pays for that is the *fertility* threshold, raised to `E.π = 0.8886` so that
+`π + σ = E.π`: a footprint of that weight contains `0.0886 n` nodes each beginning a whole
+`0.2 n` path inside it, by depth robustness at `0.8886 - 0.0886 = 0.8`.  Raising `E.π`
+lowers the tracking gain from `g_π = 0.11131` to `0.04525`, so the ledger's three prices
+become `1.2372`, `4.6991` and `19.8876` where `chung8_pebbling_latency_14` has `0.5982`,
+`3.8212` and `9.4870`.
+
+The certified slope is `17/400 = 0.0425` of `n` per layer, against the `0.02135` of
+`chung8_pebbling_latency_14` — 1.99 times — and the offset `21.2` absorbs the head
+`1.2372 + 19.8876 < 21.1249`.  The bound passes `0.2 n` at `ℓ = 26`. -/
 theorem chung8_pebbling_latency_asymptotic
-    {ℓ n : ℕ} (lambda : ℕ) (hn : 1000 ≤ n) (hℓ : 11 ≤ ℓ)
+    {ℓ n : ℕ} (lambda : ℕ) (hn : 1000 ≤ n) (hℓ : 22 ≤ ℓ)
     [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
       (fun P : ChungInterlayer n =>
         ∀ M : PebblingGame ℓ n,
-          M.απ = (1 : ℝ) / 5 → M.δ = (189 : ℝ) / 5000 → M.π = (426 : ℝ) / 625 →
+          M.απ = (1 : ℝ) / 5 → M.δ = (189 : ℝ) / 5000 → M.π = (4 : ℝ) / 5 →
           M.ρ = (4 : ℝ) / 5 → M.ζ = (9 : ℝ) / 10 →
           PebblingGame.IsAdmissible M →
           ∀ A : Finset (ℕ × Fin n), A ⊆ M.layer 0 →
             (9 : ℝ) / 10 ≤ (A.card : ℝ) / n →
               M.HasUnpebbledPathTo A
-                ((523 : ℝ) / 10000 * ((ℓ : ℝ) - 101 / 10) * n) P)
+                ((17 : ℝ) / 400 * ((ℓ : ℝ) - 106 / 5) * n) P)
       ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
   have hn1000 : (1000 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn
-  have hℓ' : (11 : ℝ) ≤ (ℓ : ℝ) := by exact_mod_cast hℓ
-  have ha : (1 : ℝ) / 100 ≤ chung8Profile.αmin := by
+  have hℓ' : (22 : ℝ) ≤ (ℓ : ℝ) := by exact_mod_cast hℓ
+  have ha : (1 : ℝ) / 100 ≤ chung8ProfileHi.αmin := by
     change (1 : ℝ) / 100 ≤ ChungCurve.filecoinAlphaMin
     rw [ChungCurve.filecoinAlphaMin]; norm_num
-  have hb : chung8Profile.αmax + 1 / (n : ℝ) ≤ 24 / 25 := by
-    have h1 : (1 : ℝ) / n ≤ 1 / 1000 :=
-      one_div_le_one_div_of_le (by norm_num) hn1000
-    have h2 : chung8Profile.αmax = (14155 : ℝ) / 14911 := by
+  have hb : chung8ProfileHi.αmax + 1 / (n : ℝ) ≤ 24 / 25 := by
+    have h1 : (1 : ℝ) / n ≤ 1 / 1000 := one_div_le_one_div_of_le (by norm_num) hn1000
+    have h2 : chung8ProfileHi.αmax = (14155 : ℝ) / 14911 := by
       change ChungCurve.filecoinAlphaMax = _
       rw [ChungCurve.filecoinAlphaMax]
     rw [h2]; linarith
   have hζδ : (9 : ℝ) / 10 - 189 / 5000 = 4311 / 5000 := by norm_num
-  have hhead : chung8Budget.searchCost ((9 : ℝ) / 10 - 189 / 5000) = 463 / 774 := by
-    rw [hζδ]
-    exact ChungCurve.chung8_potHead_eq
-  have hspanlt : chung8Budget.linkCost < 4 - 675 / 1113 + 331 / 774 :=
-    ChungCurve.chung8_potSpan_lt
-  have hspan : 0 < chung8Budget.linkCost :=
-    ChungCurve.chung8_potSpan_pos
-  have hcharge : chung8Budget.chargeRate * (4 / 5) = 105600 / 11131 := by
-    have h : (33 : ℝ) / 25 * (4 / 5) / ChungCurve.chung8Tracking.ghat = 105600 / 11131 :=
-      ChungCurve.chung8_ledgerCharge_eq
-    change (33 : ℝ) / 25 / ChungCurve.chung8Tracking.ghat * (4 / 5) = _
-    rw [← h]; ring
-  have hlevels : chung8Budget.searchCost ((9 : ℝ) / 10 - 189 / 5000)
-      + chung8Budget.chargeRate * (4 / 5) < (ℓ : ℝ) := by
-    rw [hhead, hcharge]
+  have hlevels : chung8BudgetHi.searchCost ((9 : ℝ) / 10 - 189 / 5000)
+      + chung8BudgetHi.chargeRate * (4 / 5) < (ℓ : ℝ) := by
+    rw [hζδ, chung8BudgetHi_searchCost, chung8BudgetHi_chargeRate]
     linarith
   have hmain := chung8_pebbling_latency_full_asymptotic (ℓ := ℓ) (n := n) lambda
     (1 / 100) (24 / 25)
-    chung8Profile ((74 : ℝ) / 625) chung8Budget ((1 : ℝ) / 5) ((189 : ℝ) / 5000)
-    ((426 : ℝ) / 625) ((4 : ℝ) / 5) ((9 : ℝ) / 10) ha hb le_rfl
-    (by change (426 : ℝ) / 625 + 74 / 625 ≤ (4 : ℝ) / 5; norm_num)
+    chung8ProfileHi ((443 : ℝ) / 5000) chung8BudgetHi ((1 : ℝ) / 5) ((189 : ℝ) / 5000)
+    ((4 : ℝ) / 5) ((4 : ℝ) / 5) ((9 : ℝ) / 10) ha hb le_rfl
+    (by change (4 : ℝ) / 5 + 443 / 5000 ≤ (4443 : ℝ) / 5000; norm_num)
     (by norm_num) le_rfl
-    (by change ChungCurve.chung8Setting.piBar + (4 : ℝ) / 5 < _
-        rw [Setting.piBar]
-        norm_num [ChungCurve.chungBeta8])
+    (by change ChungCurve.chung8SettingHi.piBar + (4 : ℝ) / 5 < _
+        rw [ChungCurve.chung8Hi_piBar]; norm_num)
     (by change (9 : ℝ) / 10 - 189 / 5000 ≤ ChungCurve.filecoinAlphaMax
         rw [ChungCurve.filecoinAlphaMax]; norm_num)
-    ChungCurve.chung8_nobreak ChungCurve.chung8_cs_slack (by norm_num) hspan hlevels
+    ChungCurve.chung8Hi_nobreak ChungCurve.chung8Hi_cs_slack (by norm_num)
+    ChungCurve.chung8Hi_potSpan_pos hlevels
   rw [HoldsWithFailureAtMost] at hmain ⊢
   refine hmain.trans (probabilityOf_mono _ ?_)
   intro P hev M hαπ hδ hπ hρ hζ hAdm A hA hweight
   obtain ⟨a, haA, Q, hQne, hQchain, hQunp, hQlast, hQlen⟩ :=
     hev M hαπ hδ hπ hρ hζ hAdm A hA hweight
   refine ⟨a, haA, Q, hQne, hQchain, hQunp, hQlast, le_trans ?_ hQlen⟩
-  -- weaken the certified span to the round slope of the statement
-  rw [hhead, hcharge]
+  -- weaken the exact span and head to the round constants of the statement
+  rw [hζδ, chung8BudgetHi_searchCost, chung8BudgetHi_chargeRate, chung8BudgetHi_linkCost]
   have hn0 : (0 : ℝ) ≤ (n : ℝ) := Nat.cast_nonneg n
-  have hnum : (0 : ℝ) ≤ (ℓ : ℝ) - 463 / 774 - 105600 / 11131 := by linarith
-  have hdiv : ((ℓ : ℝ) - 463 / 774 - 105600 / 11131) / (4 - 675 / 1113 + 331 / 774)
-      ≤ ((ℓ : ℝ) - 463 / 774 - 105600 / 11131) / chung8Budget.linkCost :=
-    div_le_div_of_nonneg_left hnum hspan hspanlt.le
-  set q : ℝ := ((ℓ : ℝ) - 463 / 774 - 105600 / 11131) / (4 - 675 / 1113 + 331 / 774)
-    with hqdef
-  have hqB : q * (4 - 675 / 1113 + 331 / 774) = (ℓ : ℝ) - 463 / 774 - 105600 / 11131 := by
+  set q : ℝ := ((ℓ : ℝ) - (1 + 2640 / 11131) - 112500000 / 4525427 * (4 / 5))
+    / (4 - 25 / 258 + 8860 / 11131) with hqdef
+  have hqS : q * (4 - 25 / 258 + 8860 / 11131)
+      = (ℓ : ℝ) - (1 + 2640 / 11131) - 112500000 / 4525427 * (4 / 5) := by
     rw [hqdef]; field_simp
-  norm_num at hqB
-  have hkey : (523 : ℝ) / 10000 * ((ℓ : ℝ) - 101 / 10) ≤ q * (1 / 5) := by linarith
-  have hstep1 : (523 : ℝ) / 10000 * ((ℓ : ℝ) - 101 / 10) * n ≤ q * (1 / 5) * n :=
-    mul_le_mul_of_nonneg_right hkey hn0
-  have hstep2 : q * (1 / 5) * (n : ℝ)
-      ≤ ((ℓ : ℝ) - 463 / 774 - 105600 / 11131) / chung8Budget.linkCost * (1 / 5) * n :=
-    mul_le_mul_of_nonneg_right (by linarith) hn0
-  linarith
+  norm_num at hqS
+  have hkey : (17 : ℝ) / 400 * ((ℓ : ℝ) - 106 / 5) ≤ q * (1 / 5) := by linarith
+  exact mul_le_mul_of_nonneg_right hkey hn0
 
 end ProofOfSpaceStatement

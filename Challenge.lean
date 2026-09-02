@@ -13,7 +13,7 @@ high-probability latency theorems and their Filecoin specializations.
 14-layer instance `chung8_pebbling_latency_14` gives `0.2816 n`;
 `chung8_pebbling_latency_full_asymptotic` eliminates the link count in favour of a
 slope in the layer count, and its instance `chung8_pebbling_latency_asymptotic`
-gives `0.0523 (ℓ - 10.1) n` for every `ℓ ≥ 11`. The pair differs only in the
+gives `0.0425 (ℓ - 21.2) n` for every `ℓ ≥ 22`. The generic pair differs only in the
 robustness threshold `π` at which `IsAdmissible.depth_robust` is read and in the
 payoff per link; neither implies the other.
 
@@ -429,33 +429,37 @@ theorem chung8_pebbling_latency_full_asymptotic
       ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
   sorry
 
-/-- The asymptotic Filecoin latency lower bound at `lambda` bits of security: an
-unpebbled path of length `0.0523 (ℓ - 10.1) n`, at every layer count from eleven on.
-It is the point
-`(απ, δ, π, ρ, ζ, σ) = (0.2, 0.0378, 0.6816, 0.8, 0.9, 0.1184)`
-of `chung8_pebbling_latency_full_asymptotic`, whose level condition there reads
-`10.0853 < ℓ`.
+/-- The asymptotic Filecoin latency lower bound at `lambda` bits of security, **at
+Filecoin's own robustness threshold**: an unpebbled path of length
+`0.0425 (ℓ - 21.2) n`, at every layer count from twenty-two on.  It is the point
+`(απ, δ, π, ρ, ζ, σ) = (0.2, 0.0378, 0.8, 0.8, 0.9, 0.0886)` of
+`chung8_pebbling_latency_full_asymptotic`, whose level condition there reads
+`21.1249 < ℓ`.
 
-Against `chung8_pebbling_latency_14` this trades the robustness threshold for the slope.
-`IsAdmissible.depth_robust` is asked here at `π = 426/625 = 0.6816` rather than at
-`4/5`: deleting any `0.3184 n` nodes of a layer must still leave an intra-layer path on
-`0.2 n` nodes, where the fourteen-layer theorem deletes only `0.2 n`.  In exchange the
-bound grows by `0.0523 n` per layer instead of `0.02135 n`, and it overtakes the
-`0.2816 n` of `chung8_pebbling_latency_14` at `ℓ = 16`.  Neither theorem implies the
-other. -/
+`IsAdmissible.depth_robust` is read here at the same `π = 4/5` as
+`chung8_pebbling_latency_14`: deleting any `0.2 n` nodes of a layer must still leave an
+intra-layer path on `0.2 n` nodes.  The two theorems make the *same* graph assumption, so
+this one is a genuine strengthening for large `ℓ` — the bound grows by `0.0425 n` per
+layer against `0.02135 n`, 1.99 times the slope.  What pays for it is the profile's
+fertility threshold, raised from `4/5` to `0.8886` so that `π + σ` meets it: a footprint
+of that weight contains `0.0886 n` nodes that each begin a whole `0.2 n` path, by depth
+robustness at `4/5`.  The price is a larger head, `21.2` against `10.09`, because the
+raised threshold lowers the tracking gain from `0.11131` to `0.04525`; the bound passes
+`0.2 n` at `ℓ = 26`, first passes the `z`-link bound of `chung8_pebbling_latency_14` at
+`ℓ = 40`, and is ahead of it at every layer count from `ℓ = 42` on. -/
 theorem chung8_pebbling_latency_asymptotic
-    {ℓ n : ℕ} (lambda : ℕ) (hn : 1000 ≤ n) (hℓ : 11 ≤ ℓ)
+    {ℓ n : ℕ} (lambda : ℕ) (hn : 1000 ≤ n) (hℓ : 22 ≤ ℓ)
     [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
       (fun p : ChungInterlayer n =>
         ∀ G : PebblingGame ℓ n,
-          G.απ = (1 : ℝ) / 5 → G.δ = (189 : ℝ) / 5000 → G.π = (426 : ℝ) / 625 →
+          G.απ = (1 : ℝ) / 5 → G.δ = (189 : ℝ) / 5000 → G.π = (4 : ℝ) / 5 →
           G.ρ = (4 : ℝ) / 5 → G.ζ = (9 : ℝ) / 10 →
           PebblingGame.IsAdmissible G →
           ∀ S : Finset (ℕ × Fin n), S ⊆ G.layer 0 →
             (9 : ℝ) / 10 ≤ (S.card : ℝ) / n →
               G.HasUnpebbledPathTo S
-                ((523 : ℝ) / 10000 * ((ℓ : ℝ) - 101 / 10) * n) p)
+                ((17 : ℝ) / 400 * ((ℓ : ℝ) - 106 / 5) * n) p)
       ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
   sorry
 

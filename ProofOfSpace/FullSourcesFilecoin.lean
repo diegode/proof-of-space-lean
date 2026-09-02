@@ -5,6 +5,7 @@ Authors: Diego de Estrada
 -/
 import ProofOfSpace.FullSources
 import ProofOfSpace.ChungFilecoin
+import ProofOfSpace.ChungFilecoinMirror
 
 /-!
 # The asymptotic Filecoin latency bound at full link payoff
@@ -109,6 +110,53 @@ theorem chung8_latency_asymptotic
       ≤ (((ℓ : ℝ) - 463 / 774 - 105600 / 11131) / Sp) * (1 / 5) * n :=
     mul_le_mul_of_nonneg_right (by linarith) hn0
   linarith
+
+/--
+**The asymptotic Filecoin latency bound at Filecoin's own robustness threshold.**
+
+The same full-payoff chain, run against the raised-threshold certificate of
+`ChungFilecoinMirror.lean` instead.  Because `π' - σ' = 0.8886 - 0.0886 = 4/5` exactly,
+the graph hypothesis here is depth robustness at `4/5` — the fourteen-layer theorem's own
+assumption, unchanged — and every link still pays the whole `α_π n = 0.2 n`.
+
+The coefficient of `ℓ` is `α_π / potSpan = 0.2 / 4.69908 > 0.0425`, certified here at
+`17/400`, and the offset `21.2` absorbs the ledger head `1.23718 + 19.88763 < 21.12481`.
+Against `chung8_latency_deterministic`, whose linear envelope is
+`0.02135 (ℓ - 10.0852) + 0.2`, this is 1.99 times the slope at the *same* graph
+assumption; the two are comparable, and this one is ahead from `ℓ = 42` on.
+-/
+theorem chung8_latency_asymptotic_filecoinDR
+    {V : Type u} {ℓ n : ℕ} (hℓ : 22 ≤ ℓ)
+    (G : Concrete.LayeredGraph V (chung8SettingHi) ℓ n)
+    (P : Concrete.Pebbling G)
+    (hn : 0 < n) (hαpi : G.αpi = (1 : ℝ) / 5)
+    (hDepth : G.DepthRobustThr ((4 : ℝ) / 5) G.αpi)
+    (A : Finset V) (hA : A ⊆ G.layer 0)
+    (hred : ∀ v ∈ A, v ∉ P.red 0)
+    (hweight : (chung8SettingHi).ζδ ≤ Concrete.Pebbling.weight n A) :
+    P.HasUnpebbledPathInFootprint A ((17 : ℝ) / 400 * ((ℓ : ℝ) - 106 / 5) * n) := by
+  have hℓ' : (22 : ℝ) ≤ (ℓ : ℝ) := by exact_mod_cast hℓ
+  have hthr : (chung8SettingHi).pi - (chung8TrackingHi).σ = (4 : ℝ) / 5 := by
+    rw [chung8SettingHi_pi, chung8TrackingHi_sigma]; norm_num
+  have hαpi0 : (0 : ℝ) ≤ G.αpi := by rw [hαpi]; norm_num
+  have hlong : LedgerCert.potHead (chung8RefChainHi) (chung8LedgerCertHi)
+      + (chung8LedgerCertHi).lam * (chung8SettingHi).ρ / (chung8TrackingHi).ghat
+        < (ℓ : ℝ) :=
+    lt_of_lt_of_le chung8Hi_head_lt (by linarith)
+  have h := latency_full_asymptotic G P (chung8TrackingHi) (chung8LedgerCertHi) hn hαpi0
+    (by rw [hthr]; exact hDepth) (chung8Hi_zeta_le) (chung8Hi_entry) (chung8Hi_nobreak)
+    (chung8Hi_cs_slack) (chung8Hi_potSpan_pos) hlong A hA hred hweight
+  refine P.hasPath_mono A ?_ h
+  rw [chung8Hi_potHead_eq, chung8Hi_ledgerCharge_eq, chung8Hi_potSpan_eq, hαpi]
+  have hn0 : (0 : ℝ) ≤ (n : ℝ) := Nat.cast_nonneg n
+  set q : ℝ := ((ℓ : ℝ) - (1 + 2640 / 11131) - 90000000 / 4525427)
+    / (4 - 25 / 258 + 8860 / 11131) with hqdef
+  have hqS : q * (4 - 25 / 258 + 8860 / 11131)
+      = (ℓ : ℝ) - (1 + 2640 / 11131) - 90000000 / 4525427 := by
+    rw [hqdef]; field_simp
+  norm_num at hqS
+  have hkey : (17 : ℝ) / 400 * ((ℓ : ℝ) - 106 / 5) ≤ q * (1 / 5) := by linarith
+  exact mul_le_mul_of_nonneg_right hkey hn0
 
 end ChungCurve
 

@@ -674,6 +674,42 @@ theorem filecoinAlphaG_max {x : ℝ} (hx : x ∈ Icc (0 : ℝ) 1)
   rw [filecoinBeta_eq_L11 (by norm_num) (by norm_num)]
   norm_num [L11, chord]
 
+/-! The four extra evaluations the raised-threshold certificate of
+`ChungFilecoinMirror.lean` needs.  Its reference chain is the `β_δ` orbit of
+`1 - β(0.8886)`, and the reversal symmetry of the polygon makes every one of its points a
+breakpoint of the polygon read backwards: `0.02834573`, `0.0736`, `0.2284`, `0.5337`,
+`0.8`.  The last two evaluations below are the new ones; `β(0.8)` is `filecoinBeta_08`. -/
+
+@[simp] theorem filecoinBeta_0283 :
+    filecoinBeta (2834573 / 100000000) = 557 / 5000 := by
+  rw [filecoinBeta_eq_L0 (by norm_num) (by norm_num)]
+  norm_num [L0, chord]
+
+@[simp] theorem filecoinBeta_0736 : filecoinBeta (46 / 625) = 1331 / 5000 := by
+  rw [filecoinBeta_eq_L2 (by norm_num) (by norm_num)]
+  norm_num [L2, chord]
+
+@[simp] theorem filecoinBeta_0886 :
+    filecoinBeta (443 / 5000) = 2723177 / 8960000 := by
+  rw [filecoinBeta_eq_L2 (by norm_num) (by norm_num)]
+  norm_num [L2, chord]
+
+@[simp] theorem filecoinBeta_2284 : filecoinBeta (571 / 2500) = 1143 / 2000 := by
+  rw [filecoinBeta_eq_L5 (by norm_num) (by norm_num)]
+  norm_num [L5, chord]
+
+@[simp] theorem filecoinBeta_5337 : filecoinBeta (5337 / 10000) = 4189 / 5000 := by
+  rw [filecoinBeta_eq_L8 (by norm_num) (by norm_num)]
+  norm_num [L8, chord]
+
+/-- The polygon's top piece, in closed form.  The raised-threshold certificate's `chord`
+obligation compares one free level against the top bucket over `[0.8, 0.8886]`, which is
+inside this piece. -/
+theorem filecoinBeta_top {x : ℝ} (h0 : 4 / 5 ≤ x) (h1 : x ≤ 1) :
+    filecoinBeta x = 94911 / 100000 + 5089 / 20000 * (x - 4 / 5) := by
+  rw [filecoinBeta_eq_L11 h0 h1]
+  norm_num [L11, chord]
+
 @[simp] theorem filecoinBeta_06 :
     filecoinBeta (3 / 5) = 1171517 / 1345000 := by
   rw [filecoinBeta_eq_L8 (by norm_num) (by norm_num)]
