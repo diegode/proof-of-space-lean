@@ -8,6 +8,11 @@ import Mathlib.Probability.Distributions.Uniform
 The random interlayer is the model used by Reyzin: one uniform permutation of all
 `8n` ports. This file contains only the definitions needed to state the generic
 high-probability latency theorem and its 15-layer Filecoin specialization.
+
+Both public theorems are *uniform*: the wiring is sampled first, and the event
+whose probability is bounded quantifies over every admissible pebbling position
+and every challenge set. The pebble sets are chosen with the wiring in hand, so
+the game may not be fixed before the sample.
 -/
 
 namespace ProofOfSpaceStatement
@@ -63,8 +68,13 @@ noncomputable def chung8FailureProfile (n k : ℕ) : ℕ :=
 
 namespace ChungInterlayer
 
-def Expands {n : ℕ} (p : ChungInterlayer n) : Prop :=
-  ∀ T : Finset (Fin n), T.Nonempty →
+/-- Chung-8 expansion demanded only of source sets whose density lies in `[a, b]`.
+The deterministic argument queries expansion at densities bounded away from zero, so
+the assumption—and the union bound paying for it—need not cover vanishing densities,
+where a Chung profile costs a birthday collision rather than an exponentially small
+event. -/
+def ExpandsOn {n : ℕ} (p : ChungInterlayer n) (a b : ℝ) : Prop :=
+  ∀ T : Finset (Fin n), a ≤ (T.card : ℝ) / n → (T.card : ℝ) / n ≤ b →
     chung8FailureProfile n T.card < (p.neighborhood T).card
 
 end ChungInterlayer
@@ -74,24 +84,26 @@ noncomputable def chung8PortHitProb (n k m : ℕ) : ℝ≥0∞ :=
   ((8 * m).descFactorial (8 * k) : ℝ≥0∞) /
     ((8 * n).descFactorial (8 * k) : ℝ≥0∞)
 
-/-- The exact port-model union bound for the functional Chung-8 profile. -/
-noncomputable def chung8FailureBound (n : ℕ) : ℝ≥0∞ :=
+/-- The exact port-model union bound for the functional Chung-8 profile, over the
+source densities in `[a, b]`. -/
+noncomputable def chung8FailureBound (n : ℕ) (a b : ℝ) : ℝ≥0∞ :=
   ∑ k ∈ (Finset.Ico 1 (n + 1)).filter
-      (fun k : ℕ => 1 / (n : ℝ) ≤ (k : ℝ) / n ∧ (k : ℝ) / n ≤ 1),
+      (fun k : ℕ => a ≤ (k : ℝ) / n ∧ (k : ℝ) / n ≤ b),
     (n.choose k : ℝ≥0∞) *
       ((n.choose (chung8FailureProfile n k) : ℝ≥0∞) *
         chung8PortHitProb n k (chung8FailureProfile n k))
 
-/-- The exact Chung-8 union bound is at most two to the minus lambda. -/
-class ChungSecurityConditions (n : ℕ) (lambda : ℝ) : Prop where
+/-- The exact Chung-8 union bound on `[a, b]` is at most two to the minus lambda. -/
+class ChungSecurityConditions (n : ℕ) (lambda a b : ℝ) : Prop where
   n_pos : 0 < n
+  a_pos : 0 < a
   security :
-    chung8FailureBound n ≤ ENNReal.ofReal (Real.exp (-lambda * Real.log 2))
+    chung8FailureBound n a b ≤ ENNReal.ofReal (Real.exp (-lambda * Real.log 2))
 
 /-- A static black/red pebbling position and its latency parameters on an `ℓ`-layer
-stacked graph. -/
-structure PebblingGame (ℓ : ℕ) where
-  n : ℕ
+stacked graph of width `n`. The width is a parameter, not a field, so that one
+probability space `ChungInterlayer n` serves every game. -/
+structure PebblingGame (ℓ n : ℕ) where
   απ : ℝ
   δ : ℝ
   π : ℝ
@@ -101,94 +113,100 @@ structure PebblingGame (ℓ : ℕ) where
   black : ℕ → Finset (ℕ × Fin n)
   red : ℕ → Finset (ℕ × Fin n)
 
-def PebblingGame.layer {ℓ : ℕ} (G : PebblingGame ℓ) (i : ℕ) :
-    Finset (ℕ × Fin G.n) :=
-  if i < ℓ then Finset.univ.image (fun v : Fin G.n => (i, v)) else ∅
+variable {ℓ n : ℕ}
 
-def PebblingGame.depth {ℓ : ℕ} (G : PebblingGame ℓ) (v : ℕ × Fin G.n) : ℕ := v.1
+def PebblingGame.layer (_G : PebblingGame ℓ n) (i : ℕ) : Finset (ℕ × Fin n) :=
+  if i < ℓ then Finset.univ.image (fun v : Fin n => (i, v)) else ∅
+
+def PebblingGame.depth (_G : PebblingGame ℓ n) (v : ℕ × Fin n) : ℕ := v.1
 
 /-- The latency supplied by `z` completed links with source weight `sigma`. -/
-def PebblingGame.latencyLength {ℓ : ℕ} (G : PebblingGame ℓ) (σ : ℝ) (z : ℕ) : ℝ :=
-  G.απ * G.n + ((z : ℝ) - 1) * (G.απ - σ) * G.n
+def PebblingGame.latencyLength (G : PebblingGame ℓ n) (σ : ℝ) (z : ℕ) : ℝ :=
+  G.απ * n + ((z : ℝ) - 1) * (G.απ - σ) * n
 
-def PebblingGame.intraEdge {ℓ : ℕ} (G : PebblingGame ℓ) (i : ℕ)
-    (u v : ℕ × Fin G.n) : Prop :=
+def PebblingGame.intraEdge (G : PebblingGame ℓ n) (i : ℕ)
+    (u v : ℕ × Fin n) : Prop :=
   u.1 = i ∧ v.1 = i ∧ i < ℓ ∧ G.intra u.2 v.2
 
-def PebblingGame.interEdge {ℓ : ℕ} (G : PebblingGame ℓ)
-    (p : ChungInterlayer G.n) (i : ℕ) (u v : ℕ × Fin G.n) : Prop :=
+def PebblingGame.interEdge (_G : PebblingGame ℓ n)
+    (p : ChungInterlayer n) (i : ℕ) (u v : ℕ × Fin n) : Prop :=
   u.1 = i + 1 ∧ v.1 = i ∧ i + 1 < ℓ ∧
-    ∃ q ∈ ChungInterlayer.ports ({v.2} : Finset (Fin G.n)), (p.perm q).2 = u.2
+    ∃ q ∈ ChungInterlayer.ports ({v.2} : Finset (Fin n)), (p.perm q).2 = u.2
 
-def PebblingGame.edge {ℓ : ℕ} (G : PebblingGame ℓ) (p : ChungInterlayer G.n)
-    (u v : ℕ × Fin G.n) : Prop :=
+def PebblingGame.edge (G : PebblingGame ℓ n) (p : ChungInterlayer n)
+    (u v : ℕ × Fin n) : Prop :=
   (∃ i, G.intraEdge i u v) ∨ (∃ i, G.interEdge p i u v)
 
 /-- Structural graph assumptions and pebble-budget constraints for an admissible game. -/
-class PebblingGame.IsAdmissible {ℓ : ℕ} (G : PebblingGame ℓ) : Prop where
+class PebblingGame.IsAdmissible (G : PebblingGame ℓ n) : Prop where
   intra_rank : ∀ {u v}, G.intra u v → u.val < v.val
-  depth_robust : ∀ X : Finset (Fin G.n),
-    ((X.card : ℝ) ≤ (1 - G.π) * G.n) →
-    ∃ P : List (Fin G.n), P ≠ [] ∧ P.IsChain G.intra ∧
-      (∀ v ∈ P, v ∉ X) ∧ G.απ * G.n ≤ (P.length : ℝ)
+  depth_robust : ∀ X : Finset (Fin n),
+    ((X.card : ℝ) ≤ (1 - G.π) * n) →
+    ∃ P : List (Fin n), P ≠ [] ∧ P.IsChain G.intra ∧
+      (∀ v ∈ P, v ∉ X) ∧ G.απ * n ≤ (P.length : ℝ)
   black_subset : ∀ i, G.black i ⊆ G.layer i
   red_subset : ∀ i, G.red i ⊆ G.layer i
   black_total : ∀ m,
-    ∑ i ∈ Finset.range m, ((G.black i).card : ℝ) / G.n ≤ G.ρ
-  red_bound : ∀ i, ((G.red i).card : ℝ) ≤ G.δ * G.n
-  n_pos : 0 < G.n
+    ∑ i ∈ Finset.range m, ((G.black i).card : ℝ) / n ≤ G.ρ
+  red_bound : ∀ i, ((G.red i).card : ℝ) ≤ G.δ * n
+  n_pos : 0 < n
 
 /-- The game has an unpebbled directed path of length at least `L` ending in `S`. -/
-def PebblingGame.HasUnpebbledPathTo {ℓ : ℕ} (G : PebblingGame ℓ)
-    (S : Finset (ℕ × Fin G.n))
-    (L : ℝ) (p : ChungInterlayer G.n) : Prop :=
-  ∃ u v, v ∈ S ∧ ∃ P : List (ℕ × Fin G.n),
+def PebblingGame.HasUnpebbledPathTo (G : PebblingGame ℓ n)
+    (S : Finset (ℕ × Fin n))
+    (L : ℝ) (p : ChungInterlayer n) : Prop :=
+  ∃ v ∈ S, ∃ P : List (ℕ × Fin n),
     P ≠ [] ∧ P.IsChain (G.edge p) ∧
     (∀ w ∈ P, w ∉ G.black (G.depth w) ∧ w ∉ G.red (G.depth w)) ∧
-    P.head? = some u ∧ P.getLast? = some v ∧ L ≤ (P.length : ℝ)
+    P.getLast? = some v ∧ L ≤ (P.length : ℝ)
 
-/-- The parameter tuples for which Chung-8 expansion deterministically supplies `z`
-links. This is a semantic, proof-independent description of the covered region: it
-quantifies over every admissible game with the displayed fundamental parameters. -/
-def Chung8LatencyRegion (ℓ z : ℕ) (απ δ π ρ ζ σ : ℝ) : Prop :=
+/-- The latency conclusion, as an event on the sampled wiring: every admissible game
+of these parameters and every challenge set of weight `ζ` in layer zero has an
+unpebbled path of the stated length. -/
+def PebblingGame.LatencyEvent (ℓ n z : ℕ) (απ δ π ρ ζ σ : ℝ)
+    (p : ChungInterlayer n) : Prop :=
+  ∀ G : PebblingGame ℓ n, G.απ = απ → G.δ = δ → G.π = π → G.ρ = ρ → G.ζ = ζ →
+    PebblingGame.IsAdmissible G →
+    ∀ S : Finset (ℕ × Fin n), S ⊆ G.layer 0 → ζ ≤ (S.card : ℝ) / n →
+      G.HasUnpebbledPathTo S (G.latencyLength σ z) p
+
+/-- The parameter tuples for which Chung-8 expansion on `[a, b]` deterministically
+supplies `z` links. This is a semantic, proof-independent description of the covered
+region: it quantifies over every wiring that expands and every admissible game with
+the displayed fundamental parameters. -/
+def Chung8LatencyRegion (ℓ n z : ℕ) (απ δ π ρ ζ σ a b : ℝ) : Prop :=
   σ < απ ∧
-    ∀ (G : PebblingGame ℓ), G.απ = απ → G.δ = δ → G.π = π → G.ρ = ρ → G.ζ = ζ →
-      PebblingGame.IsAdmissible G →
-      ∀ (S : Finset (ℕ × Fin G.n)), S ⊆ G.layer 0 →
-        G.ζ ≤ (S.card : ℝ) / G.n →
-        ∀ p : ChungInterlayer G.n, p.Expands →
-          G.HasUnpebbledPathTo S (G.latencyLength σ z) p
+    ∀ p : ChungInterlayer n, p.ExpandsOn a b →
+      PebblingGame.LatencyEvent ℓ n z απ δ π ρ ζ σ p
 
 -- The public challenge theorem bodies are intentionally omitted; see `README.md`.
 set_option warn.sorry false
 
 /-- The high-probability Chung-8 latency theorem for every tuple in the semantic
-latency region. All game parameters and the certified link count remain symbolic. -/
+latency region. All game parameters, the expansion range, and the certified link
+count remain symbolic. -/
 theorem chung8_pebbling_latency_whp
-    {ℓ : ℕ} (lambda : ℝ) (G : PebblingGame ℓ)
-    [PebblingGame.IsAdmissible G] [ChungSecurityConditions G.n lambda]
-    (z : ℕ) (σ : ℝ)
-    (hregion : Chung8LatencyRegion ℓ z G.απ G.δ G.π G.ρ G.ζ σ)
-    (S : Finset (ℕ × Fin G.n)) (hS : S ⊆ G.layer 0)
-    (hweight : G.ζ ≤ (S.card : ℝ) / G.n) :
-    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw G.n)
-      (G.HasUnpebbledPathTo S (G.latencyLength σ z))
+    {ℓ n : ℕ} (lambda a b : ℝ) [ChungSecurityConditions n lambda a b]
+    (z : ℕ) (απ δ π ρ ζ σ : ℝ)
+    (hregion : Chung8LatencyRegion ℓ n z απ δ π ρ ζ σ a b) :
+    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
+      (PebblingGame.LatencyEvent ℓ n z απ δ π ρ ζ σ)
       (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
   sorry
 
 /-- The 15-layer Filecoin latency lower bound at `lambda` bits of security. -/
 theorem chung8_pebbling_latency_15
-    (lambda : ℝ) (G : PebblingGame 15) [PebblingGame.IsAdmissible G]
-    [ChungSecurityConditions G.n lambda]
-    (S : Finset (ℕ × Fin G.n)) (hS : S ⊆ G.layer 0)
-    (hαπ : G.απ = (1 : ℝ) / 5)
-    (hδ : G.δ = (189 : ℝ) / 5000)
-    (hπ : G.π = (4 : ℝ) / 5)
-    (hρ : G.ρ = (4 : ℝ) / 5)
-    (hζ : G.ζ = (9 : ℝ) / 10)
-    (hweight : G.ζ ≤ (S.card : ℝ) / G.n) :
-    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw G.n)
-      (G.HasUnpebbledPathTo S (G.latencyLength ((74 : ℝ) / 625) 2))
+    {n : ℕ} (lambda : ℝ) (hn : 1000 ≤ n)
+    [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
+    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
+      (fun p : ChungInterlayer n =>
+        ∀ G : PebblingGame 15 n,
+          G.απ = (1 : ℝ) / 5 → G.δ = (189 : ℝ) / 5000 → G.π = (4 : ℝ) / 5 →
+          G.ρ = (4 : ℝ) / 5 → G.ζ = (9 : ℝ) / 10 →
+          PebblingGame.IsAdmissible G →
+          ∀ S : Finset (ℕ × Fin n), S ⊆ G.layer 0 →
+            (9 : ℝ) / 10 ≤ (S.card : ℝ) / n →
+              G.HasUnpebbledPathTo S ((176 : ℝ) / 625 * n) p)
       (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
   sorry
 

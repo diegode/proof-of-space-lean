@@ -7,34 +7,58 @@ consecutive layers.
 
 ## Main result
 
-[`chung8_pebbling_latency_15`](Challenge.lean) proves that, under explicit
-within-layer depth-robustness, pebbling-budget, and security
-conditions, there is an unpebbled directed path ending in any challenge set of
-weight `ζ` in the final layer and having length at least
+[`chung8_pebbling_latency_15`](Challenge.lean) proves that, except with
+probability `2^(-lambda)` over the sampled wiring, **every** admissible
+15-layer pebbling position at the Filecoin parameters and **every** challenge
+set of weight `ζ = 9/10` in the final layer admit an unpebbled directed path,
+ending in that challenge set, of length at least
 
 ```text
-(1/5)n + (1/5 - 74/625)n = (176/625)n = 0.2816n
+(176/625)n = 0.2816n
 ```
 
-with failure probability at most `2^(-lambda)`.
+The statement is uniform in this sense on purpose: the pebble sets are chosen
+with the wiring in hand, so the game may not be fixed before the sample. The
+width `n` is a parameter of `PebblingGame`, not a field, which is what lets one
+probability space `ChungInterlayer n` carry a quantifier over all games.
 
 [`chung8_pebbling_latency_whp`](Challenge.lean) is the reusable probabilistic
-Chung-8 theorem. Its game parameters, source weight `σ`, and link count `z` are
-all symbolic. `Chung8LatencyRegion` gives a semantic, proof-independent
-description of the covered scalar tuples: a tuple belongs to the region when
-every admissible game with those fundamental parameters has the deterministic
-`z`-link latency property under Chung-8 expansion.
+Chung-8 theorem. Its game parameters, source weight `σ`, expansion range
+`[a, b]`, and link count `z` are all symbolic. `Chung8LatencyRegion` gives a
+semantic, proof-independent description of the covered scalar tuples: a tuple
+belongs to the region when every wiring that expands on `[a, b]` gives the
+deterministic `z`-link latency property, for every admissible game with those
+fundamental parameters. The theorem itself is the transfer from that
+deterministic hypothesis through the union bound; the latency content lives in
+the region-membership proof, which for the 15-layer tuple is discharged in
+`Solution.lean` from the analytic and potential-ledger certificates.
 
-For every tuple in that region, the conclusion is the symbolic lower bound
-`απ*n + (z-1)*(απ-σ)*n`, under the uniform interlayer law, with failure
-probability at most `2^(-lambda)`. The 15-layer result is its direct
-specialization at `z = 2`, `σ = 74/625`, and the Filecoin parameters. Its proof
-establishes that tuple's region membership using the analytic and
-potential-ledger certificates, which occur only in the solution and library.
+## Expansion is assumed only on a density range
+
+`ChungInterlayer.ExpandsOn a b` demands the Chung-8 profile only of source sets
+whose density lies in `[a, b]`, and `chung8FailureBound n a b` pays for exactly
+that range. This matters: at density `1/n` a Chung profile is a birthday
+collision, so a bound covering every nonempty set is `Θ(1/n)` however large `n`
+is, and near density `1` the union bound is vacuous. The deterministic argument
+only ever queries expansion at densities in `[αmin, αmax]`, and a set denser
+than `b` is handled by expanding a subset of the queried density.
+
+The 15-layer theorem instantiates `[1/100, 24/25]`, which brackets the
+Filecoin `[αmin, αmax] = [0.0129…, 0.9493…]`, and assumes `1000 ≤ n` so that the
+rounding of a subset back into the range fits. `ChungSecurityConditions n lambda
+a b` remains an assumption on the width: it is satisfiable at the deployed
+`lambda = 128` only for `n` around `2^35`, because the public margin
+`chung8Level` scales the entropy by `2^-23`. The library's polygon route
+([`expansionFailureBound_le_security`](ProofOfSpace/ChungFilecoinExpansion.lean))
+reaches the same security level at `n = 2^30` with a flat `2^-22` margin; the
+two are not yet connected.
+
+## Scope
 
 The result concerns a static black/red pebbling snapshot. It does not formalize
 a time-indexed cryptographic game, a reduction from path length to running time,
-or an equivalence between Filecoin's deployed Feistel wiring and the uniform
+a bound on the catching probability from the challenge distribution, or an
+equivalence between Filecoin's deployed Feistel wiring and the uniform
 port-permutation model.
 
 ## Repository layout
