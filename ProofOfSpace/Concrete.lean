@@ -785,14 +785,15 @@ def chainPathLength (G : LayeredGraph V S ℓ n) (T : Tracking S) (z : ℕ) : �
 The `tail` field is the certified tail from every source node to `A` that a link
 carries in `latency analysis`, strengthened
 inductively so that it already includes all later links. -/
-structure Link [DecidableEq V] (P : Pebbling G) (T : Tracking S) (A : Finset V) where
+structure Link [DecidableEq V] (P : Pebbling G) (T : Tracking S) (A : Finset V)
+    (cs : ℝ) where
   depth : ℕ
   inside : depth < ℓ
   source : Finset V
   source_layer : source ⊆ G.layer depth
   source_available : ∀ v ∈ source, P.unpebbled v
   source_weight : T.σ ≤ weight n source
-  expandable : Expandable P.budget T.ghat depth
+  expandable : Expandable P.budget T.ghat depth cs
   count : ℕ
   count_pos : 1 ≤ count
   tail : ∀ v ∈ source,
@@ -801,13 +802,14 @@ structure Link [DecidableEq V] (P : Pebbling G) (T : Tracking S) (A : Finset V) 
 
 namespace Link
 
-variable [DecidableEq V]
+variable [DecidableEq V] {cs : ℝ}
 
-theorem source_scalar_le (L : Link P T A) :
+theorem source_scalar_le (L : Link P T A cs) :
     T.σ ≤ weight n (P.layerFootprint L.source L.depth) :=
   P.source_le_layerFootprint L.source_layer L.source_available L.source_weight
 
-theorem scalar_active (L : Link P T A)
+theorem scalar_active (L : Link P T A cs)
+    (hslack : T.lam + (cs - 1) * T.ghat ≤ T.σ)
     (hnobreak : S.ρ < S.betaD S.pi - T.lam) {d : ℕ}
     (hdepth : L.depth ≤ d) :
     P.footprintBound L.depth T.σ d ∈ Set.Icc S.αmin S.αmax := by
@@ -831,14 +833,14 @@ theorem scalar_active (L : Link P T A)
     · push Not at hfe
       have hle : ∀ i, i ≤ d - L.depth → f (L.depth + i) ≤ S.pi := fun i hi =>
         (hfe (L.depth + i) (by omega) (by omega)).le
-      have hfloor := mirror_floor L.expandable hbound hinit hle
+      have hfloor := mirror_floor hslack L.expandable hbound hinit hle
         (d - L.depth) le_rfl
       have : T.lam ≤ f d := by
         rwa [show L.depth + (d - L.depth) = d from by omega] at hfloor
       exact T.αmin_lt_lam.le.trans this
   exact ⟨hlower, hupper⟩
 
-theorem scalar_le_actual (L : Link P T A) (hn : 0 < n)
+theorem scalar_le_actual (L : Link P T A cs) (hn : 0 < n)
     {d : ℕ}
     (hactive : ∀ e, L.depth ≤ e → e ≤ d →
       P.footprintBound L.depth T.σ e ∈ Set.Icc S.αmin S.αmax)
@@ -856,7 +858,7 @@ theorem scalar_le_actual (L : Link P T A) (hn : 0 < n)
   exact go d hdepth le_rfl hd
 
 /-- Convert an actual footprint of weight at least `π` into a depth-robust local path. -/
-theorem local_path (L : Link P T A) (hn : 0 < n) {d : ℕ} (hd : d < ℓ)
+theorem local_path (L : Link P T A cs) (hn : 0 < n) {d : ℕ} (hd : d < ℓ)
     (hDepth : G.DepthRobust G.αpi)
     (hweight : S.pi ≤ weight n (P.layerFootprint L.source d)) :
     ∃ Q : Path G.edge P.unpebbled,
@@ -872,9 +874,9 @@ theorem local_path (L : Link P T A) (hn : 0 < n) {d : ℕ} (hd : d < ℓ)
 /-- The base link supplied by `first-source lemma`, with all set and path conclusions proved
 from the actual challenge footprint and the assumed depth robustness. -/
 noncomputable def base (hn : 0 < n) (hσapi : T.σ ≤ G.αpi)
-    (hDepth : G.DepthRobust G.αpi) {b : ℕ} (hb : b < ℓ)
-    (hexp : Expandable P.budget T.ghat b)
-    (hfert : S.pi ≤ weight n (P.layerFootprint A b)) : Link P T A := by
+    (hDepth : G.DepthRobust G.αpi) {b : ℕ} {cs : ℝ} (hb : b < ℓ)
+    (hexp : Expandable P.budget T.ghat b cs)
+    (hfert : S.pi ≤ weight n (P.layerFootprint A b)) : Link P T A cs := by
   classical
   have hnreal : (0 : ℝ) < n := by exact_mod_cast hn
   have hcard : S.pi * n ≤ ((P.layerFootprint A b).card : ℝ) := by
@@ -961,10 +963,10 @@ noncomputable def base (hn : 0 < n) (hσapi : T.σ ≤ G.αpi)
 the new local path to the previous source is obtained from the *actual* footprint;
 the stored `tail` certificate supplies all accumulated links. -/
 noncomputable def extend (hn : 0 < n) (hσapi : T.σ ≤ G.αpi)
-    (hDepthRobust : G.DepthRobust G.αpi)
-    (L : Link P T A) {b : ℕ} (hdepth : L.depth < b) (hb : b < ℓ)
-    (hexp : Expandable P.budget T.ghat b)
-    (hfert : S.pi ≤ weight n (P.layerFootprint L.source b)) : Link P T A := by
+    (hDepthRobust : G.DepthRobust G.αpi) {cs : ℝ}
+    (L : Link P T A cs) {b : ℕ} (hdepth : L.depth < b) (hb : b < ℓ)
+    (hexp : Expandable P.budget T.ghat b cs)
+    (hfert : S.pi ≤ weight n (P.layerFootprint L.source b)) : Link P T A cs := by
   classical
   have hnreal : (0 : ℝ) < n := by exact_mod_cast hn
   let hpath := L.local_path hn hb hDepthRobust hfert
@@ -1091,10 +1093,13 @@ graph-side axiom: it is `Link.extend`, proved above from actual reachability plu
 explicit uniform depth-robustness hypothesis. -/
 noncomputable def chainSystem [DecidableEq V] (P : Pebbling G) (T : Tracking S)
     (A : Finset V) (hn : 0 < n) (hσapi : T.σ ≤ G.αpi)
-    (hDepth : G.DepthRobust G.αpi) :
-    ChainSystem S P.budget T ℓ
+    (hDepth : G.DepthRobust G.αpi) (cs : ℝ) (hcs : 1 ≤ cs)
+    (hslack : T.lam + (cs - 1) * T.ghat ≤ T.σ) :
+    ChainSystem S P.budget T cs ℓ
       (fun z => P.HasUnpebbledPathInFootprint A (chainPathLength G T z)) where
-  Link := Link P T A
+  one_le_cs := hcs
+  cs_slack := hslack
+  Link := Link P T A cs
   depth := Link.depth
   wt := fun L => P.footprintBound L.depth T.σ
   bound := fun L => P.footprintBound_isBound L.depth T.σ

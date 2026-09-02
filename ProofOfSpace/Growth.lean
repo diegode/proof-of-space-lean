@@ -68,7 +68,8 @@ Let `f` be the footprint bound of an unpebbled set of weight `σ` at a
 `ĝ`-expandable depth `t`.  If the footprint does not exceed `π` during the next `j`
 levels, then it stays at least `π̂` throughout those levels.
 -/
-theorem mirror_floor (hexp : Expandable B T.ghat t) (hbound : IsFootprintBound S B t f)
+theorem mirror_floor {cs : ℝ} (hslack : T.lam + (cs - 1) * T.ghat ≤ T.σ)
+    (hexp : Expandable B T.ghat t cs) (hbound : IsFootprintBound S B t f)
     (hinit : f t = T.σ) {j : ℕ} (hle : ∀ i, i ≤ j → f (t + i) ≤ S.pi) :
     ∀ i, i ≤ j → T.lam ≤ f (t + i) := by
   intro i
@@ -83,8 +84,9 @@ theorem mirror_floor (hexp : Expandable B T.ghat t) (hbound : IsFootprintBound S
       have hspend := hexp i hi
       have hid := hbound.sum_le (le_refl t) i
       rw [hinit] at hid
-      have : T.σ ≤ f (t + i) := by linarith
-      exact le_trans T.lam_le_σ this
+      have hdiff : ((i : ℝ) + cs) * T.ghat - ((i : ℝ) + 1) * T.ghat
+          = (cs - 1) * T.ghat := by ring
+      linarith
 
 /-! ### `growth-window lemma` -/
 
@@ -97,7 +99,7 @@ theorem growth_exhaustion (hexp : Expandable B T.ghat t) (hbound : IsFootprintBo
     (hinit : f t = T.σ) {m : ℕ} (hm : 1 ≤ m) (hle : ∀ i, i ≤ m → f (t + i) ≤ S.pi) :
     ((m : ℝ) + 1) * T.ghat
       ≤ S.pi - T.σ + ∑ d ∈ Finset.Ico (t + 1) (t + m + 1), B.spend d := by
-  have hfloor := mirror_floor hexp hbound hinit hle
+  have hfloor := mirror_floor (by simpa using T.lam_le_σ) hexp hbound hinit hle
   have hgain := gain_sum_ge hinit hm (fun k hk => hfloor k (by omega))
     (fun k hk => hle k (by omega))
   have hid := hbound.sum_le (le_refl t) m
@@ -398,7 +400,7 @@ theorem mirror_floor_sigma (hexp : Expandable B T.ghat t) (hbound : IsFootprintB
   intro i hij
   rcases Nat.eq_zero_or_pos i with rfl | hi
   · rw [Nat.add_zero, hinit]
-  · have hfloor := mirror_floor hexp hbound hinit hle
+  · have hfloor := mirror_floor (by simpa using T.lam_le_σ) hexp hbound hinit hle
     have hgain := gain_sum_ge hinit hi (fun m hm => hfloor m (by omega))
       (fun m hm => hle m (by omega))
     have hspend := hexp i hi

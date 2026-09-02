@@ -9,7 +9,8 @@ This module contains the deterministic latency engine used by the Chung-8 result
 chain construction lives in `Chain.lean`, and the reference-trajectory accounting in
 `PotentialLedger.lean`. `latency_potential` uses the reference-trajectory potential from
 `PotentialLedger.lean`. Its head, per-link span, and budget charge are `potHead`,
-`potSpan`, and `λρ/ĝ`. A `RefChain` is an explicit argument because no reference chain
+`potSpan`, and `λρ/ĝ`; `λ` is the certificate's charge rate, `1.32` at the Chung-8
+parameters. A `RefChain` is an explicit argument because no reference chain
 is valid for every `Setting`. At the Chung-8 Filecoin parameters, the resulting
 asymptotic coefficient is greater than `0.02135`.
 -/
@@ -111,7 +112,7 @@ theorem latency_general {V : Type u}
       (latencyLength G.αpi T.σ n (zMin S T ℓ)) := by
   classical
   have hζ : 0 ≤ S.ζδ := zetaDelta_nonneg GR
-  let CS := P.chainSystem T A hn hσapi.le hDepth
+  let CS := P.chainSystem T A hn hσapi.le hDepth 1 le_rfl (by simpa using T.lam_le_σ)
   let C := P.challengeBound_struct hζ
   have hrestart : ∀ b : ℕ, b < ℓ → S.pi ≤ C.f b → Expandable P.budget T.ghat b →
       ∃ L : CS.Link, CS.depth L = b ∧ CS.count L = 1 := fun b hb hfertScalar hexp =>
@@ -143,6 +144,7 @@ theorem latency_potential {V : Type u}
     (hDepth : G.DepthRobust G.αpi)
     (hζmax : S.ζδ ≤ S.αmax) (hentry : S.piBar < S.ζδ - S.ρ)
     (hnobreak : S.ρ < S.betaD S.pi - T.lam)
+    (hslack : T.lam + (Cert.cs - 1) * T.ghat ≤ T.σ)
     {z : ℕ} (hz1 : 1 ≤ z)
     (hz : LedgerCert.potHead C Cert + ((z : ℝ) - 1) * LedgerCert.potSpan C Cert
       + Cert.lam * S.ρ / T.ghat < (ℓ : ℝ))
@@ -155,9 +157,9 @@ theorem latency_potential {V : Type u}
     have h1 := S.piBar_pos
     have h2 := S.ρ_nonneg
     linarith
-  let CS := P.chainSystem T A hn hσapi.le hDepth
+  let CS := P.chainSystem T A hn hσapi.le hDepth Cert.cs Cert.one_le_cs hslack
   let Ch := P.challengeBound_struct hζ
-  have hrestart : ∀ b : ℕ, b < ℓ → S.pi ≤ Ch.f b → Expandable P.budget T.ghat b →
+  have hrestart : ∀ b : ℕ, b < ℓ → S.pi ≤ Ch.f b → Expandable P.budget T.ghat b Cert.cs →
       ∃ L : CS.Link, CS.depth L = b ∧ CS.count L = 1 := fun b hb hfertScalar hexp =>
     ⟨Concrete.Pebbling.Link.base hn hσapi.le hDepth hb hexp
       (P.challenge_fertile hn hζ hζmax hentry hA hred hweight hb hfertScalar), rfl, rfl⟩

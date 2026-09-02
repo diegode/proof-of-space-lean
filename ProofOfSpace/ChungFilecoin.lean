@@ -17,7 +17,7 @@ algebraically, so the specialization has no analytic typeclass assumption.
 The last section exhibits the reference chain of `Potential.lean` for these parameters —
 the `β_δ` orbit of the tracking floor, rationalized downwards — together with its
 `LedgerCert`, and evaluates the potential ledger's constants. That is what
-`chung8_latency_15_deterministic` runs on. The chain is data supplied here, not a hypothesis of
+`chung8_latency_14_deterministic` runs on. The chain is data supplied here, not a hypothesis of
 anything upstream.
 -/
 
@@ -466,130 +466,6 @@ theorem chainPot_low {u v : ℝ} (huv : v ≤ u)
     have h2 := (chung8RefChain).refPot_nonneg v
     linarith
 
-/-! ### The ledger certificate -/
-
-/--
-**The Chung-8 ledger certificate**, at charge rate `λ = 1.45` and saturation loss
-`loss = 331/774 = 0.4276`, the exact value of `refPot π - 3`.
-
-* `loss_ge` is monotonicity plus the evaluation of `refPot` at `π`;
-* `t1` is the top-bucket chord of `RefChain.betaD_chord` with the extension point
-  `x_top = 0.9333`: a step that stays infertile must spend more than
-  `0.0886 + 0.0447 θ`, and `θ ĝ ≤ 0.45 · that` because `θ ≤ 0.4276 < 0.4367`;
-* `modulus` is the case analysis of the five certificates above;
-* `block_base` is `0.4276 ≤ 0.9`.
--/
-noncomputable def chung8LedgerCert :
-    LedgerCert (chung8Setting) (chung8Tracking) (chung8RefChain) where
-  lam := 29 / 20
-  loss := 331 / 774
-  one_le_lam := by norm_num
-  loss_nonneg := by norm_num
-  block_base := by norm_num
-  loss_ge := by
-    intro v _ hv
-    rw [chung8Setting_pi] at hv
-    have hm : ((chung8RefChain).m : ℝ) - 1 = 3 := by norm_num [chung8RefChain_m]
-    rw [hm]
-    have hpi : (chung8RefChain).refPot (4 / 5) = 3 + 331 / 774 := by
-      rw [chainPot_b3 (t := 4 / 5) (by norm_num) (by norm_num)]; norm_num
-    have hmono : (chung8RefChain).refPot v ≤ (chung8RefChain).refPot (4 / 5) :=
-      (chung8RefChain).refPot_mono hv
-    rw [hpi] at hmono
-    linarith
-  t1 := by
-    intro v s _ hv hs hbeta
-    rw [chung8Setting_pi] at hv hbeta
-    rw [chung8_ghat_eq]
-    have hm : ((chung8RefChain).m : ℝ) - 1 = 3 := by norm_num [chung8RefChain_m]
-    rw [hm]
-    rcases le_total v ((3669 : ℝ) / 5000) with hlow | hhigh
-    · have hmono : (chung8RefChain).refPot v ≤ 3 := by
-        rw [← chainPot_three]
-        exact (chung8RefChain).refPot_mono hlow
-      nlinarith [gpi8_bounds.1]
-    · have hv4 : v ≤ (4443 : ℝ) / 5000 := by linarith
-      have hpot : (chung8RefChain).refPot v - 3 = (5000 / 774) * (v - 3669 / 5000) := by
-        rw [chainPot_b3 hhigh hv4]; ring
-      -- the top-bucket chord, extended to `x_top = 0.9333`
-      have hchord : (4443 : ℝ) / 5000 + (149 / 516) * (v - 3669 / 5000)
-          ≤ (chung8Setting).betaD v := by
-        have h := (chung8RefChain).betaD_chord (k := 3) (by norm_num)
-          (chung8_chainTop_le) (show (chung8RefChain).x 3 ≤ v by simpa using hhigh)
-          (show v ≤ (chung8RefChain).x (3 + 1) by simpa using hv4)
-        have e1 : (chung8RefChain).x 3 = (3669 : ℝ) / 5000 := rfl
-        have e2 : (chung8RefChain).x (3 + 1) = (4443 : ℝ) / 5000 := rfl
-        rw [e1, e2] at h
-        simp only [chainTop] at h
-        calc (4443 : ℝ) / 5000 + (149 / 516) * (v - 3669 / 5000)
-            = (4443 : ℝ) / 5000 + (v - 3669 / 5000) / ((4443 : ℝ) / 5000 - 3669 / 5000)
-                * ((9333 : ℝ) / 10000 - 4443 / 5000) := by ring
-          _ ≤ (chung8Setting).betaD v := h
-      rw [hpot]
-      have hprod : (5000 / 774 : ℝ) * (v - 3669 / 5000) * gpi8
-          ≤ (5000 / 774 : ℝ) * (v - 3669 / 5000) * (557 / 5000) :=
-        mul_le_mul_of_nonneg_left gpi8_bounds.2.le (by linarith)
-      linarith
-  modulus := by
-    intro u v huv hρ
-    rw [chung8Setting_rho] at hρ
-    rw [chung8_ghat_eq]
-    -- charge at the rational rate `A = 2250/557 ≤ (λ-1)/ĝ`
-    have hArate : (2250 / 557 : ℝ) * (u - v) ≤ (29 / 20 - 1) * (u - v) / gpi8 := by
-      have hnn : (0 : ℝ) ≤ (29 / 20 - 1) * (u - v) := by
-        have : (0 : ℝ) ≤ u - v := by linarith
-        nlinarith
-      have hd : ((29 / 20 - 1) * (u - v)) / (557 / 5000 : ℝ)
-          ≤ ((29 / 20 - 1) * (u - v)) / gpi8 :=
-        div_le_div_of_nonneg_left hnn (by linarith [gpi8_bounds.1]) gpi8_bounds.2.le
-      have hval : ((29 / 20 - 1) * (u - v)) / (557 / 5000 : ℝ)
-          = (2250 / 557 : ℝ) * (u - v) := by ring
-      linarith [hval ▸ hd]
-    suffices hmain : (chung8RefChain).refPot u - (chung8RefChain).refPot v
-        ≤ (2250 / 557) * (u - v) + (1 - 331 / 774) by
-      have hgoal : (29 / 20 - 1) * (u - v) / gpi8 + (1 - 331 / 774)
-          ≥ (2250 / 557) * (u - v) + (1 - 331 / 774) := by linarith
-      linarith
-    rcases le_total u ((811 : ℝ) / 5000) with hu1 | hu1
-    · have := chainPot_low huv hu1
-      linarith
-    rcases le_total ((811 : ℝ) / 5000) v with hv1 | hv1
-    · -- both above `x₁`
-      rcases le_total ((4443 : ℝ) / 5000) v with hv4 | hv4
-      · rw [chainPot_sat hv4, chainPot_sat (le_trans hv4 huv)]
-        linarith
-      · have h1 := chainPot_hi_ub (le_trans hv1 huv)
-        have h2 := chainPot_hi_lb hv1 hv4
-        linarith
-    · -- the crossing case
-      have hdown := chainPot_down hv1
-      rcases le_total u ((17 : ℝ) / 20) with hu2 | hu2
-      · have hup := chainPot_up_zero hu1 hu2
-        have hdA := chainPot_down_A hv1
-        linarith
-      · rcases le_total ((4443 : ℝ) / 5000) u with hu4 | hu4
-        · rw [chainPot_sat hu4]
-          linarith
-        · rw [chainPot_b3 (by linarith) hu4]
-          linarith
-
-/-! ### The two-link threshold at `ℓ = 15`
-
-The potential ledger's chain-length condition is
-
-  `potHead + (z - 1) potSpan + λ ρ / ĝ < ℓ`,
-
-and at the Chung-8 Filecoin parameters its three terms are `0.5982`, `3.8212` and
-`10.4223`.  Their sum `14.8417` is below `15`, so `ℓ = 15` certifies two links.  The
-The source weight is `σ = 74/625`, so two links give payoff `0.2816 n`.
--/
-
-@[simp] theorem chung8LedgerCert_lam :
-    (chung8LedgerCert).lam = 29 / 20 := rfl
-
-@[simp] theorem chung8LedgerCert_loss :
-    (chung8LedgerCert).loss = 331 / 774 := rfl
-
 /-- The first bucket, whose width is exactly `ĝ`. -/
 theorem chainPot_b0 {t : ℝ}
     (h1 : chainX 0 ≤ t) (h2 : t ≤ (811 : ℝ) / 5000) :
@@ -601,6 +477,180 @@ theorem chainPot_b0 {t : ℝ}
   have e0 : (chung8RefChain).x 0 = chainX 0 := rfl
   rw [h, e1, e0]
   norm_num
+
+/-! ### The ledger certificate -/
+
+/-- `g_π` exactly.  `gpi8_bounds` brackets it; the polygon actually evaluates. -/
+theorem gpi8_eq : gpi8 = 11131 / 100000 := by
+  norm_num [gpi8, gainD8]
+
+/-- `x₀ = π̄` exactly. -/
+theorem chainX_zero_eq : chainX 0 = 5089 / 100000 := by
+  rw [chainX_zero, beta8_pi_eq]; norm_num
+
+/-- `β_δ(π)` exactly: one free level from the fertility threshold. -/
+theorem chung8_betaD_pi : (chung8Setting).betaD (4 / 5) = 91131 / 100000 := by
+  rw [chung8_betaD_eq, beta8_pi_eq]; norm_num
+
+/-- **The top-bucket Lipschitz certificate.**  Measured down from the top chain point,
+the potential falls at rate `1/(x₄ - x₃) = 6.46`, not at the global rate `1/ĝ = 8.98`.
+Equality holds on the top bucket; below it the shallower buckets leave room. -/
+theorem chainPot_topLip_le {v : ℝ} (hv : v ≤ (4443 : ℝ) / 5000) :
+    (4 : ℝ) - (chung8RefChain).refPot v ≤ (4443 / 5000 - v) / (387 / 2500) := by
+  rcases le_total ((3669 : ℝ) / 5000) v with h3 | h3
+  · rw [chainPot_b3 h3 hv]; linarith
+  rcases le_total ((857 : ℝ) / 2000) v with h2 | h2
+  · rw [chainPot_b2 h2 h3]; linarith
+  rcases le_total ((811 : ℝ) / 5000) v with h1 | h1
+  · rw [chainPot_b1 h1 h2]; linarith
+  · have := (chung8RefChain).refPot_nonneg v
+    linarith
+
+/-- **The blocked-range drop certificate.**  A blocked range below a fertile depth has its
+own first free level, so its endpoint is at least `β_δ(π) - x`; the potential it can
+destroy is affine in its own spend.  The bound is tight at both ends of the window. -/
+theorem chainPot_blockDrop {x : ℝ} (hlo : (144703 : ℝ) / 500000 ≤ x) (hhi : x ≤ 4 / 5) :
+    (4 : ℝ) - (chung8RefChain).refPot (91131 / 100000 - x) ≤ 819 / 200 * x + 91 / 500 := by
+  set v : ℝ := 91131 / 100000 - x with hvdef
+  have hvlo : (11131 : ℝ) / 100000 ≤ v := by simp only [hvdef]; linarith
+  have hvhi : v ≤ (38869 : ℝ) / 62500 := by simp only [hvdef]; linarith
+  have hx : x = 91131 / 100000 - v := by simp only [hvdef]; ring
+  rw [hx]
+  rcases le_total ((857 : ℝ) / 2000) v with h2 | h2
+  · rw [chainPot_b2 h2 (by linarith)]; linarith
+  rcases le_total ((811 : ℝ) / 5000) v with h1 | h1
+  · rw [chainPot_b1 h1 h2]; linarith
+  · rw [chainPot_b0 (by rw [chainX_zero_eq]; linarith) h1, gpi8_eq, chainX_zero_eq]
+    linarith
+
+/--
+**The Chung-8 ledger certificate**, at charge rate `λ = 1.32`, expandability slack
+`cs = 8/5` and saturation loss `loss = 331/774 = 0.4276`.
+
+* `cs = 8/5` is free: `mirror_floor` proves the tracked footprint stays above `σ`, and
+  only `π̂` is needed, so the search may run at `(i + 8/5) ĝ` instead of `(i + 1) ĝ`.
+  That shortens every blocked range by three fifths of a level.
+* `topLip` is `chainPot_topLip_le`, `chord` is the top-bucket chord of
+  `RefChain.betaD_chord` with the extension point `x_top = 0.9333`;
+* `blockDrop` is `chainPot_blockDrop`, and the two rate conditions are linear arithmetic
+  in `g_π = 0.11131`.
+-/
+noncomputable def chung8LedgerCert :
+    LedgerCert (chung8Setting) (chung8Tracking) (chung8RefChain) where
+  lam := 33 / 25
+  loss := 331 / 774
+  cs := 8 / 5
+  wtop := 387 / 2500
+  kappa := 447 / 10000
+  a2 := 819 / 200
+  b2 := 91 / 500
+  one_le_lam := by norm_num
+  loss_nonneg := by norm_num
+  one_le_cs := by norm_num
+  wtop_pos := by norm_num
+  kappa_nonneg := by norm_num
+  loss_ge := by
+    intro v _ hv
+    rw [chung8Setting_pi] at hv
+    have hm : ((chung8RefChain).m : ℝ) - 1 = 3 := by norm_num [chung8RefChain_m]
+    rw [hm]
+    have hpi : (chung8RefChain).refPot (4 / 5) = 3 + 331 / 774 := by
+      rw [chainPot_b3 (t := 4 / 5) (by norm_num) (by norm_num)]; norm_num
+    have hmono : (chung8RefChain).refPot v ≤ (chung8RefChain).refPot (4 / 5) :=
+      (chung8RefChain).refPot_mono hv
+    rw [hpi] at hmono
+    linarith
+  topLip := by
+    intro u v hu hv
+    have hu' : (4443 : ℝ) / 5000 ≤ u := by simpa using hu
+    have hsat : (chung8RefChain).refPot u = 4 := by
+      have := chainPot_sat hu'
+      simpa using this
+    rcases le_total ((4443 : ℝ) / 5000) v with hv4 | hv4
+    · rw [hsat, chainPot_sat hv4]
+      have h : (0 : ℝ) ≤ u - v := by linarith
+      have : (0 : ℝ) ≤ (u - v) / (387 / 2500) := by positivity
+      linarith
+    · have hkey := chainPot_topLip_le hv4
+      have hmono : (4443 / 5000 - v) / ((387 : ℝ) / 2500) ≤ (u - v) / (387 / 2500) := by
+        rw [div_le_div_iff_of_pos_right (by norm_num)]; linarith
+      rw [hsat]; linarith
+  chord := by
+    intro v hv3 hv
+    rw [chung8Setting_pi] at hv
+    have hv3' : (3669 : ℝ) / 5000 ≤ v := by simpa using hv3
+    have hv4 : v ≤ (4443 : ℝ) / 5000 := by linarith
+    have hm : ((chung8RefChain).m : ℝ) - 1 = 3 := by norm_num [chung8RefChain_m]
+    have hxm : (chung8RefChain).x (chung8RefChain).m = (4443 : ℝ) / 5000 := by
+      simp [chung8RefChain_m]
+    have hpot : (chung8RefChain).refPot v - 3 = (5000 / 774) * (v - 3669 / 5000) := by
+      rw [chainPot_b3 hv3' hv4]; ring
+    have hchord : (4443 : ℝ) / 5000 + (149 / 516) * (v - 3669 / 5000)
+        ≤ (chung8Setting).betaD v := by
+      have h := (chung8RefChain).betaD_chord (k := 3) (by norm_num)
+        (chung8_chainTop_le) (show (chung8RefChain).x 3 ≤ v by simpa using hv3')
+        (show v ≤ (chung8RefChain).x (3 + 1) by simpa using hv4)
+      have e1 : (chung8RefChain).x 3 = (3669 : ℝ) / 5000 := rfl
+      have e2 : (chung8RefChain).x (3 + 1) = (4443 : ℝ) / 5000 := rfl
+      rw [e1, e2] at h
+      simp only [chainTop] at h
+      calc (4443 : ℝ) / 5000 + (149 / 516) * (v - 3669 / 5000)
+          = (4443 : ℝ) / 5000 + (v - 3669 / 5000) / ((4443 : ℝ) / 5000 - 3669 / 5000)
+              * ((9333 : ℝ) / 10000 - 4443 / 5000) := by ring
+        _ ≤ (chung8Setting).betaD v := h
+    rw [hxm, hm, hpot]
+    linarith
+  ghat_le_lam_wtop := by
+    rw [chung8_ghat_eq, gpi8_eq]; norm_num
+  inf_rate := by
+    intro θ s hθ0 hθloss hs hspend
+    rw [chung8_ghat_eq, gpi8_eq]
+    have hxm : (chung8RefChain).x (chung8RefChain).m = (4443 : ℝ) / 5000 := by
+      simp [chung8RefChain_m]
+    rw [hxm, chung8Setting_pi] at hspend
+    linarith
+  blockDrop := by
+    intro x hx hxρ
+    rw [chung8Setting_rho] at hxρ
+    rw [chung8_ghat_eq, gpi8_eq] at hx
+    rw [chung8Setting_pi, chung8_betaD_pi]
+    have hm : ((chung8RefChain).m : ℝ) = 4 := by norm_num [chung8RefChain_m]
+    rw [hm]
+    exact chainPot_blockDrop (by linarith) hxρ
+  blockDrop_one := by
+    intro x hx
+    rw [chung8_ghat_eq, gpi8_eq] at hx
+    linarith
+  blk_rate := by
+    intro x y hx hxρ hy
+    rw [chung8Setting_rho] at hxρ
+    rw [chung8_ghat_eq, gpi8_eq] at hx ⊢
+    linarith
+
+/-! ### The two-link threshold at `ℓ = 14`
+
+The potential ledger's chain-length condition is
+
+  `potHead + (z - 1) potSpan + λ ρ / ĝ < ℓ`,
+
+and at the Chung-8 Filecoin parameters its three terms are `0.5982`, `3.8212` and
+`9.4870`.  Their sum `13.9064` is below `14`, so `ℓ = 14` certifies two links.  The
+source weight is `σ = 74/625`, so two links give payoff `0.2816 n`.
+
+The budget charge is what moved: `λ` fell from `1.45` to `1.32` because the infertile
+step is now priced by the top-bucket Lipschitz constant `1/(x₄ - x₃) = 6.46` rather than
+by `1/ĝ = 8.98`, and because a blocked range keeps its own first free level.  The
+expandability slack `cs = 8/5` shortens every blocked range by `3/5` of a level.
+-/
+
+@[simp] theorem chung8LedgerCert_lam :
+    (chung8LedgerCert).lam = 33 / 25 := rfl
+
+@[simp] theorem chung8LedgerCert_cs :
+    (chung8LedgerCert).cs = 8 / 5 := rfl
+
+@[simp] theorem chung8LedgerCert_loss :
+    (chung8LedgerCert).loss = 331 / 774 := rfl
 
 /-- `refPot σ > 0.60646`: the source starts a fifth of the way up the first bucket, and
 that is the only place the potential of the growth phase is charged. -/
@@ -634,36 +684,45 @@ theorem chung8_potSpan_lt :
   norm_num
   linarith
 
-theorem chung8_ledgerCharge_lt :
+theorem chung8_ledgerCharge_eq :
     (chung8LedgerCert).lam * (chung8Setting).ρ / (chung8Tracking).ghat
-      < 11600 / 1113 := by
-  rw [chung8LedgerCert_lam, chung8Setting_rho, chung8_ghat_eq]
-  rw [div_lt_iff₀ (by linarith [gpi8_bounds.1] : (0 : ℝ) < gpi8)]
-  linarith [gpi8_bounds.1]
+      = 105600 / 11131 := by
+  rw [chung8LedgerCert_lam, chung8Setting_rho, chung8_ghat_eq, gpi8_eq]
+  norm_num
 
 /-- **The two-link threshold of the potential ledger, evaluated.**  `14.8417 < 15`. -/
-theorem chung8_potential_threshold :
+theorem chung8_potential_threshold {ℓ : ℕ} (hℓ : 14 ≤ ℓ) :
     LedgerCert.potHead (chung8RefChain) (chung8LedgerCert)
         + (((2 : ℕ) : ℝ) - 1) * LedgerCert.potSpan (chung8RefChain) (chung8LedgerCert)
         + (chung8LedgerCert).lam * (chung8Setting).ρ / (chung8Tracking).ghat
-      < ((15 : ℕ) : ℝ) := by
+      < ((ℓ : ℕ) : ℝ) := by
   have h1 := chung8_potHead_eq
   have h2 := chung8_potSpan_lt
-  have h3 := chung8_ledgerCharge_lt
+  have h3 := chung8_ledgerCharge_eq
+  have hℓ' : (14 : ℝ) ≤ (ℓ : ℝ) := by exact_mod_cast hℓ
   push_cast
   linarith
 
+/-- The slack `mirror_floor` has to spare at `cs = 8/5`: the tracked footprint may fall
+`(cs - 1) ĝ = 0.0668` below `σ` and still clear the tracking floor `π̂ = 0.05089`. -/
+theorem chung8_cs_slack :
+    (chung8Tracking).lam + ((chung8LedgerCert).cs - 1) * (chung8Tracking).ghat
+      ≤ (chung8Tracking).σ := by
+  rw [chung8_lam_eq, chainX_zero_eq, chung8LedgerCert_cs, chung8_ghat_eq, gpi8_eq,
+    chung8Tracking_sigma]
+  norm_num
+
 /--
-**Two chain links at `ℓ = 15`, at the full `0.2816 n` payoff.**
+**Two chain links at `ℓ = 14`, at the full `0.2816 n` payoff.**
 
 No reference chain appears among the theorem's hypotheses; it is supplied here, and its
 conditions are the `ChungNumerics` brackets for the constructed curve.  The potential
-ledger charges the black budget once at `λ/ĝ`, with `λ = 1.45`, and has per-link span
+ledger charges the black budget once at `λ/ĝ`, with `λ = 1.32`, and has per-link span
 `potSpan = 3.82`.  The source weight is `σ = 74/625`.
 -/
-theorem chung8_latency_15_deterministic
-    {V : Type u} {n : ℕ}
-    (G : Concrete.LayeredGraph V (chung8Setting) 15 n)
+theorem chung8_latency_deterministic
+    {V : Type u} {ℓ n : ℕ} (hℓ : 14 ≤ ℓ)
+    (G : Concrete.LayeredGraph V (chung8Setting) ℓ n)
     (P : Concrete.Pebbling G)
     (hn : 0 < n) (hαpi : G.αpi = (1 : ℝ) / 5)
     (hDepth : G.DepthRobust G.αpi)
@@ -676,14 +735,42 @@ theorem chung8_latency_15_deterministic
   have hσapi : (chung8Tracking).σ < G.αpi := by
     rw [chung8Tracking_sigma, hαpi]; norm_num
   have h := latency_potential G P (chung8Tracking) (chung8LedgerCert) hn hσapi hDepth
-    (chung8_zeta_le) (chung8_entry) (chung8_nobreak) (z := 2) (by norm_num)
-    (chung8_potential_threshold) A hA hred hweight
+    (chung8_zeta_le) (chung8_entry) (chung8_nobreak) (chung8_cs_slack) (z := 2) (by norm_num)
+    (chung8_potential_threshold hℓ) A hA hred hweight
   have hlen : latencyLength G.αpi (chung8Tracking).σ n 2
       = (1 : ℝ) / 5 * n + ((1 : ℝ) / 5 - (74 : ℝ) / 625) * n := by
     simp only [latencyLength, hαpi, chung8Tracking_sigma]
     push_cast
     ring
   rwa [hlen] at h
+
+/-- **The 14-layer instance.** -/
+theorem chung8_latency_14_deterministic
+    {V : Type u} {n : ℕ}
+    (G : Concrete.LayeredGraph V (chung8Setting) 14 n)
+    (P : Concrete.Pebbling G)
+    (hn : 0 < n) (hαpi : G.αpi = (1 : ℝ) / 5)
+    (hDepth : G.DepthRobust G.αpi)
+    (A : Finset V) (hA : A ⊆ G.layer 0)
+    (hred : ∀ v ∈ A, v ∉ P.red 0)
+    (hweight : (chung8Setting).ζδ ≤ Concrete.Pebbling.weight n A) :
+    P.HasUnpebbledPathInFootprint A
+      ((1 : ℝ) / 5 * n + ((1 : ℝ) / 5 - (74 : ℝ) / 625) * n) :=
+  chung8_latency_deterministic (by norm_num) G P hn hαpi hDepth A hA hred hweight
+
+/-- **The 15-layer instance**, the original threshold, now with a level to spare. -/
+theorem chung8_latency_15_deterministic
+    {V : Type u} {n : ℕ}
+    (G : Concrete.LayeredGraph V (chung8Setting) 15 n)
+    (P : Concrete.Pebbling G)
+    (hn : 0 < n) (hαpi : G.αpi = (1 : ℝ) / 5)
+    (hDepth : G.DepthRobust G.αpi)
+    (A : Finset V) (hA : A ⊆ G.layer 0)
+    (hred : ∀ v ∈ A, v ∉ P.red 0)
+    (hweight : (chung8Setting).ζδ ≤ Concrete.Pebbling.weight n A) :
+    P.HasUnpebbledPathInFootprint A
+      ((1 : ℝ) / 5 * n + ((1 : ℝ) / 5 - (74 : ℝ) / 625) * n) :=
+  chung8_latency_deterministic (by norm_num) G P hn hαpi hDepth A hA hred hweight
 
 
 end ChungCurve

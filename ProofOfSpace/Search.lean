@@ -18,18 +18,32 @@ open Finset
 
 variable {S : Setting}
 
-/-- `expandability condition`: depth `t` is `g`-*expandable* when, for every window of `i` levels
-immediately below it, the black-pebble spend is at most `(i+1) g`. -/
-def Expandable (B : Budget S) (g : ℝ) (t : ℕ) : Prop :=
-  ∀ i : ℕ, 1 ≤ i → ∑ m ∈ Finset.range i, B.spend (t + m + 1) ≤ ((i : ℝ) + 1) * g
+/-- `expandability condition`: depth `t` is `g`-*expandable* when, for every window of `i`
+levels immediately below it, the black-pebble spend is at most `(i + cs) g`.
 
-/-- `expandability condition`: depth `t` is `g`-*blockable* when some window immediately below it
-carries more than `g` pebbles per level on average. -/
-def Blockable (B : Budget S) (g : ℝ) (t : ℕ) : Prop :=
-  ∃ k : ℕ, 1 ≤ k ∧ ((k : ℝ) + 1) * g < ∑ m ∈ Finset.range k, B.spend (t + m + 1)
+`cs = 1` is the classical notion and the default.  `Growth.mirror_floor` accepts any
+`cs ≤ 1 + (σ - π̂)/ĝ`, because it proves the tracked footprint stays above the *source
+weight* `σ` while only the tracking floor `π̂` is needed; raising `cs` costs nothing and
+shortens every blocked range, since blocking then needs `(k + cs) g` rather than
+`(k + 1) g`. -/
+def Expandable (B : Budget S) (g : ℝ) (t : ℕ) (cs : ℝ := 1) : Prop :=
+  ∀ i : ℕ, 1 ≤ i → ∑ m ∈ Finset.range i, B.spend (t + m + 1) ≤ ((i : ℝ) + cs) * g
 
-theorem not_expandable_iff_blockable (B : Budget S) (g : ℝ) (t : ℕ) :
-    ¬ Expandable B g t ↔ Blockable B g t := by
+/-- `expandability condition`: depth `t` is `g`-*blockable* when some window immediately
+below it carries more than `(k + cs) g` in total. -/
+def Blockable (B : Budget S) (g : ℝ) (t : ℕ) (cs : ℝ := 1) : Prop :=
+  ∃ k : ℕ, 1 ≤ k ∧ ((k : ℝ) + cs) * g < ∑ m ∈ Finset.range k, B.spend (t + m + 1)
+
+/-- Expandability at a larger slack is a weaker requirement. -/
+theorem Expandable.mono {B : Budget S} {g c₁ c₂ : ℝ} {t : ℕ}
+    (h : Expandable B g t c₁) (hg : 0 ≤ g) (hc : c₁ ≤ c₂) : Expandable B g t c₂ := by
+  intro i hi
+  refine (h i hi).trans ?_
+  have hi' : (0 : ℝ) ≤ (i : ℝ) := Nat.cast_nonneg i
+  nlinarith
+
+theorem not_expandable_iff_blockable (B : Budget S) (g : ℝ) (t : ℕ) (cs : ℝ := 1) :
+    ¬ Expandable B g t cs ↔ Blockable B g t cs := by
   constructor
   · intro h
     by_contra hb
@@ -40,14 +54,14 @@ theorem not_expandable_iff_blockable (B : Budget S) (g : ℝ) (t : ℕ) :
     exact absurd (hexp k hk1) (not_le.mpr hk2)
 
 /-- The length of the blocked range witnessed at a blockable depth. -/
-noncomputable def blockLen (B : Budget S) (g : ℝ) (t : ℕ) : ℕ :=
+noncomputable def blockLen (B : Budget S) (g : ℝ) (t : ℕ) (cs : ℝ := 1) : ℕ :=
   open Classical in
-  if h : Blockable B g t then h.choose else 1
+  if h : Blockable B g t cs then h.choose else 1
 
-theorem blockLen_spec {B : Budget S} {g : ℝ} {t : ℕ} (h : Blockable B g t) :
-    1 ≤ blockLen B g t ∧
-      ((blockLen B g t : ℝ) + 1) * g <
-        ∑ m ∈ Finset.range (blockLen B g t), B.spend (t + m + 1) := by
+theorem blockLen_spec {B : Budget S} {g : ℝ} {t : ℕ} {cs : ℝ} (h : Blockable B g t cs) :
+    1 ≤ blockLen B g t cs ∧
+      ((blockLen B g t cs : ℝ) + cs) * g <
+        ∑ m ∈ Finset.range (blockLen B g t cs), B.spend (t + m + 1) := by
   classical
   simp only [blockLen, dif_pos h]
   exact h.choose_spec
@@ -56,80 +70,83 @@ theorem blockLen_spec {B : Budget S} {g : ℝ} {t : ℕ} (h : Blockable B g t) :
 
 section Search
 
-variable (B : Budget S) (g : ℝ) (Fert : ℕ → Prop) [DecidablePred Fert] (t : ℕ)
+variable (B : Budget S) (g cs : ℝ) (Fert : ℕ → Prop) [DecidablePred Fert] (t : ℕ)
 
 /-- Position of the search after `j` steps. -/
 noncomputable def searchPos : ℕ → ℕ
   | 0 => t
   | j + 1 =>
       let p := searchPos j
-      if Fert p then p + blockLen B g p + 1 else p + 1
+      if Fert p then p + blockLen B g p cs + 1 else p + 1
 
 /-- Number of single-level (infertile) skips among the first `j` steps. -/
 noncomputable def searchI : ℕ → ℕ
   | 0 => 0
-  | j + 1 => if Fert (searchPos B g Fert t j) then searchI j else searchI j + 1
+  | j + 1 => if Fert (searchPos B g cs Fert t j) then searchI j else searchI j + 1
 
 /-- Total number of levels inside blocked ranges among the first `j` steps. -/
 noncomputable def searchQ : ℕ → ℕ
   | 0 => 0
   | j + 1 =>
-      let p := searchPos B g Fert t j
-      if Fert p then searchQ j + blockLen B g p + 1 else searchQ j
+      let p := searchPos B g cs Fert t j
+      if Fert p then searchQ j + blockLen B g p cs + 1 else searchQ j
 
-variable {B g Fert t}
+variable {B g cs Fert t}
 
-theorem searchPos_zero : searchPos B g Fert t 0 = t := rfl
+theorem searchPos_zero : searchPos B g cs Fert t 0 = t := rfl
 
 theorem searchPos_succ (j : ℕ) :
-    searchPos B g Fert t (j + 1) =
-      if Fert (searchPos B g Fert t j) then
-        searchPos B g Fert t j + blockLen B g (searchPos B g Fert t j) + 1
-      else searchPos B g Fert t j + 1 := rfl
+    searchPos B g cs Fert t (j + 1) =
+      if Fert (searchPos B g cs Fert t j) then
+        searchPos B g cs Fert t j + blockLen B g (searchPos B g cs Fert t j) cs + 1
+      else searchPos B g cs Fert t j + 1 := rfl
 
 theorem searchI_succ (j : ℕ) :
-    searchI B g Fert t (j + 1) =
-      if Fert (searchPos B g Fert t j) then searchI B g Fert t j
-      else searchI B g Fert t j + 1 := rfl
+    searchI B g cs Fert t (j + 1) =
+      if Fert (searchPos B g cs Fert t j) then searchI B g cs Fert t j
+      else searchI B g cs Fert t j + 1 := rfl
 
 theorem searchQ_succ (j : ℕ) :
-    searchQ B g Fert t (j + 1) =
-      if Fert (searchPos B g Fert t j) then
-        searchQ B g Fert t j + blockLen B g (searchPos B g Fert t j) + 1
-      else searchQ B g Fert t j := rfl
+    searchQ B g cs Fert t (j + 1) =
+      if Fert (searchPos B g cs Fert t j) then
+        searchQ B g cs Fert t j + blockLen B g (searchPos B g cs Fert t j) cs + 1
+      else searchQ B g cs Fert t j := rfl
 
 /-- The search position is the sum of the two capacities consumed so far. -/
 theorem searchPos_eq (j : ℕ) :
-    searchPos B g Fert t j = t + searchI B g Fert t j + searchQ B g Fert t j := by
+    searchPos B g cs Fert t j = t + searchI B g cs Fert t j + searchQ B g cs Fert t j := by
   induction j with
   | zero => simp [searchPos_zero, searchI, searchQ]
   | succ j ih =>
       rw [searchPos_succ, searchI_succ, searchQ_succ]
-      by_cases h : Fert (searchPos B g Fert t j) <;> simp only [h, if_true, if_false] <;> omega
+      by_cases h : Fert (searchPos B g cs Fert t j) <;> simp only [h, if_true, if_false] <;> omega
 
-theorem searchPos_lt_succ (j : ℕ) : searchPos B g Fert t j < searchPos B g Fert t (j + 1) := by
+theorem searchPos_lt_succ (j : ℕ) :
+    searchPos B g cs Fert t j < searchPos B g cs Fert t (j + 1) := by
   rw [searchPos_succ]
-  by_cases h : Fert (searchPos B g Fert t j) <;> simp only [h, if_true, if_false] <;> omega
+  by_cases h : Fert (searchPos B g cs Fert t j) <;> simp only [h, if_true, if_false] <;> omega
 
-theorem searchPos_mono : Monotone (searchPos B g Fert t) := by
+theorem searchPos_mono : Monotone (searchPos B g cs Fert t) := by
   refine monotone_nat_of_le_succ fun j => ?_
   exact (searchPos_lt_succ j).le
 
-theorem le_searchPos (j : ℕ) : t + j ≤ searchPos B g Fert t j := by
+theorem le_searchPos (j : ℕ) : t + j ≤ searchPos B g cs Fert t j := by
   induction j with
   | zero => simp [searchPos_zero]
-  | succ j ih => have := searchPos_lt_succ (B := B) (g := g) (Fert := Fert) (t := t) j; omega
+  | succ j ih =>
+      have := searchPos_lt_succ (B := B) (g := g) (cs := cs) (Fert := Fert) (t := t) j
+      omega
 
-theorem base_le_searchPos (j : ℕ) : t ≤ searchPos B g Fert t j := by
-  have := le_searchPos (B := B) (g := g) (Fert := Fert) (t := t) j; omega
+theorem base_le_searchPos (j : ℕ) : t ≤ searchPos B g cs Fert t j := by
+  have := le_searchPos (B := B) (g := g) (cs := cs) (Fert := Fert) (t := t) j; omega
 
 /-- The spend accumulated strictly below the base by the first `j` steps. -/
 noncomputable def searchSpend (j : ℕ) : ℝ :=
-  ∑ d ∈ Finset.Ico (t + 1) (searchPos B g Fert t j), B.spend d
+  ∑ d ∈ Finset.Ico (t + 1) (searchPos B g cs Fert t j), B.spend d
 
 theorem searchSpend_mono {i j : ℕ} (hij : i ≤ j) :
-    searchSpend (B := B) (g := g) (Fert := Fert) (t := t) i ≤
-      searchSpend (B := B) (g := g) (Fert := Fert) (t := t) j := by
+    searchSpend (B := B) (g := g) (cs := cs) (Fert := Fert) (t := t) i ≤
+      searchSpend (B := B) (g := g) (cs := cs) (Fert := Fert) (t := t) j := by
   refine Finset.sum_le_sum_of_subset_of_nonneg ?_ fun d _ _ => B.spend_nonneg d
   intro d hd
   simp only [Finset.mem_Ico] at hd ⊢
@@ -143,13 +160,13 @@ search is stopped by a level budget, and `fertile-continuation lemma`, where it 
 first fertile expandable level it meets. -/
 theorem searchQ_spend {J : ℕ}
     (hbad : ∀ j, j < J →
-      ¬(Fert (searchPos B g Fert t j) ∧ Expandable B g (searchPos B g Fert t j))) :
+      ¬(Fert (searchPos B g 1 Fert t j) ∧ Expandable B g (searchPos B g 1 Fert t j))) :
     ∀ j ≤ J,
-      ((searchQ B g Fert t j : ℝ) * g
-          ≤ searchSpend (B := B) (g := g) (Fert := Fert) (t := t) j) ∧
-      (0 < searchQ B g Fert t j →
-        (searchQ B g Fert t j : ℝ) * g
-          < searchSpend (B := B) (g := g) (Fert := Fert) (t := t) j) := by
+      ((searchQ B g 1 Fert t j : ℝ) * g
+          ≤ searchSpend (B := B) (g := g) (cs := 1) (Fert := Fert) (t := t) j) ∧
+      (0 < searchQ B g 1 Fert t j →
+        (searchQ B g 1 Fert t j : ℝ) * g
+          < searchSpend (B := B) (g := g) (cs := 1) (Fert := Fert) (t := t) j) := by
   intro j
   induction j with
   | zero =>
@@ -162,7 +179,7 @@ theorem searchQ_spend {J : ℕ}
       intro hj
       have hjJ : j < J := by omega
       have ihj := ih (by omega)
-      set p := searchPos B g Fert t j with hp
+      set p := searchPos B g 1 Fert t j with hp
       by_cases hF : Fert p
       · -- fertile, hence blockable: the block pays for its own levels
         have hpt : t ≤ p := base_le_searchPos j
@@ -182,23 +199,23 @@ theorem searchQ_spend {J : ℕ}
           intro a ha
           simp only [Finset.mem_union, Finset.mem_Ico] at ha ⊢
           omega
-        have hss : searchSpend (B := B) (g := g) (Fert := Fert) (t := t) j
+        have hss : searchSpend (B := B) (g := g) (cs := 1) (Fert := Fert) (t := t) j
             = ∑ d ∈ Finset.Ico (t + 1) p, B.spend d := by
           simp only [searchSpend, ← hp]
-        have hsplit : searchSpend (B := B) (g := g) (Fert := Fert) (t := t) j
+        have hsplit : searchSpend (B := B) (g := g) (cs := 1) (Fert := Fert) (t := t) j
               + ∑ d ∈ Finset.Ico (p + 1) (p + k + 1), B.spend d
             ≤ ∑ d ∈ Finset.Ico (t + 1) (p + k + 1), B.spend d := by
           rw [hss, ← Finset.sum_union hdisj]
           exact Finset.sum_le_sum_of_subset_of_nonneg hsubset fun d _ _ => B.spend_nonneg d
-        have hnext : searchPos B g Fert t (j + 1) = p + k + 1 := by
+        have hnext : searchPos B g 1 Fert t (j + 1) = p + k + 1 := by
           rw [searchPos_succ]; simp only [← hp, hF, if_true, ← hk]
-        have hQnext : searchQ B g Fert t (j + 1) = searchQ B g Fert t j + k + 1 := by
+        have hQnext : searchQ B g 1 Fert t (j + 1) = searchQ B g 1 Fert t j + k + 1 := by
           rw [searchQ_succ]; simp only [← hp, hF, if_true, ← hk]
-        have hspendnext : searchSpend (B := B) (g := g) (Fert := Fert) (t := t) (j + 1)
+        have hspendnext : searchSpend (B := B) (g := g) (cs := 1) (Fert := Fert) (t := t) (j + 1)
             = ∑ d ∈ Finset.Ico (t + 1) (p + k + 1), B.spend d := by
           simp only [searchSpend, hnext]
-        have hstrict : (searchQ B g Fert t (j + 1) : ℝ) * g <
-            searchSpend (B := B) (g := g) (Fert := Fert) (t := t) (j + 1) := by
+        have hstrict : (searchQ B g 1 Fert t (j + 1) : ℝ) * g <
+            searchSpend (B := B) (g := g) (cs := 1) (Fert := Fert) (t := t) (j + 1) := by
           rw [hQnext, hspendnext]
           push_cast
           have h1 := ihj.1
@@ -207,36 +224,36 @@ theorem searchQ_spend {J : ℕ}
           nlinarith [h1, h2, hsplit]
         exact ⟨hstrict.le, fun _ => hstrict⟩
       · -- infertile: nothing is charged, and the accumulated spend cannot decrease
-        have hnext : searchPos B g Fert t (j + 1) = p + 1 := by
+        have hnext : searchPos B g 1 Fert t (j + 1) = p + 1 := by
           rw [searchPos_succ]; simp only [← hp, hF, if_false]
-        have hQnext : searchQ B g Fert t (j + 1) = searchQ B g Fert t j := by
+        have hQnext : searchQ B g 1 Fert t (j + 1) = searchQ B g 1 Fert t j := by
           rw [searchQ_succ]; simp only [← hp, hF, if_false]
-        have hmono := searchSpend_mono (B := B) (g := g) (Fert := Fert) (t := t)
+        have hmono := searchSpend_mono (B := B) (g := g) (cs := 1) (Fert := Fert) (t := t)
           (Nat.le_succ j)
         rw [hQnext]
         exact ⟨le_trans ihj.1 hmono, fun h => lt_of_lt_of_le (ihj.2 h) hmono⟩
 
 /-- Each single-level skip happens at a distinct infertile depth. -/
 theorem searchI_card (j : ℕ) :
-    searchI B g Fert t j ≤
-      ((Finset.Ico t (searchPos B g Fert t j)).filter (fun d => ¬ Fert d)).card := by
+    searchI B g cs Fert t j ≤
+      ((Finset.Ico t (searchPos B g cs Fert t j)).filter (fun d => ¬ Fert d)).card := by
   induction j with
   | zero => simp [searchI]
   | succ j ih =>
-      set p := searchPos B g Fert t j with hp
+      set p := searchPos B g cs Fert t j with hp
       by_cases hF : Fert p
-      · have hI : searchI B g Fert t (j + 1) = searchI B g Fert t j := by
+      · have hI : searchI B g cs Fert t (j + 1) = searchI B g cs Fert t j := by
           rw [searchI_succ]; simp only [← hp, hF, if_true]
         have hsub : (Finset.Ico t p).filter (fun d => ¬ Fert d)
-            ⊆ (Finset.Ico t (searchPos B g Fert t (j + 1))).filter (fun d => ¬ Fert d) := by
+            ⊆ (Finset.Ico t (searchPos B g cs Fert t (j + 1))).filter (fun d => ¬ Fert d) := by
           intro d hd
           simp only [Finset.mem_filter, Finset.mem_Ico] at hd ⊢
           exact ⟨⟨hd.1.1, lt_of_lt_of_le hd.1.2 (searchPos_mono (Nat.le_succ j))⟩, hd.2⟩
         rw [hI]
         exact le_trans ih (Finset.card_le_card hsub)
-      · have hI : searchI B g Fert t (j + 1) = searchI B g Fert t j + 1 := by
+      · have hI : searchI B g cs Fert t (j + 1) = searchI B g cs Fert t j + 1 := by
           rw [searchI_succ]; simp only [← hp, hF, if_false]
-        have hnext : searchPos B g Fert t (j + 1) = p + 1 := by
+        have hnext : searchPos B g cs Fert t (j + 1) = p + 1 := by
           rw [searchPos_succ]; simp only [← hp, hF, if_false]
         have hpt : t ≤ p := base_le_searchPos j
         have hins : (Finset.Ico t (p + 1)).filter (fun d => ¬ Fert d)
@@ -265,18 +282,18 @@ search's last jump.  A search may overshoot its stopping bound by a whole blocke
 and
 in the general regime the footprint-bound hypotheses are unpebbled only up to that bound. -/
 theorem searchI_card_succ (j : ℕ) :
-    searchI B g Fert t (j + 1) ≤
-      ((Finset.Ico t (searchPos B g Fert t j + 1)).filter (fun d => ¬ Fert d)).card := by
-  set p := searchPos B g Fert t j with hp
+    searchI B g cs Fert t (j + 1) ≤
+      ((Finset.Ico t (searchPos B g cs Fert t j + 1)).filter (fun d => ¬ Fert d)).card := by
+  set p := searchPos B g cs Fert t j with hp
   by_cases hF : Fert p
-  · have hI : searchI B g Fert t (j + 1) = searchI B g Fert t j := by
+  · have hI : searchI B g cs Fert t (j + 1) = searchI B g cs Fert t j := by
       rw [searchI_succ]; simp only [← hp, hF, if_true]
     rw [hI]
     refine le_trans (searchI_card j) (Finset.card_le_card ?_)
     intro d hd
     simp only [Finset.mem_filter, Finset.mem_Ico, ← hp] at hd ⊢
     exact ⟨⟨hd.1.1, by omega⟩, hd.2⟩
-  · have hnext : searchPos B g Fert t (j + 1) = p + 1 := by
+  · have hnext : searchPos B g cs Fert t (j + 1) = p + 1 := by
       rw [searchPos_succ]; simp only [← hp, hF, if_false]
     rw [← hnext]
     exact searchI_card (j + 1)
@@ -297,23 +314,23 @@ theorem search_bound {B : Budget S} {g : ℝ} (Fert : ℕ → Prop) [DecidablePr
       I ≤ ((Finset.Ico t P).filter (fun d => ¬ Fert d)).card ∧
       (0 < Q → (Q : ℝ) * g < ∑ d ∈ Finset.Ico (t + 1) P, B.spend d) := by
   classical
-  have hex : ∃ j, t + D < searchPos B g Fert t j :=
+  have hex : ∃ j, t + D < searchPos B g 1 Fert t j :=
     ⟨D + 1, lt_of_lt_of_le (by omega)
-      (le_searchPos (B := B) (g := g) (Fert := Fert) (t := t) (D + 1))⟩
+      (le_searchPos (B := B) (g := g) (cs := 1) (Fert := Fert) (t := t) (D + 1))⟩
   set J := Nat.find hex with hJdef
-  have hJspec : t + D < searchPos B g Fert t J := Nat.find_spec hex
-  have hJmin : ∀ j, j < J → searchPos B g Fert t j ≤ t + D := by
+  have hJspec : t + D < searchPos B g 1 Fert t J := Nat.find_spec hex
+  have hJmin : ∀ j, j < J → searchPos B g 1 Fert t j ≤ t + D := by
     intro j hj
     have := Nat.find_min hex hj
     omega
   have hbad' : ∀ j, j < J →
-      ¬(Fert (searchPos B g Fert t j) ∧ Expandable B g (searchPos B g Fert t j)) := by
+      ¬(Fert (searchPos B g 1 Fert t j) ∧ Expandable B g (searchPos B g 1 Fert t j)) := by
     intro j hj
     exact hbad _ (base_le_searchPos j) (hJmin j hj)
   obtain ⟨hQle, hQlt⟩ := searchQ_spend hbad' J (le_refl J)
-  refine ⟨searchI B g Fert t J, searchQ B g Fert t J, searchPos B g Fert t J, hJspec, ?_,
+  refine ⟨searchI B g 1 Fert t J, searchQ B g 1 Fert t J, searchPos B g 1 Fert t J, hJspec, ?_,
     searchPos_eq J, searchI_card J, ?_⟩
-  · have := searchPos_eq (B := B) (g := g) (Fert := Fert) (t := t) J
+  · have := searchPos_eq (B := B) (g := g) (cs := 1) (Fert := Fert) (t := t) J
     omega
   · intro h
     exact hQlt h

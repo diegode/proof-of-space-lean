@@ -342,12 +342,12 @@ theorem chung8_pebbling_latency_whp
       (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) :=
   chung8_of_expands_whp lambda a b _ hregion.2
 
-theorem chung8_pebbling_latency_15
-    {n : ℕ} (lambda : ℝ) (hn : 1000 ≤ n)
+theorem chung8_pebbling_latency_at
+    {ℓ n : ℕ} (hℓ : 14 ≤ ℓ) (lambda : ℝ) (hn : 1000 ≤ n)
     [C : ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
       (fun P : ChungInterlayer n =>
-        ∀ M : PebblingGame 15 n,
+        ∀ M : PebblingGame ℓ n,
           M.απ = (1 : ℝ) / 5 → M.δ = (189 : ℝ) / 5000 → M.π = (4 : ℝ) / 5 →
           M.ρ = (4 : ℝ) / 5 → M.ζ = (9 : ℝ) / 10 →
           PebblingGame.IsAdmissible M →
@@ -356,7 +356,7 @@ theorem chung8_pebbling_latency_15
               M.HasUnpebbledPathTo A ((176 : ℝ) / 625 * n) P)
       (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
   classical
-  have hregion : Chung8LatencyRegion 15 n 2 ((1 : ℝ) / 5)
+  have hregion : Chung8LatencyRegion ℓ n 2 ((1 : ℝ) / 5)
       ((189 : ℝ) / 5000) ((4 : ℝ) / 5) ((4 : ℝ) / 5) ((9 : ℝ) / 10)
       ((74 : ℝ) / 625) (1 / 100) (24 / 25) := by
     refine ⟨by norm_num, ?_⟩
@@ -392,7 +392,7 @@ theorem chung8_pebbling_latency_15
       · exact hP
     let standalone : Concrete.StandaloneGraph n :=
       { edge := N.intra, edge_lt := fun {_ _} h => hN.intra_rank h }
-    let G := Concrete.portStack standalone ChungCurve.chung8Setting 15 N.απ hN.n_pos
+    let G := Concrete.portStack standalone ChungCurve.chung8Setting ℓ N.απ hN.n_pos
       (fun _ => Pc) (fun _ _ => hPc)
     let pebbling : Concrete.Pebbling G := {
       black := N.black
@@ -437,7 +437,7 @@ theorem chung8_pebbling_latency_15
     have hGαπ : G.αpi = (1 : ℝ) / 5 := by
       change N.απ = (1 : ℝ) / 5
       exact hNαπ
-    have hpath := ChungCurve.chung8_latency_15_deterministic G pebbling hN.n_pos hGαπ
+    have hpath := ChungCurve.chung8_latency_deterministic hℓ G pebbling hN.n_pos hGαπ
       hDepth (B \ N.red 0) hB' hBred hweight'
     rcases hpath with ⟨u, a, ha, Q, hfirst, hlast, hlength⟩
     have hlatency : N.latencyLength ((74 : ℝ) / 625) 2 =
@@ -451,7 +451,7 @@ theorem chung8_pebbling_latency_15
       exact congrArg some hlast
     · rw [hlatency]
       exact hlength
-  have hmain := chung8_pebbling_latency_whp (ℓ := 15) (n := n) lambda (1 / 100) (24 / 25) 2
+  have hmain := chung8_pebbling_latency_whp (ℓ := ℓ) (n := n) lambda (1 / 100) (24 / 25) 2
     ((1 : ℝ) / 5) ((189 : ℝ) / 5000) ((4 : ℝ) / 5) ((4 : ℝ) / 5) ((9 : ℝ) / 10)
     ((74 : ℝ) / 625) hregion
   rw [HoldsWithFailureAtMost] at hmain ⊢
@@ -463,5 +463,41 @@ theorem chung8_pebbling_latency_15
     ring
   rw [← hlen]
   exact hev M hαπ hδ hπ hρ hζ hAdm A hA hweight
+
+
+/-- **The 14-layer Filecoin latency lower bound** at `lambda` bits of security: the same
+`0.2816 n` payoff as before, one layer earlier.  The improvement is entirely in the
+potential ledger's budget charge — `λ` falls from `1.45` to `1.32` — and changes no
+assumption of the statement. -/
+theorem chung8_pebbling_latency_14
+    {n : ℕ} (lambda : ℝ) (hn : 1000 ≤ n)
+    [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
+    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
+      (fun P : ChungInterlayer n =>
+        ∀ M : PebblingGame 14 n,
+          M.απ = (1 : ℝ) / 5 → M.δ = (189 : ℝ) / 5000 → M.π = (4 : ℝ) / 5 →
+          M.ρ = (4 : ℝ) / 5 → M.ζ = (9 : ℝ) / 10 →
+          PebblingGame.IsAdmissible M →
+          ∀ A : Finset (ℕ × Fin n), A ⊆ M.layer 0 →
+            (9 : ℝ) / 10 ≤ (A.card : ℝ) / n →
+              M.HasUnpebbledPathTo A ((176 : ℝ) / 625 * n) P)
+      (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) :=
+  chung8_pebbling_latency_at (by norm_num) lambda hn
+
+/-- The original 15-layer statement, as an instance of the same threshold. -/
+theorem chung8_pebbling_latency_15
+    {n : ℕ} (lambda : ℝ) (hn : 1000 ≤ n)
+    [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
+    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
+      (fun P : ChungInterlayer n =>
+        ∀ M : PebblingGame 15 n,
+          M.απ = (1 : ℝ) / 5 → M.δ = (189 : ℝ) / 5000 → M.π = (4 : ℝ) / 5 →
+          M.ρ = (4 : ℝ) / 5 → M.ζ = (9 : ℝ) / 10 →
+          PebblingGame.IsAdmissible M →
+          ∀ A : Finset (ℕ × Fin n), A ⊆ M.layer 0 →
+            (9 : ℝ) / 10 ≤ (A.card : ℝ) / n →
+              M.HasUnpebbledPathTo A ((176 : ℝ) / 625 * n) P)
+      (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) :=
+  chung8_pebbling_latency_at (by norm_num) lambda hn
 
 end ProofOfSpaceStatement

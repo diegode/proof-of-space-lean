@@ -10,17 +10,25 @@ blocked ranges in a single ledger:
 carried through both kinds of search step, where `X` is the spend on `(t, p]`.  At a
 fertile stopping position `Ψ ≥ 0`, so the span is `Ψ t + loss + λ X / ĝ`.
 
-Two numerical certificates make the induction go through, packaged as `LedgerCert`:
+Three numerical certificates make the induction go through, packaged as `LedgerCert`:
 
-* `t1` — an infertile step whose successor is *still* infertile must pay for its own
-  saturation loss.  Such a step has `refPot (f d) > m - 1`, hence `f d` above the last
-  chain point below `π`, so one free level would already carry it past `π`: staying
-  infertile costs spend, and the chord for `β_δ` on the top bucket prices that spend.
-* `modulus` — the offset-Lipschitz bound `refPot u - refPot v ≤ (λ-1)(u-v)/ĝ + (1-loss)`
-  for `u - v ≤ ρ`.  A blocked range of `q` levels needs more than `q ĝ` of spend, and
-  that is what turns the drop it can buy into `(λ-1)` levels per unit rather than `1`.
+* `topLip` — reached from at or above the top chain point, `refPot` falls at rate
+  `1/(x_m - x_{m-1})`, not at the global rate `1/ĝ`.  That is the only rate the ledger
+  ever needs, because a fertile position always has `β_δ f ≥ β_δ π > x_m`, and it is
+  where `λ` comes down: at the Chung-8 chain `1/(x₄-x₃) = 6.46` against `1/ĝ = 8.98`.
+* `chord` — the top-bucket chord of `β_δ`, in potential units.  An infertile step
+  carrying saturation loss `θ` sits `κ θ` above `x_m` after one free level, so staying
+  infertile costs more than `(x_m - π) + κ θ` of spend; `inf_rate` prices that.
+* `blockDrop` — a blocked range below a fertile depth begins with one free level, so its
+  endpoint is at least `β_δ π - x` and the potential it can destroy is affine in its own
+  spend `x`.  `blk_rate` prices that against the `(k + cs) ĝ` the block itself needs.
 
-Both are statements about the chain alone, discharged numerically for the Chung-8
+The slack `cs` is the expandability constant the search runs at: `Expandable B ĝ t cs`
+asks for `(i + cs) ĝ`, and `mirror_floor` accepts any `cs ≤ 1 + (σ - π̂)/ĝ` because it
+proves the tracked footprint stays above `σ` when only `π̂` is required.  A larger `cs`
+shortens every blocked range.
+
+All of them are statements about the chain alone, discharged numerically for the Chung-8
 chain.  Nothing here assumes the chain is the `β_δ` orbit.
 -/
 import ProofOfSpace.Potential
@@ -45,18 +53,50 @@ structure LedgerCert (S : Setting) (T : Tracking S) (C : RefChain S T) where
   lam : ℝ
   /-- Bound on the saturation loss of a subfertile value. -/
   loss : ℝ
+  /-- The expandability slack the search runs at: a link is `(i + cs) ĝ`-expandable.
+  `cs = 1` is the classical notion; a larger `cs` shortens every blocked range. -/
+  cs : ℝ
+  /-- The width `x_m - x_{m-1}` of the top bucket. -/
+  wtop : ℝ
+  /-- The top-bucket chord slope of `β_δ`, measured per unit of potential. -/
+  kappa : ℝ
+  /-- Affine drop bound of a blocked range: slope and offset. -/
+  a2 : ℝ
+  b2 : ℝ
   one_le_lam : 1 ≤ lam
   loss_nonneg : 0 ≤ loss
+  one_le_cs : 1 ≤ cs
+  wtop_pos : 0 < wtop
+  kappa_nonneg : 0 ≤ kappa
   /-- Below `π` the potential is within `loss` of saturation-minus-one. -/
   loss_ge : ∀ v, C.x 0 ≤ v → v ≤ S.pi → C.refPot v - ((C.m : ℝ) - 1) ≤ loss
-  /-- A step that stays infertile pays for its own saturation loss. -/
-  t1 : ∀ v s : ℝ, C.x 0 ≤ v → v ≤ S.pi → 0 ≤ s → S.betaD v - s < S.pi →
-    (C.refPot v - ((C.m : ℝ) - 1)) * T.ghat ≤ (lam - 1) * s
-  /-- Offset-Lipschitz modulus of `refPot` over a window the budget can pay for. -/
-  modulus : ∀ u v : ℝ, v ≤ u → u - v ≤ S.ρ →
-    C.refPot u - C.refPot v ≤ (lam - 1) * (u - v) / T.ghat + (1 - loss)
-  /-- The two levels a blocked range always consumes already pay the loss. -/
-  block_base : loss ≤ 2 * (lam - 1)
+  /-- **The top-bucket Lipschitz bound.**  Reached from at or above the top chain point,
+  the potential falls at rate `1/wtop`, not at the global rate `1/ĝ`.  This is the only
+  place the ledger looks at, because a fertile position always has `β_δ f ≥ β_δ π > x_m`. -/
+  topLip : ∀ u v : ℝ, C.x C.m ≤ u → v ≤ u →
+    C.refPot u - C.refPot v ≤ (u - v) / wtop
+  /-- The top-bucket chord of `β_δ`, in potential units: a position carrying saturation
+  loss `θ` already sits `κ θ` above the top chain point after one free level. -/
+  chord : ∀ v : ℝ, C.x (C.m - 1) ≤ v → v ≤ S.pi →
+    C.x C.m + kappa * (C.refPot v - ((C.m : ℝ) - 1)) ≤ S.betaD v
+  /-- `ĝ ≤ λ · wtop`: one unit of spend never costs more than `λ/ĝ` in the top bucket. -/
+  ghat_le_lam_wtop : T.ghat ≤ lam * wtop
+  /-- **The infertile rate.**  A step that stays infertile spends more than
+  `(x_m - π) + κ θ`, and that pays for both the level and the saturation loss `θ`. -/
+  inf_rate : ∀ θ s : ℝ, 0 ≤ θ → θ ≤ loss → 0 ≤ s →
+    (C.x C.m - S.pi) + kappa * θ ≤ s → θ + (s - kappa * θ) / wtop ≤ lam * s / T.ghat
+  /-- **The blocked-range drop.**  A blocked range below a fertile depth begins with one
+  free level, so its endpoint is at least `β_δ π - x`; the potential it can lose is an
+  affine function of its own spend `x`. -/
+  blockDrop : ∀ x : ℝ, (1 + cs) * T.ghat ≤ x → x ≤ S.ρ →
+    ((C.m : ℝ)) - C.refPot (S.betaD S.pi - x) ≤ a2 * x + b2
+  /-- The affine drop bound already covers one whole level. -/
+  blockDrop_one : ∀ x : ℝ, (1 + cs) * T.ghat ≤ x → 1 ≤ a2 * x + b2
+  /-- **The blocked rate.**  `x` is the spend witnessing the block, `y` the spend at the
+  level the search resumes from. -/
+  blk_rate : ∀ x y : ℝ, (1 + cs) * T.ghat ≤ x → x ≤ S.ρ → 0 ≤ y →
+    (x / T.ghat - cs + 1) + (a2 * x + b2 - 1) + y / T.ghat
+      ≤ -loss + lam * (x + y) / T.ghat
 
 namespace RefChain
 
@@ -96,7 +136,7 @@ end RefChain
 
 namespace ChainSystem
 
-variable {ℓ : ℕ} {Realizes : ℕ → Prop}
+variable {cs : ℝ} {ℓ : ℕ} {Realizes : ℕ → Prop}
 
 /-! ### The no-break hypotheses of the ledger, discharged for a chain system
 
@@ -111,7 +151,7 @@ into "no break can be paid for" — is exactly what makes the post-fertile floor
 -/
 
 /-- A link's tracked footprint never leaves the active interval. -/
-theorem link_le_αmax (CS : ChainSystem.{u} S B T ℓ Realizes) (L : CS.Link) :
+theorem link_le_αmax (CS : ChainSystem.{u} S B T cs ℓ Realizes) (L : CS.Link) :
     ∀ d, CS.depth L ≤ d → CS.wt L d ≤ S.αmax := by
   intro d hd
   have hinit : CS.wt L (CS.depth L) = T.σ := CS.init L
@@ -120,7 +160,7 @@ theorem link_le_αmax (CS : ChainSystem.{u} S B T ℓ Realizes) (L : CS.Link) :
 
 /-- **A link's tracked footprint never falls below the tracking floor**, in the no-break
 regime. -/
-theorem link_floor (CS : ChainSystem.{u} S B T ℓ Realizes)
+theorem link_floor (CS : ChainSystem.{u} S B T cs ℓ Realizes)
     (hnobreak : S.ρ < S.betaD S.pi - T.lam) (L : CS.Link) :
     ∀ d, CS.depth L ≤ d → T.lam ≤ CS.wt L d := by
   intro d hd
@@ -128,7 +168,7 @@ theorem link_floor (CS : ChainSystem.{u} S B T ℓ Realizes)
   set f := CS.wt L with hf
   have hbound : IsFootprintBound S B b f := CS.bound L
   have hinit : f b = T.σ := CS.init L
-  have hexp : Expandable B T.ghat b := CS.expandable L
+  have hexp : Expandable B T.ghat b cs := CS.expandable L
   have hcond : S.αmin + S.ρ < S.betaD S.pi := by
     have := T.αmin_lt_lam
     linarith
@@ -142,7 +182,7 @@ theorem link_floor (CS : ChainSystem.{u} S B T ℓ Realizes)
   · push Not at hfe
     have hle : ∀ i, i ≤ d - b → f (b + i) ≤ S.pi := fun i hi =>
       (hfe (b + i) (by omega) (by omega)).le
-    have hfloor := mirror_floor hexp hbound hinit hle (d - b) le_rfl
+    have hfloor := mirror_floor CS.cs_slack hexp hbound hinit hle (d - b) le_rfl
     rwa [show b + (d - b) = d from by omega] at hfloor
 
 end ChainSystem
@@ -153,66 +193,102 @@ namespace LedgerCert
 
 variable {C : RefChain S T} (Cert : LedgerCert S T C)
 
-/-- **The infertile step.**  One level, charged `λ` per unit of the spend beneath it,
-with the saturation loss released only when the step lands at a fertile depth. -/
+/-- **The infertile step.**  One level.  Below the top chain point the free level is
+worth a full unit of potential and the spend is charged at `1/ĝ`; above it the step is
+priced by the top-bucket chord and the top-bucket Lipschitz constant instead, which is
+what makes `λ` small. -/
 theorem step_infertile {f : ℕ → ℝ} {start d : ℕ} (hbound : IsFootprintBound S B start f)
     (hd : start ≤ d) (hmem : f d ∈ Icc (0 : ℝ) 1) (hbase : C.x 0 ≤ f d)
     (hgain : 0 ≤ S.gainD (f d)) (hinf : f d ≤ S.pi) :
     1 + C.psi f (d + 1) - C.psi f d
       ≤ (if S.pi ≤ f (d + 1) then Cert.loss else 0)
         + Cert.lam * B.spend (d + 1) / T.ghat := by
-  have hlevel := C.refPot_level hbound hd hmem hbase hgain
-  have hspend := B.spend_nonneg (d + 1)
-  have hsat : 1 + C.psi f (d + 1) - C.psi f d
-      ≤ max 0 (C.refPot (f d) - ((C.m : ℝ) - 1)) + B.spend (d + 1) / T.ghat := by
+  have hs : 0 ≤ B.spend (d + 1) := B.spend_nonneg _
+  have hif0 : (0 : ℝ) ≤ (if S.pi ≤ f (d + 1) then Cert.loss else 0) := by
+    split_ifs
+    · exact Cert.loss_nonneg
+    · exact le_rfl
+  have hge : S.betaD (f d) - B.spend (d + 1) ≤ f (d + 1) := by
+    rw [hbound d hd]; exact le_max_right _ _
+  by_cases hsat : C.refPot (f d) ≤ (C.m : ℝ) - 1
+  · -- unsaturated: one free level is worth a whole unit
+    have hlevel := C.refPot_level hbound hd hmem hbase hgain
+    rw [min_eq_left (by linarith)] at hlevel
+    have hlam : B.spend (d + 1) / T.ghat ≤ Cert.lam * B.spend (d + 1) / T.ghat := by
+      rw [div_le_div_iff_of_pos_right T.ghat_pos]
+      nlinarith [Cert.one_le_lam]
     simp only [RefChain.psi]
-    rcases le_total (C.refPot (f d) + 1) (C.m : ℝ) with h | h
-    · rw [min_eq_left h] at hlevel
-      have : (0 : ℝ) ≤ max 0 (C.refPot (f d) - ((C.m : ℝ) - 1)) := le_max_left _ _
-      linarith
-    · rw [min_eq_right h] at hlevel
-      have : C.refPot (f d) - ((C.m : ℝ) - 1) ≤ max 0 (C.refPot (f d) - ((C.m : ℝ) - 1)) :=
-        le_max_right _ _
-      linarith
-  have hlossbound : max 0 (C.refPot (f d) - ((C.m : ℝ) - 1)) ≤ Cert.loss :=
-    max_le Cert.loss_nonneg (Cert.loss_ge _ hbase hinf)
-  have hlam : B.spend (d + 1) / T.ghat ≤ Cert.lam * B.spend (d + 1) / T.ghat := by
-    rw [div_le_div_iff_of_pos_right T.ghat_pos]
-    nlinarith [Cert.one_le_lam]
-  by_cases hfert : S.pi ≤ f (d + 1)
-  · simp only [hfert, if_true]
     linarith
-  · simp only [hfert, if_false]
-    -- the step stays infertile, so it must have paid for its own saturation loss
-    push Not at hfert
-    have hbetalt : S.betaD (f d) - B.spend (d + 1) < S.pi := by
-      have hge : S.betaD (f d) - B.spend (d + 1) ≤ f (d + 1) := by
-        rw [hbound d hd]; exact le_max_right _ _
-      linarith
-    have hcert := Cert.t1 (f d) (B.spend (d + 1)) hbase hinf hspend hbetalt
-    have hkey : max 0 (C.refPot (f d) - ((C.m : ℝ) - 1))
-        ≤ (Cert.lam - 1) * B.spend (d + 1) / T.ghat := by
-      refine max_le ?_ ?_
-      · exact div_nonneg (mul_nonneg (by linarith [Cert.one_le_lam]) hspend) T.ghat_pos.le
-      · rw [le_div_iff₀ T.ghat_pos]
-        linarith
-    have hsplit : Cert.lam * B.spend (d + 1) / T.ghat
-        = (Cert.lam - 1) * B.spend (d + 1) / T.ghat + B.spend (d + 1) / T.ghat := by
-      field_simp
+  · -- saturating: the step carries a loss `θ`, and the chord prices it
+    push Not at hsat
+    set θ : ℝ := C.refPot (f d) - ((C.m : ℝ) - 1) with hθdef
+    have hθ0 : 0 ≤ θ := by simp only [hθdef]; linarith
+    have hθloss : θ ≤ Cert.loss := Cert.loss_ge _ hbase hinf
+    have hmcast : ((C.m - 1 : ℕ) : ℝ) = (C.m : ℝ) - 1 := by
+      have := C.m_pos
+      push_cast [Nat.cast_sub (by omega : 1 ≤ C.m)]
       ring
-    rw [hsplit]
-    linarith
+    have hxm1 : C.x (C.m - 1) ≤ f d := by
+      by_contra hcon
+      push Not at hcon
+      have hmono := C.refPot_mono hcon.le
+      rw [C.refPot_x (by omega), hmcast] at hmono
+      simp only [hθdef] at hθ0
+      linarith
+    have hchord := Cert.chord (f d) hxm1 hinf
+    by_cases hbig : C.x C.m ≤ f (d + 1)
+    · -- the step overshoots the top chain point: it costs only the loss it carried
+      have hfert : S.pi ≤ f (d + 1) := le_trans C.top hbig
+      have hmax : C.refPot (f (d + 1)) = (C.m : ℝ) := C.refPot_eq_m hbig
+      have hpos : 0 ≤ Cert.lam * B.spend (d + 1) / T.ghat :=
+        div_nonneg (mul_nonneg (by linarith [Cert.one_le_lam]) hs) T.ghat_pos.le
+      simp only [RefChain.psi, hfert, if_true, hmax, hθdef] at *
+      linarith
+    · push Not at hbig
+      have hdrop : (C.m : ℝ) - C.refPot (f (d + 1)) ≤ (C.x C.m - f (d + 1)) / Cert.wtop := by
+        have h := Cert.topLip (C.x C.m) (f (d + 1)) le_rfl hbig.le
+        rwa [C.refPot_x le_rfl] at h
+      have hgap : C.x C.m - f (d + 1) ≤ B.spend (d + 1) - Cert.kappa * θ := by
+        simp only [hθdef] at hchord ⊢; linarith
+      have hdiv : (C.x C.m - f (d + 1)) / Cert.wtop
+          ≤ (B.spend (d + 1) - Cert.kappa * θ) / Cert.wtop := by
+        rw [div_le_div_iff_of_pos_right Cert.wtop_pos]; exact hgap
+      have hkey : 1 + C.psi f (d + 1) - C.psi f d
+          ≤ θ + (B.spend (d + 1) - Cert.kappa * θ) / Cert.wtop := by
+        simp only [RefChain.psi, hθdef]
+        linarith
+      by_cases hfert : S.pi ≤ f (d + 1)
+      · -- lands fertile: the released allowance covers `θ`
+        have hw : (B.spend (d + 1) - Cert.kappa * θ) / Cert.wtop
+            ≤ Cert.lam * B.spend (d + 1) / T.ghat := by
+          have h1 : (B.spend (d + 1) - Cert.kappa * θ) / Cert.wtop
+              ≤ B.spend (d + 1) / Cert.wtop := by
+            rw [div_le_div_iff_of_pos_right Cert.wtop_pos]
+            nlinarith [Cert.kappa_nonneg, hθ0]
+          have h2 : B.spend (d + 1) / Cert.wtop ≤ Cert.lam * B.spend (d + 1) / T.ghat := by
+            rw [div_le_div_iff₀ Cert.wtop_pos T.ghat_pos]
+            nlinarith [Cert.ghat_le_lam_wtop, hs]
+          linarith
+        simp only [hfert, if_true]
+        linarith
+      · -- stays infertile: the chord forces the spend, and `inf_rate` prices it
+        push Not at hfert
+        have hspend : (C.x C.m - S.pi) + Cert.kappa * θ ≤ B.spend (d + 1) := by
+          simp only [hθdef] at hchord ⊢; linarith
+        have := Cert.inf_rate θ (B.spend (d + 1)) hθ0 hθloss hs hspend
+        simp only [hfert.not_ge, if_false]
+        linarith
 
 /-- **The blocked step.**  A blocked range of `k + 1` levels below a fertile depth is
-paid for by the spend that witnesses the block: it needs more than `(k+1) ĝ`, and the
-`modulus` certificate turns the drop that spend can buy into `(λ - 1)` levels per unit.
-The `- loss` on the right is the saturation allowance the step hands back. -/
+paid for by the spend that witnesses the block: it needs more than `(k + cs) ĝ`, and the
+range's own first free level puts its endpoint above `β_δ π - x`, so the potential it can
+destroy is `blockDrop`, not the whole Lipschitz drop. -/
 theorem step_blocked {f : ℕ → ℝ} {start p k : ℕ} (hbound : IsFootprintBound S B start f)
-    (hp : start ≤ p) (hk : 1 ≤ k)
+    (hp : start ≤ p) (hk : 1 ≤ k) (hfert : S.pi ≤ f p) (hmemp : f p ∈ Icc (0 : ℝ) 1)
     (hgains : ∀ i, i < k → 0 ≤ S.gainD (f (p + i)))
     (hmem : f (p + k) ∈ Icc (0 : ℝ) 1) (hbase : C.x 0 ≤ f (p + k))
     (hgain : 0 ≤ S.gainD (f (p + k)))
-    (hwitness : ((k : ℝ) + 1) * T.ghat
+    (hwitness : ((k : ℝ) + Cert.cs) * T.ghat
       < ∑ d ∈ Finset.Ico (p + 1) (p + k + 1), B.spend d) :
     ((k : ℝ) + 1) + C.psi f (p + k + 1) - C.psi f p
       ≤ (if S.pi ≤ f (p + k + 1) then Cert.loss else 0) - Cert.loss
@@ -220,76 +296,59 @@ theorem step_blocked {f : ℕ → ℝ} {start p k : ℕ} (hbound : IsFootprintBo
   classical
   set sw : ℝ := ∑ d ∈ Finset.Ico (p + 1) (p + k + 1), B.spend d with hsw
   set sq : ℝ := B.spend (p + k + 1) with hsq
-  have hswnn : 0 ≤ sw := Finset.sum_nonneg fun d _ => B.spend_nonneg d
   have hsqnn : 0 ≤ sq := B.spend_nonneg _
   have hswρ : sw ≤ S.ρ := B.sum_Ico_le _ _
+  have hkR : (1 : ℝ) ≤ (k : ℝ) := by exact_mod_cast hk
+  have hlow : (1 + Cert.cs) * T.ghat ≤ sw := by
+    nlinarith [T.ghat_pos, hwitness, hkR]
   have hstot : ∑ d ∈ Finset.Ico (p + 1) (p + k + 2), B.spend d = sw + sq := by
     rw [hsw, hsq, show p + k + 2 = (p + k + 1) + 1 from by omega,
       Finset.sum_Ico_succ_top (by omega)]
-  -- the range drops the footprint by at most its own spend
-  have hdrop : f p - sw ≤ f (p + k) := by
-    have hid := hbound.sum_le hp k
-    have hg : 0 ≤ ∑ i ∈ Finset.range k, S.gainD (f (p + i)) :=
-      Finset.sum_nonneg fun i hi => hgains i (Finset.mem_range.mp hi)
-    have hshift : ∑ i ∈ Finset.range k, B.spend (p + i + 1) = sw := by
-      rw [hsw]; exact B.sum_shift p k
+  -- the range's own first free level: its endpoint stays above `β_δ π - sw`
+  have hdrop : S.betaD S.pi - sw ≤ f (p + k) := by
+    obtain ⟨j, rfl⟩ : ∃ j, k = j + 1 := ⟨k - 1, by omega⟩
+    have hid := hbound.sum_le hp (j + 1)
+    have hshift : ∑ m ∈ Finset.range (j + 1), B.spend (p + m + 1) = sw := by
+      rw [hsw]; exact B.sum_shift p (j + 1)
     rw [hshift] at hid
+    have hsplit : ∑ i ∈ Finset.range (j + 1), S.gainD (f (p + i))
+        = (∑ i ∈ Finset.range j, S.gainD (f (p + (i + 1)))) + S.gainD (f (p + 0)) :=
+      Finset.sum_range_succ' _ j
+    have htail : 0 ≤ ∑ i ∈ Finset.range j, S.gainD (f (p + (i + 1))) :=
+      Finset.sum_nonneg fun i hi => hgains (i + 1) (by
+        simpa using Nat.succ_lt_succ (Finset.mem_range.mp hi))
+    have hbeta : S.betaD S.pi ≤ S.betaD (f p) :=
+      S.betaD_strictMonoOn.monotoneOn S.pi_mem_Icc hmemp hfert
+    simp only [Setting.betaD_eq] at hbeta ⊢
+    simp only [Nat.add_zero] at hsplit
     linarith
+  -- the potential the range can destroy
+  have hΦ : (C.m : ℝ) - C.refPot (f (p + k)) ≤ Cert.a2 * sw + Cert.b2 := by
+    have hmono := C.refPot_mono hdrop
+    have := Cert.blockDrop sw hlow hswρ
+    linarith
+  have hone := Cert.blockDrop_one sw hlow
   -- one more free level, at the depth the search resumes from
   have hlevel := C.refPot_level hbound (show start ≤ p + k from by omega) hmem hbase hgain
-  have hmono : C.refPot (f p - sw) ≤ C.refPot (f (p + k)) := C.refPot_mono hdrop
-  have hmin : min (C.refPot (f p - sw) + 1) (C.m : ℝ)
-      ≤ min (C.refPot (f (p + k)) + 1) (C.m : ℝ) :=
-    min_le_min (by linarith) le_rfl
-  have hresume : min (C.refPot (f p - sw) + 1) (C.m : ℝ) - sq / T.ghat
-      ≤ C.refPot (f (p + k + 1)) := by
-    have h := hlevel
-    rw [← hsq] at h
+  rw [← hsq] at hlevel
+  have hminle : (C.m : ℝ) - min (C.refPot (f (p + k)) + 1) (C.m : ℝ)
+      ≤ Cert.a2 * sw + Cert.b2 - 1 := by
+    rcases le_total (C.refPot (f (p + k)) + 1) (C.m : ℝ) with hc | hc
+    · rw [min_eq_left hc]; linarith
+    · rw [min_eq_right hc]; linarith
+  -- the level count the witness pays for
+  have hq : ((k : ℝ) + 1) ≤ sw / T.ghat - Cert.cs + 1 := by
+    have h : (k : ℝ) + Cert.cs ≤ sw / T.ghat := by
+      rw [le_div_iff₀ T.ghat_pos]; linarith [hwitness]
     linarith
-  have hq : ((k : ℝ) + 1) < sw / T.ghat := by
-    rw [lt_div_iff₀ T.ghat_pos]; linarith
-  have hif : (0 : ℝ) ≤ (if S.pi ≤ f (p + k + 1) then Cert.loss else 0) := by
+  have hrate := Cert.blk_rate sw sq hlow hswρ hsqnn
+  have hcap := C.refPot_le_m (f p)
+  have hif0 : (0 : ℝ) ≤ (if S.pi ≤ f (p + k + 1) then Cert.loss else 0) := by
     split_ifs
     · exact Cert.loss_nonneg
     · exact le_rfl
-  have hkey : ((k : ℝ) + 1) + C.psi f (p + k + 1) - C.psi f p
-      ≤ - Cert.loss + Cert.lam * (sw + sq) / T.ghat := by
-    simp only [RefChain.psi]
-    have hsplit : Cert.lam * (sw + sq) / T.ghat
-        = Cert.lam * sw / T.ghat + Cert.lam * sq / T.ghat := by
-      field_simp
-    have hsqlam : sq / T.ghat ≤ Cert.lam * sq / T.ghat := by
-      rw [div_le_div_iff_of_pos_right T.ghat_pos]
-      nlinarith [Cert.one_le_lam]
-    rcases le_total (C.refPot (f p - sw) + 1) (C.m : ℝ) with hcase | hcase
-    · rw [min_eq_left hcase] at hresume
-      have hmod := Cert.modulus (f p) (f p - sw) (by linarith) (by linarith)
-      have harith : (Cert.lam - 1) * (f p - (f p - sw)) / T.ghat
-          = (Cert.lam - 1) * sw / T.ghat := by
-        congr 1
-        ring
-      rw [harith] at hmod
-      have hlamsw : ((k : ℝ) + 1) + (Cert.lam - 1) * sw / T.ghat
-          ≤ Cert.lam * sw / T.ghat := by
-        have : (Cert.lam - 1) * sw / T.ghat + sw / T.ghat = Cert.lam * sw / T.ghat := by
-          field_simp; ring
-        linarith
-      rw [hsplit]
-      linarith
-    · rw [min_eq_right hcase] at hresume
-      have hcap := C.refPot_le_m (f p)
-      have hbig : ((k : ℝ) + 1) + Cert.loss ≤ Cert.lam * sw / T.ghat := by
-        have h2 : (2 : ℝ) ≤ (k : ℝ) + 1 := by
-          have : (1 : ℝ) ≤ (k : ℝ) := by exact_mod_cast hk
-          linarith
-        have hlamq : Cert.lam * ((k : ℝ) + 1) ≤ Cert.lam * (sw / T.ghat) :=
-          mul_le_mul_of_nonneg_left hq.le (by linarith [Cert.one_le_lam])
-        have hbb := Cert.block_base
-        have : Cert.lam * (sw / T.ghat) = Cert.lam * sw / T.ghat := by ring
-        nlinarith [Cert.one_le_lam]
-      rw [hsplit]
-      linarith
   rw [hstot]
+  simp only [RefChain.psi]
   linarith
 
 /-!
@@ -316,7 +375,7 @@ theorem search_ledger {f : ℕ → ℝ} {t ℓ : ℕ}
     (hfloor : ∀ d, t ≤ d → T.lam ≤ f d)
     (hmax : ∀ d, t ≤ d → f d ≤ S.αmax) :
     ∃ t2, t ≤ t2 ∧ (f t < S.pi → t < ℓ → t < t2) ∧
-      (ℓ ≤ t2 ∨ (S.pi ≤ f t2 ∧ Expandable B T.ghat t2)) ∧
+      (ℓ ≤ t2 ∨ (S.pi ≤ f t2 ∧ Expandable B T.ghat t2 Cert.cs)) ∧
       ((t2 - t : ℕ) : ℝ) ≤ C.psi f t + Cert.loss
         + Cert.lam * (∑ d ∈ Finset.Ico (t + 1) (t2 + 1), B.spend d) / T.ghat := by
   classical
@@ -327,34 +386,34 @@ theorem search_ledger {f : ℕ → ℝ} {t ℓ : ℕ}
       le_trans (hmax d hd) S.αmax_le_one⟩
   have hbaseall : ∀ d, t ≤ d → C.x 0 ≤ f d := fun d hd => le_trans C.base (hfloor d hd)
   set Fert : ℕ → Prop := fun d => S.pi ≤ f d with hFert
-  have hex : ∃ j, (Fert (searchPos B T.ghat Fert t j) ∧
-      Expandable B T.ghat (searchPos B T.ghat Fert t j)) ∨
-      ℓ ≤ searchPos B T.ghat Fert t j := by
+  have hex : ∃ j, (Fert (searchPos B T.ghat Cert.cs Fert t j) ∧
+      Expandable B T.ghat (searchPos B T.ghat Cert.cs Fert t j) Cert.cs) ∨
+      ℓ ≤ searchPos B T.ghat Cert.cs Fert t j := by
     refine ⟨ℓ, Or.inr ?_⟩
-    have := le_searchPos (B := B) (g := T.ghat) (Fert := Fert) (t := t) ℓ
+    have := le_searchPos (B := B) (g := T.ghat) (cs := Cert.cs) (Fert := Fert) (t := t) ℓ
     omega
   set J := Nat.find hex with hJ
-  set t2 := searchPos B T.ghat Fert t J with ht2
-  have hJspec : (Fert t2 ∧ Expandable B T.ghat t2) ∨ ℓ ≤ t2 := Nat.find_spec hex
+  set t2 := searchPos B T.ghat Cert.cs Fert t J with ht2
+  have hJspec : (Fert t2 ∧ Expandable B T.ghat t2 Cert.cs) ∨ ℓ ≤ t2 := Nat.find_spec hex
   have hbad : ∀ j, j < J →
-      ¬(Fert (searchPos B T.ghat Fert t j) ∧
-        Expandable B T.ghat (searchPos B T.ghat Fert t j)) := by
+      ¬(Fert (searchPos B T.ghat Cert.cs Fert t j) ∧
+        Expandable B T.ghat (searchPos B T.ghat Cert.cs Fert t j) Cert.cs) := by
     intro j hj hcon
     exact (Nat.find_min hex hj) (Or.inl hcon)
   -- the ledger invariant, carried along the search
   have hinv : ∀ j, j ≤ J →
-      ((searchPos B T.ghat Fert t j - t : ℕ) : ℝ)
-          + C.psi f (searchPos B T.ghat Fert t j)
+      ((searchPos B T.ghat Cert.cs Fert t j - t : ℕ) : ℝ)
+          + C.psi f (searchPos B T.ghat Cert.cs Fert t j)
         ≤ C.psi f t
-          + (if S.pi ≤ f (searchPos B T.ghat Fert t j) then Cert.loss else 0)
+          + (if S.pi ≤ f (searchPos B T.ghat Cert.cs Fert t j) then Cert.loss else 0)
           + Cert.lam
-              * (∑ d ∈ Finset.Ico (t + 1) (searchPos B T.ghat Fert t j + 1), B.spend d)
+              * (∑ d ∈ Finset.Ico (t + 1) (searchPos B T.ghat Cert.cs Fert t j + 1), B.spend d)
               / T.ghat := by
     intro j
     induction j with
     | zero =>
         intro _
-        have h0 : searchPos B T.ghat Fert t 0 = t := searchPos_zero
+        have h0 : searchPos B T.ghat Cert.cs Fert t 0 = t := searchPos_zero
         have hif : (0 : ℝ) ≤ (if S.pi ≤ f t then Cert.loss else 0) := by
           split_ifs
           · exact Cert.loss_nonneg
@@ -367,7 +426,7 @@ theorem search_ledger {f : ℕ → ℝ} {t ℓ : ℕ}
         intro hj
         have hjJ : j < J := by omega
         have ihj := ih (by omega)
-        set p := searchPos B T.ghat Fert t j with hp
+        set p := searchPos B T.ghat Cert.cs Fert t j with hp
         have hpt : t ≤ p := base_le_searchPos j
         have hsplit : ∀ b : ℕ, p + 1 ≤ b →
             ∑ d ∈ Finset.Ico (t + 1) b, B.spend d
@@ -377,19 +436,20 @@ theorem search_ledger {f : ℕ → ℝ} {t ℓ : ℕ}
           rw [Finset.sum_Ico_consecutive _ (by omega) hb]
         by_cases hF : Fert p
         · -- fertile, hence blockable: jump the witnessed range
-          have hblock : Blockable B T.ghat p :=
-            (not_expandable_iff_blockable B T.ghat p).mp fun hexp => hbad j hjJ ⟨hF, hexp⟩
+          have hblock : Blockable B T.ghat p Cert.cs :=
+            (not_expandable_iff_blockable B T.ghat p Cert.cs).mp fun hexp => hbad j hjJ ⟨hF, hexp⟩
           obtain ⟨hk1, hkspend⟩ := blockLen_spec hblock
-          set k := blockLen B T.ghat p with hk
-          have hnext : searchPos B T.ghat Fert t (j + 1) = p + k + 1 := by
+          set k := blockLen B T.ghat p Cert.cs with hk
+          have hnext : searchPos B T.ghat Cert.cs Fert t (j + 1) = p + k + 1 := by
             rw [searchPos_succ]; simp only [← hp, hF, if_true, ← hk]
           have hshift : ∑ m ∈ Finset.range k, B.spend (p + m + 1)
               = ∑ d ∈ Finset.Ico (p + 1) (p + k + 1), B.spend d := B.sum_shift p k
-          have hwit : ((k : ℝ) + 1) * T.ghat
+          have hwit : ((k : ℝ) + Cert.cs) * T.ghat
               < ∑ d ∈ Finset.Ico (p + 1) (p + k + 1), B.spend d := by
             rw [← hshift]; exact hkspend
           have hstep := Cert.step_blocked (f := f) (start := t) (p := p) (k := k)
-            hbound hpt hk1 (fun i _ => hgainall (p + i) (by omega))
+            hbound hpt hk1 (by simpa only [hFert] using hF) (hmemall p hpt)
+            (fun i _ => hgainall (p + i) (by omega))
             (hmemall (p + k) (by omega)) (hbaseall (p + k) (by omega))
             (hgainall (p + k) (by omega)) hwit
           have hcast : ((p + k + 1 - t : ℕ) : ℝ)
@@ -411,7 +471,7 @@ theorem search_ledger {f : ℕ → ℝ} {t ℓ : ℕ}
           rw [hdiv]
           linarith
         · -- infertile: advance one level
-          have hnext : searchPos B T.ghat Fert t (j + 1) = p + 1 := by
+          have hnext : searchPos B T.ghat Cert.cs Fert t (j + 1) = p + 1 := by
             rw [searchPos_succ]; simp only [← hp, hF, if_false]
           have hinf : f p ≤ S.pi := by
             simp only [hFert, not_le] at hF
@@ -489,7 +549,7 @@ prefix `[0, b]`, including the challenge level itself, so it composes with
 theorem search_head {C : RefChain S T} (Cert : LedgerCert S T C)
     (Ch : ChallengeBound S B) (hζmax : S.ζδ ≤ S.αmax) (hentry : S.piBar < S.ζδ - S.ρ)
     (ℓ : ℕ) :
-    ∃ b, (ℓ ≤ b ∨ (S.pi ≤ Ch.f b ∧ Expandable B T.ghat b)) ∧
+    ∃ b, (ℓ ≤ b ∨ (S.pi ≤ Ch.f b ∧ Expandable B T.ghat b Cert.cs)) ∧
       (b : ℝ) ≤ potHead C Cert
         + Cert.lam * (∑ d ∈ Finset.Ico 0 (b + 1), B.spend d) / T.ghat := by
   obtain ⟨b, _, _, hout, hspan⟩ :=
@@ -530,7 +590,7 @@ theorem search_head {C : RefChain S T} (Cert : LedgerCert S T C)
 
 namespace ChainSystem
 
-variable {ℓ : ℕ} {Realizes : ℕ → Prop}
+variable {cs : ℝ} {ℓ : ℕ} {Realizes : ℕ → Prop}
 
 /--
 **Chain length from the potential ledger.**
@@ -544,7 +604,7 @@ Only the no-break hypotheses are used, because that is all `search_ledger` needs
 break-aware accounting of `Ledger.lean` is untouched.
 -/
 theorem potential_links {C : RefChain S T} (Cert : LedgerCert S T C)
-    (CS : ChainSystem.{u} S B T ℓ Realizes)
+    (CS : ChainSystem.{u} S B T Cert.cs ℓ Realizes)
     (hfloor : ∀ (L : CS.Link) d, CS.depth L ≤ d → T.lam ≤ CS.wt L d)
     (hmax : ∀ (L : CS.Link) d, CS.depth L ≤ d → CS.wt L d ≤ S.αmax)
     (L0 : CS.Link) :
@@ -638,11 +698,11 @@ The head and the links are charged against disjoint prefixes of the same budget,
 whole construction pays `λ ρ / ĝ` once.
 -/
 theorem potential_count {C : RefChain S T} (Cert : LedgerCert S T C)
-    (CS : ChainSystem.{u} S B T ℓ Realizes) (Ch : ChallengeBound S B)
+    (CS : ChainSystem.{u} S B T Cert.cs ℓ Realizes) (Ch : ChallengeBound S B)
     (hζmax : S.ζδ ≤ S.αmax) (hentry : S.piBar < S.ζδ - S.ρ)
     (hfloor : ∀ (L : CS.Link) d, CS.depth L ≤ d → T.lam ≤ CS.wt L d)
     (hmax : ∀ (L : CS.Link) d, CS.depth L ≤ d → CS.wt L d ≤ S.αmax)
-    (restart : ∀ b : ℕ, b < ℓ → S.pi ≤ Ch.f b → Expandable B T.ghat b →
+    (restart : ∀ b : ℕ, b < ℓ → S.pi ≤ Ch.f b → Expandable B T.ghat b Cert.cs →
       ∃ L : CS.Link, CS.depth L = b ∧ CS.count L = 1)
     {z : ℕ} (hz1 : 1 ≤ z)
     (hz : potHead C Cert + ((z : ℝ) - 1) * potSpan C Cert

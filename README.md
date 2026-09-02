@@ -1,15 +1,15 @@
 # Formalized Latency Bounds for Stacked Proofs of Space
 
 This repository formalizes in Lean 4 a static latency lower bound for a
-15-layer stacked proof-of-space graph. The vertical wiring is one uniformly
+14-layer stacked proof-of-space graph. The vertical wiring is one uniformly
 sampled permutation of the `8n` ports `Fin 8 × Fin n`, reused between all
 consecutive layers.
 
 ## Main result
 
-[`chung8_pebbling_latency_15`](Challenge.lean) proves that, except with
+[`chung8_pebbling_latency_14`](Challenge.lean) proves that, except with
 probability `2^(-lambda)` over the sampled wiring, **every** admissible
-15-layer pebbling position at the Filecoin parameters and **every** challenge
+14-layer pebbling position at the Filecoin parameters and **every** challenge
 set of weight `ζ = 9/10` in the final layer admit an unpebbled directed path,
 ending in that challenge set, of length at least
 
@@ -30,7 +30,7 @@ belongs to the region when every wiring that expands on `[a, b]` gives the
 deterministic `z`-link latency property, for every admissible game with those
 fundamental parameters. The theorem itself is the transfer from that
 deterministic hypothesis through the union bound; the latency content lives in
-the region-membership proof, which for the 15-layer tuple is discharged in
+the region-membership proof, which for the 14- and 15-layer tuples is discharged in
 `Solution.lean` from the analytic and potential-ledger certificates.
 
 ## Expansion is assumed only on a density range
@@ -43,7 +43,7 @@ is, and near density `1` the union bound is vacuous. The deterministic argument
 only ever queries expansion at densities in `[αmin, αmax]`, and a set denser
 than `b` is handled by expanding a subset of the queried density.
 
-The 15-layer theorem instantiates `[1/100, 24/25]`, which brackets the
+Both layer instances instantiate `[1/100, 24/25]`, which brackets the
 Filecoin `[αmin, αmax] = [0.0129…, 0.9493…]`, and assumes `1000 ≤ n` so that the
 rounding of a subset back into the range fits. `ChungSecurityConditions n lambda
 a b` remains an assumption on the width: it is satisfiable at the deployed
@@ -63,11 +63,11 @@ port-permutation model.
 
 ## Repository layout
 
-- [`Challenge.lean`](Challenge.lean) contains the public definitions and the two
+- [`Challenge.lean`](Challenge.lean) contains the public definitions and the
   theorem statements, with proof bodies replaced by `sorry`.
 - [`Solution.lean`](Solution.lean) proves those statements from the library.
 - [`ProofOfSpace/`](ProofOfSpace/) contains the deterministic latency argument,
-  the 15-layer specialization, and the expansion probability bound.
+  the layer specializations, and the expansion probability bound.
 - [`ProofOfSpace.lean`](ProofOfSpace.lean) imports the complete development.
 
 ## Verification
@@ -77,9 +77,11 @@ lake build
 ./scripts/verify-comparator.sh
 ```
 
-The comparator checks the registered theorem
-`ProofOfSpaceStatement.chung8_pebbling_latency_15`, its permitted axioms, and
-NanoDa replay using the pinned toolchain.
+The comparator checks the registered theorems
+`ProofOfSpaceStatement.chung8_pebbling_latency_14` and
+`ProofOfSpaceStatement.chung8_pebbling_latency_15`, their permitted axioms, and
+NanoDa replay using the pinned toolchain.  `chung8_pebbling_latency_15` is kept
+as an instance of the same threshold; the 14-layer statement is the sharper one.
 
 The development builds on Leonid Reyzin's *Proofs of Space with Maximal
 Hardness* (FOCS 2024) and Ben Fisch's *Tight Proofs of Space and Replication*

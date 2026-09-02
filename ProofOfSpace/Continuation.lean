@@ -202,21 +202,21 @@ theorem fertile_continuation_gen {f : ℕ → ℝ} {t1 E : ℕ}
   classical
   set Fert : ℕ → Prop := fun d => S.pi ≤ f d with hFert
   -- the search stops at the first fertile expandable position, or when it leaves `[t1, E)`
-  have hex : ∃ j, (Fert (searchPos B T.ghat Fert t1 j) ∧
-      Expandable B T.ghat (searchPos B T.ghat Fert t1 j)) ∨
-      E ≤ searchPos B T.ghat Fert t1 j := by
+  have hex : ∃ j, (Fert (searchPos B T.ghat 1 Fert t1 j) ∧
+      Expandable B T.ghat (searchPos B T.ghat 1 Fert t1 j)) ∨
+      E ≤ searchPos B T.ghat 1 Fert t1 j := by
     refine ⟨E, Or.inr ?_⟩
-    have := le_searchPos (B := B) (g := T.ghat) (Fert := Fert) (t := t1) E
+    have := le_searchPos (B := B) (g := T.ghat) (cs := 1) (Fert := Fert) (t := t1) E
     omega
   set J := Nat.find hex with hJ
-  set t2 := searchPos B T.ghat Fert t1 J with ht2
+  set t2 := searchPos B T.ghat 1 Fert t1 J with ht2
   have hJspec : (Fert t2 ∧ Expandable B T.ghat t2) ∨ E ≤ t2 := Nat.find_spec hex
   have hbad : ∀ j, j < J →
-      ¬(Fert (searchPos B T.ghat Fert t1 j) ∧
-        Expandable B T.ghat (searchPos B T.ghat Fert t1 j)) := by
+      ¬(Fert (searchPos B T.ghat 1 Fert t1 j) ∧
+        Expandable B T.ghat (searchPos B T.ghat 1 Fert t1 j)) := by
     intro j hj hcon
     exact (Nat.find_min hex hj) (Or.inl hcon)
-  have hcut : ∀ j, j < J → searchPos B T.ghat Fert t1 j < E := by
+  have hcut : ∀ j, j < J → searchPos B T.ghat 1 Fert t1 j < E := by
     intro j hj
     have := Nat.find_min hex hj
     push Not at this
@@ -229,26 +229,26 @@ theorem fertile_continuation_gen {f : ℕ → ℝ} {t1 E : ℕ}
   -- the two capacities
   obtain ⟨_, hQlt⟩ := searchQ_spend (B := B) (g := T.ghat) (Fert := Fert) (t := t1) hbad J
     (le_refl J)
-  have hpos := searchPos_eq (B := B) (g := T.ghat) (Fert := Fert) (t := t1) J
+  have hpos := searchPos_eq (B := B) (g := T.ghat) (cs := 1) (Fert := Fert) (t := t1) J
   set x : ℝ := ∑ d ∈ Finset.Ico (t1 + 1) t2, B.spend d with hx
   have hxnn : 0 ≤ x := Finset.sum_nonneg fun d _ => B.spend_nonneg d
-  have hspend : searchSpend (B := B) (g := T.ghat) (Fert := Fert) (t := t1) J = x := by
+  have hspend : searchSpend (B := B) (g := T.ghat) (cs := 1) (Fert := Fert) (t := t1) J = x := by
     simp only [searchSpend, hx, ht2]
   -- the infertile skips, charged on a window that stops before the search's last jump
-  have hIle : searchI B T.ghat Fert t1 J ≤ ⌈x / T.ghat⌉₊ := by
+  have hIle : searchI B T.ghat 1 Fert t1 J ≤ ⌈x / T.ghat⌉₊ := by
     rcases Nat.eq_zero_or_pos J with hJ0 | hJpos
     · simp [hJ0, searchI]
     obtain ⟨j, hjJ⟩ : ∃ j, J = j + 1 := ⟨J - 1, by omega⟩
-    set p := searchPos B T.ghat Fert t1 j with hp
+    set p := searchPos B T.ghat 1 Fert t1 j with hp
     have hpE : p < E := hcut j (by omega)
     have hpt1 : t1 ≤ p := base_le_searchPos j
     have hp1t2 : p + 1 ≤ t2 := by
-      have := searchPos_lt_succ (B := B) (g := T.ghat) (Fert := Fert) (t := t1) j
+      have := searchPos_lt_succ (B := B) (g := T.ghat) (cs := 1) (Fert := Fert) (t := t1) j
       rw [ht2, hjJ]; omega
     set K := ((Finset.Ico t1 (p + 1)).filter (fun d => ¬ Fert d)).card with hK
-    have hIK : searchI B T.ghat Fert t1 J ≤ K := by
+    have hIK : searchI B T.ghat 1 Fert t1 J ≤ K := by
       rw [hjJ, hK]
-      exact searchI_card_succ (B := B) (g := T.ghat) (Fert := Fert) (t := t1) j
+      exact searchI_card_succ (B := B) (g := T.ghat) (cs := 1) (Fert := Fert) (t := t1) j
     rcases Nat.eq_zero_or_pos K with hK0 | hKpos
     · omega
     -- gains along the tracked footprint bound, unpebbled above the cut-off
@@ -282,16 +282,16 @@ theorem fertile_continuation_gen {f : ℕ → ℝ} {t1 E : ℕ}
     have := Nat.lt_ceil.mpr hcast
     omega
   -- the blocked ranges, charged to their own disjoint spends
-  have hQle : searchQ B T.ghat Fert t1 J ≤ ⌈x / T.ghat⌉₊ - 1 := by
-    rcases Nat.eq_zero_or_pos (searchQ B T.ghat Fert t1 J) with h0 | hpos'
+  have hQle : searchQ B T.ghat 1 Fert t1 J ≤ ⌈x / T.ghat⌉₊ - 1 := by
+    rcases Nat.eq_zero_or_pos (searchQ B T.ghat 1 Fert t1 J) with h0 | hpos'
     · omega
     · have h1 := hQlt hpos'
       rw [hspend] at h1
-      have h2 : (searchQ B T.ghat Fert t1 J : ℝ) < x / T.ghat := by
+      have h2 : (searchQ B T.ghat 1 Fert t1 J : ℝ) < x / T.ghat := by
         rw [lt_div_iff₀ T.ghat_pos]; exact h1
       have := Nat.lt_ceil.mpr h2
       omega
-  have hsum : t2 - t1 = searchI B T.ghat Fert t1 J + searchQ B T.ghat Fert t1 J := by
+  have hsum : t2 - t1 = searchI B T.ghat 1 Fert t1 J + searchQ B T.ghat 1 Fert t1 J := by
     rw [ht2, hpos]; omega
   simp only [contSpan]
   omega

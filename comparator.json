@@ -1,8 +1,15 @@
 {
   "challenge_module": "Challenge",
   "solution_module": "Solution",
-  "theorem_names": ["ProofOfSpaceStatement.chung8_pebbling_latency_15"],
+  "theorem_names": [
+    "ProofOfSpaceStatement.chung8_pebbling_latency_15",
+    "ProofOfSpaceStatement.chung8_pebbling_latency_14"
+  ],
   "definition_names": [],
-  "permitted_axioms": ["propext", "Quot.sound", "Classical.choice"],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ],
   "enable_nanoda": true
 }

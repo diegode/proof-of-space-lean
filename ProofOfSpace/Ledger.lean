@@ -193,20 +193,20 @@ theorem search_stops {B : Budget S} {g : ℝ} (Fert : ℕ → Prop) [DecidablePr
       I ≤ ((Finset.Ico t p).filter (fun d => ¬ Fert d)).card ∧
       (0 < Q → (Q : ℝ) * g < ∑ d ∈ Finset.Ico (t + 1) p, B.spend d) := by
   classical
-  have hex : ∃ j, (Fert (searchPos B g Fert t j) ∧ Expandable B g (searchPos B g Fert t j)) ∨
-      E ≤ searchPos B g Fert t j := by
+  have hex : ∃ j, (Fert (searchPos B g 1 Fert t j) ∧ Expandable B g (searchPos B g 1 Fert t j)) ∨
+      E ≤ searchPos B g 1 Fert t j := by
     refine ⟨E, Or.inr ?_⟩
-    have := le_searchPos (B := B) (g := g) (Fert := Fert) (t := t) E
+    have := le_searchPos (B := B) (g := g) (cs := 1) (Fert := Fert) (t := t) E
     omega
   set J := Nat.find hex with hJ
   have hJspec := Nat.find_spec hex
   have hbad : ∀ j, j < J →
-      ¬(Fert (searchPos B g Fert t j) ∧ Expandable B g (searchPos B g Fert t j)) := by
+      ¬(Fert (searchPos B g 1 Fert t j) ∧ Expandable B g (searchPos B g 1 Fert t j)) := by
     intro j hj hcon
     exact (Nat.find_min hex hj) (Or.inl hcon)
   obtain ⟨_, hQlt⟩ :=
     searchQ_spend (B := B) (g := g) (Fert := Fert) (t := t) hbad J (le_refl J)
-  exact ⟨searchPos B g Fert t J, searchI B g Fert t J, searchQ B g Fert t J,
+  exact ⟨searchPos B g 1 Fert t J, searchI B g 1 Fert t J, searchQ B g 1 Fert t J,
     searchPos_eq J, hJspec.symm, searchI_card J,
     fun h => by simpa only [searchSpend] using hQlt h⟩
 
@@ -322,7 +322,7 @@ def GenLedger (S : Setting) (B : Budget S) (T : Tracking S) (Fert : ℕ → Prop
 
 namespace ChainSystem
 
-variable {ℓ : ℕ} {Realizes : ℕ → Prop} (CS : ChainSystem.{u} S B T ℓ Realizes)
+variable {ℓ : ℕ} {Realizes : ℕ → Prop} (CS : ChainSystem.{u} S B T 1 ℓ Realizes)
 
 /--
 **Chain extension with a possible break** (`extension-attempt lemma`).
@@ -498,7 +498,7 @@ theorem extension_attempt_gen (L : CS.Link) :
       · have hle : ∀ i, i ≤ d - b → f (b + i) ≤ S.pi := by
           intro i hi
           exact hbelow (b + i) (by omega) (by omega)
-        have hfloor := mirror_floor hexp hbound hinit hle (d - b) le_rfl
+        have hfloor := mirror_floor CS.cs_slack hexp hbound hinit hle (d - b) le_rfl
         rw [show b + (d - b) = d by omega] at hfloor
         exact T.αmin_lt_lam.le.trans hfloor
       · have ht1d : t1 ≤ d := by omega

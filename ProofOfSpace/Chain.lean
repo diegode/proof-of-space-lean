@@ -151,8 +151,11 @@ length `α_π n` inside the footprint at `b`, whose first `σ n` nodes form the 
 the footprint inclusions a link carries (`path-payoff lemma`) splice the paths.  Depth
 robustness of the construction is *assumed*, exactly as in the development.
 -/
-structure ChainSystem (S : Setting) (B : Budget S) (T : Tracking S) (ℓ : ℕ)
+structure ChainSystem (S : Setting) (B : Budget S) (T : Tracking S) (cs : ℝ) (ℓ : ℕ)
     (Realizes : ℕ → Prop) where
+  one_le_cs : 1 ≤ cs
+  /-- The slack `mirror_floor` needs: the source may fall `(cs - 1) ĝ` and stay above `π̂`. -/
+  cs_slack : T.lam + (cs - 1) * T.ghat ≤ T.σ
   /-- The links of a chain. -/
   Link : Type u
   /-- The depth `b_i` of a link. -/
@@ -164,7 +167,7 @@ structure ChainSystem (S : Setting) (B : Budget S) (T : Tracking S) (ℓ : ℕ)
   /-- The source set has weight exactly `σ`. -/
   init : ∀ L, wt L (depth L) = T.σ
   /-- The last level of the chain is `ĝ`-expandable (`expandability condition`). -/
-  expandable : ∀ L, Expandable B T.ghat (depth L)
+  expandable : ∀ L, Expandable B T.ghat (depth L) cs
   /-- The link lies inside the graph. -/
   inside : ∀ L, depth L < ℓ
   /-- The number of links of the chain ending at this one. -/
@@ -174,7 +177,7 @@ structure ChainSystem (S : Setting) (B : Budget S) (T : Tracking S) (ℓ : ℕ)
   realizes : ∀ L, Realizes (count L)
   /-- **Depth robustness** (assumed) and the splice of `path-payoff lemma`. -/
   extend : ∀ (L : Link) (b : ℕ), depth L < b → b < ℓ → S.pi ≤ wt L b →
-      Expandable B T.ghat b →
+      Expandable B T.ghat b cs →
       (∀ d, depth L ≤ d → d ≤ b → wt L d ∈ Set.Icc S.αmin S.αmax) →
       ∃ L' : Link, depth L' = b ∧ count L' = count L + 1
 

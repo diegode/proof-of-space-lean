@@ -210,4 +210,22 @@ theorem chung8_pebbling_latency_15
       (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
   sorry
 
+/-- The 14-layer Filecoin latency lower bound at `lambda` bits of security: the same
+`0.2816 n` payoff as the 15-layer statement, one layer earlier, under exactly the same
+assumptions. -/
+theorem chung8_pebbling_latency_14
+    {n : ℕ} (lambda : ℝ) (hn : 1000 ≤ n)
+    [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
+    HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
+      (fun p : ChungInterlayer n =>
+        ∀ G : PebblingGame 14 n,
+          G.απ = (1 : ℝ) / 5 → G.δ = (189 : ℝ) / 5000 → G.π = (4 : ℝ) / 5 →
+          G.ρ = (4 : ℝ) / 5 → G.ζ = (9 : ℝ) / 10 →
+          PebblingGame.IsAdmissible G →
+          ∀ S : Finset (ℕ × Fin n), S ⊆ G.layer 0 →
+            (9 : ℝ) / 10 ≤ (S.card : ℝ) / n →
+              G.HasUnpebbledPathTo S ((176 : ℝ) / 625 * n) p)
+      (ENNReal.ofReal (Real.exp (-lambda * Real.log 2))) := by
+  sorry
+
 end ProofOfSpaceStatement
