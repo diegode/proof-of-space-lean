@@ -23,38 +23,35 @@ width `n` is a parameter of `PebblingGame`, not a field, which is what lets one
 probability space `ChungInterlayer n` carry a quantifier over all games.
 
 [`chung8_pebbling_latency_whp`](Challenge.lean) is the theorem that carries the
-argument, and `chung8_pebbling_latency_14` is one point of it. Its six game
-parameters, the source weight `σ`, the expansion range `[a, b]`, the link count
-`z` and the layer count `ℓ` are symbolic. What ties them together is one
-inequality in layers,
+argument, and it is generic: it holds for **any** expansion profile with a certified
+level budget, and `chung8_pebbling_latency_14` is one instance of it.
+
+An `ExpansionProfile` is the expansion calculus of the analysis — a map of the unit
+interval into itself fixing `0`, strictly increasing, concave, expanding, satisfying
+Chung's reversal law, with a unique gain maximiser and the two zeros of the adjusted
+gain. One field, `le_chung8`, ties it to the sampled wiring: the profile must lie under
+the degree-eight Chung threshold, which is what the union bound pays for. A
+`LevelBudget` is a reference trajectory for the profile together with the certificate
+that prices one step of the search along it, and it yields the three prices the layer
+count is spent on.
+
+The parameters are then tied together only by relations among themselves:
 
 ```text
-chung8SearchCost (ζ - δ) + (z - 1)·chung8LinkCost + chung8ChargeRate·ρ < ℓ
+δ ≤ E.δ,  π ≤ E.π,  ρ ≤ L.ρmax,  E.piBar + ρ < ζ - δ ≤ E.αmax,  σ < απ,
+a ≤ E.αmin,  E.αmax + 1/n ≤ b,
+L.searchCost (ζ - δ) + (z - 1)·L.linkCost + L.chargeRate·ρ < ℓ
 ```
 
-the initial search, one further chain link (`3.822` layers), and the black weight
-(`11.87` layers per unit), each priced in layers. The search price
-`0.43 + 6.46·(0.89 - (ζ - δ))₊` is a function of the challenge weight rather than a
-constant, so a thinner challenge set is paid for instead of being excluded. The whole
-latency argument — the union bound, the transfer of the public profile to the
-deterministic setting, the layered graph, the red-pebble removal from the challenge set
-and the potential ledger — lives in this proof.
+The last line is what a change of parameters has to buy. At the Chung-8 budget the three
+prices are `0.5982`, `3.8212` and `11.8588` per unit of black weight, so two links need
+`ℓ = 14` at `ρ = 4/5` (`13.907 < 14`), `ℓ = 13` at `ρ = 7/10`, and a third link needs
+`ℓ = 18`; these instances are checked in [`Solution.lean`](Solution.lean).
 
-Reading the inequality as a budget for `ℓ` is what the theorem is for. Two links
-need `ℓ = 14` at the Filecoin parameters (`13.928 < 14`), `ℓ = 13` at `ρ = 7/10`,
-and `ℓ = 12` at challenge weight `0.75` against half the space; a third link at
-the Filecoin budget needs `ℓ = 18`. Worked points are checked in
-[`ChungFilecoinGeneral.lean`](ProofOfSpace/ChungFilecoinGeneral.lean).
-
-The remaining hypotheses are the ranges the profile is certified on, named rather
-than written as bare numerals: `δ ≤ chung8Delta`, `π ≤ chung8Pi`,
-`ρ ≤ chung8Rho`, `chung8PiBar + ρ < ζ - δ ≤ chung8ActiveHi`, and
-`chung8SourceLo ≤ σ ≤ chung8SourceHi` with `σ < απ`. Three of these ceilings are
-genuinely tight rather than conservative: the blocked-range certificate is fitted
-exactly to `ρ = 4/5`, `gain_δ(σ) = 2g_π` holds with equality at `chung8SourceLo`,
-and `chung8ActiveHi` is where the adjusted gain vanishes. Raising `δ` or `π`
-means re-certifying the curve constants `α_δ^min`, `α_δ^max`, `g_π` and `π̄`,
-which are the polygon evaluations of `ChungFilecoin.lean`.
+`chung8_pebbling_latency_14` supplies `chung8Profile` — every field a theorem about the
+constructed degree-eight profile — and `chung8Budget`, the `β_δ` orbit of the tracking
+floor with its certificate. `chung8BudgetAt` gives the same budget at any source weight
+in `[0.1184, 0.6]`, where the tracking constants do not move.
 
 ## Expansion is assumed only on a density range
 

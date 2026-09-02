@@ -99,52 +99,156 @@ class ChungSecurityConditions (n : ℕ) (lambda : ℕ) (a b : ℝ) : Prop where
   a_pos : 0 < a
   security : chung8FailureBound n a b ≤ (2 : ℝ≥0∞)⁻¹ ^ lambda
 
-/-! ### The certified profile
+/-! ### Expansion profiles
 
-The degree-eight profile is analysed at one red-pebble fraction and one robustness
-threshold, and at one interval of source weights.  The constants below record that
-certification; they are not choices the latency theorem makes, and everything else it
-says is relative to them. -/
+The deterministic argument runs on any expansion profile with the properties below.  They
+are the expansion calculus of the analysis: the profile maps the unit interval to itself,
+fixes `0`, is strictly increasing, concave and expanding, satisfies Chung's reversal law,
+has a unique gain maximiser `αg`, and has the two zeros of the adjusted gain
+`gain_δ(x) = β(x) - δ - x` as `αmin` and `αmax`.  Only `le_chung8` mentions the sampled
+wiring: it is what makes the profile realizable by the uniform port permutation, and it
+is why the degree-eight failure bound pays for the event. -/
+structure ExpansionProfile where
+  /-- The expansion function of the vertical edges. -/
+  β : ℝ → ℝ
+  /-- The red-pebble fraction the profile is certified at. -/
+  δ : ℝ
+  /-- The intra-layer robustness threshold. -/
+  π : ℝ
+  /-- The unique maximiser of the gain `β - id`. -/
+  αg : ℝ
+  /-- The low zero of the adjusted gain. -/
+  αmin : ℝ
+  /-- The high zero of the adjusted gain. -/
+  αmax : ℝ
+  β_maps : ∀ ⦃x⦄, x ∈ Set.Icc (0 : ℝ) 1 → β x ∈ Set.Icc (0 : ℝ) 1
+  β_zero : β 0 = 0
+  β_strictMonoOn : StrictMonoOn β (Set.Icc (0 : ℝ) 1)
+  β_concaveOn : ConcaveOn ℝ (Set.Icc (0 : ℝ) 1) β
+  β_expands : ∀ ⦃x⦄, x ∈ Set.Ioo (0 : ℝ) 1 → x < β x
+  β_reversal : ∀ ⦃x⦄, x ∈ Set.Ioo (0 : ℝ) 1 → β (1 - β x) = 1 - x
+  αg_mem : αg ∈ Set.Ioo (0 : ℝ) 1
+  αg_max : ∀ ⦃x⦄, x ∈ Set.Icc (0 : ℝ) 1 → x ≠ αg → β x - x < β αg - αg
+  δ_nonneg : 0 ≤ δ
+  π_mem : π ∈ Set.Ioo (0 : ℝ) 1
+  αg_lt_π : αg < π
+  /-- `δ` is small enough that the fertile gain `g_π` is positive. -/
+  gpi_pos : 0 < β π - δ - π
+  αmin_mem : αmin ∈ Set.Icc (0 : ℝ) αg
+  αmax_mem : αmax ∈ Set.Icc αg 1
+  gainD_αmin : β αmin - δ - αmin = 0
+  gainD_αmax : β αmax - δ - αmax = 0
+  /-- The sampled degree-eight wiring realizes the profile. -/
+  le_chung8 : ∀ ⦃x⦄, x ∈ Set.Icc (0 : ℝ) 1 → β x ≤ chung8Beta x
 
-/-- The red-pebble fraction the profile is certified at. -/
-noncomputable def chung8Delta : ℝ := 189 / 5000
+namespace ExpansionProfile
 
-/-- The intra-layer robustness threshold it is certified at. -/
-noncomputable def chung8Pi : ℝ := 4 / 5
+variable (E : ExpansionProfile)
 
-/-- `π̄ = 1 - β(π)`: the floor a tracked footprint cannot be pushed below. -/
-noncomputable def chung8PiBar : ℝ := 5089 / 100000
+/-- `gain_δ(x) = β(x) - δ - x`. -/
+def gainD (x : ℝ) : ℝ := E.β x - E.δ - x
 
-/-- The largest black-pebble weight the blocked-range certificate covers.  The
-certificate is tight there, so this bound is not slack that can be spent. -/
-noncomputable def chung8Rho : ℝ := 4 / 5
+/-- `β_δ(x) = β(x) - δ`, one level of growth against a full red layer. -/
+def betaD (x : ℝ) : ℝ := E.β x - E.δ
 
-/-- `α_δ^min`: the low end of the interval where the certified profile has nonnegative
-adjusted gain.  Expansion is queried exactly on that interval. -/
-noncomputable def chung8ActiveLo : ℝ := 961821 / 74555000
+/-- `g_π = gain_δ(π)`, the gain at the fertility threshold. -/
+def gpi : ℝ := E.gainD E.π
 
-/-- `α_δ^max`: its high end. -/
-noncomputable def chung8ActiveHi : ℝ := 14155 / 14911
+/-- `π̄ = 1 - β(π)`, the lower member of the equal-gain mirror pair. -/
+def piBar : ℝ := 1 - E.β E.π
 
-/-- The lowest certified source weight: `gain_δ(σ) ≥ 2 g_π` holds from here up, with
-equality at this point, and the tracking constant drops below it. -/
-noncomputable def chung8SourceLo : ℝ := 74 / 625
+/-- `π̂ = min{π̄, σ, 1 - β(σ)}`: the weight a tracked source cannot be pushed below. -/
+noncomputable def floor (σ : ℝ) : ℝ := min E.piBar (min σ (1 - E.β σ))
 
-/-- The highest certified source weight, the doubled-gain midpoint. -/
-noncomputable def chung8SourceHi : ℝ := 3 / 5
+/-- `ĝ = min{g_π, gain_δ(σ)/2}`: the gain the tracking argument runs at. -/
+noncomputable def trackingGain (σ : ℝ) : ℝ := min E.gpi (E.gainD σ / 2)
 
-/-- What the initial search costs, in layers, at red-free challenge weight `w = ζ - δ`:
-a saturation allowance of `0.43` layers, plus `6.46` layers for every unit of weight the
-challenge falls short of `0.89`, the weight from which the profile's own growth already
-saturates the ledger.  A thinner challenge set is paid for here. -/
-noncomputable def chung8SearchCost (w : ℝ) : ℝ :=
-  43 / 100 + 646 / 100 * max 0 (89 / 100 - w)
+end ExpansionProfile
+
+/-! ### Certified level budgets
+
+A level budget is a reference trajectory for the profile together with the certificate
+that prices one step of the search along it.  The trajectory is a finite increasing
+sequence from the tracking floor to the fertility threshold, each step within one free
+level of growth and each bucket at least `ĝ` wide; `refPotOf` interpolates it, measuring
+in levels how far a weight has climbed.  The certificate turns that into the three prices
+the layer count is spent on. -/
+
+/-- The piecewise-linear interpolation of `x k ↦ k`: how many free levels of the
+trajectory the weight `v` has already covered. -/
+noncomputable def refPotOf (m : ℕ) (x : ℕ → ℝ) (v : ℝ) : ℝ :=
+  ∑ k ∈ Finset.range m, max 0 (min 1 ((v - x k) / (x (k + 1) - x k)))
+
+/-- A **certified level budget** for the profile `E` at source weight `σ`, valid for black
+weights up to `ρmax`. -/
+structure LevelBudget (E : ExpansionProfile) (σ : ℝ) where
+  /-- The largest black weight the blocked-range clauses are certified for. -/
+  ρmax : ℝ
+  σ_gt : E.αmin < σ
+  σ_lt : σ < E.π
+  /-- A doubled-gain midpoint: `gain_δ ≥ 2 ĝ` still holds there, and concavity spreads it
+  over `[σ, mid]`. -/
+  mid : ℝ
+  mid_ge : σ ≤ mid
+  mid_le : mid ≤ E.π
+  mid_gain : 2 * E.trackingGain σ ≤ E.gainD mid
+  /-- The number of buckets of the reference trajectory. -/
+  m : ℕ
+  /-- Its points. -/
+  x : ℕ → ℝ
+  m_pos : 0 < m
+  base : x 0 ≤ E.floor σ
+  width : ∀ k, k < m → E.trackingGain σ ≤ x (k + 1) - x k
+  step : ∀ k, k < m → x (k + 1) ≤ E.betaD (x k)
+  mem : ∀ k, k ≤ m → x k ∈ Set.Icc (0 : ℝ) 1
+  top : E.π ≤ x m
+  /-- Levels charged per unit of black weight, in units of `1/ĝ`. -/
+  lam : ℝ
+  /-- Bound on the potential a subfertile weight is short of saturation. -/
+  loss : ℝ
+  /-- The expandability slack the search runs at. -/
+  cs : ℝ
+  /-- The width of the top bucket. -/
+  wtop : ℝ
+  /-- The top-bucket chord slope of `β_δ`, per unit of potential. -/
+  kappa : ℝ
+  /-- Slope and offset of the blocked-range drop. -/
+  a2 : ℝ
+  b2 : ℝ
+  one_le_lam : 1 ≤ lam
+  loss_nonneg : 0 ≤ loss
+  one_le_cs : 1 ≤ cs
+  wtop_pos : 0 < wtop
+  kappa_nonneg : 0 ≤ kappa
+  loss_ge : ∀ v, x 0 ≤ v → v ≤ E.π → refPotOf m x v - ((m : ℝ) - 1) ≤ loss
+  topLip : ∀ u v : ℝ, x m ≤ u → v ≤ u →
+    refPotOf m x u - refPotOf m x v ≤ (u - v) / wtop
+  chord : ∀ v : ℝ, x (m - 1) ≤ v → v ≤ E.π →
+    x m + kappa * (refPotOf m x v - ((m : ℝ) - 1)) ≤ E.betaD v
+  ghat_le_lam_wtop : E.trackingGain σ ≤ lam * wtop
+  inf_rate : ∀ θ s : ℝ, 0 ≤ θ → θ ≤ loss → 0 ≤ s →
+    (x m - E.π) + kappa * θ ≤ s → θ + (s - kappa * θ) / wtop ≤ lam * s / E.trackingGain σ
+  blockDrop : ∀ y : ℝ, (1 + cs) * E.trackingGain σ ≤ y → y ≤ ρmax →
+    ((m : ℝ)) - refPotOf m x (E.betaD E.π - y) ≤ a2 * y + b2
+  blockDrop_one : ∀ y : ℝ, (1 + cs) * E.trackingGain σ ≤ y → 1 ≤ a2 * y + b2
+  blk_rate : ∀ y w : ℝ, (1 + cs) * E.trackingGain σ ≤ y → y ≤ ρmax → 0 ≤ w →
+    (y / E.trackingGain σ - cs + 1) + (a2 * y + b2 - 1) + w / E.trackingGain σ
+      ≤ -loss + lam * (y + w) / E.trackingGain σ
+
+namespace LevelBudget
+
+variable {E : ExpansionProfile} {σ : ℝ} (L : LevelBudget E σ)
+
+/-- What the initial search costs, in layers, at red-free challenge weight `w`. -/
+noncomputable def searchCost (w : ℝ) : ℝ := ((L.m : ℝ) - refPotOf L.m L.x w) + L.loss
 
 /-- What one further chain link costs, in layers. -/
-noncomputable def chung8LinkCost : ℝ := 1911 / 500
+noncomputable def linkCost : ℝ := ((L.m : ℝ) - refPotOf L.m L.x σ) + L.loss
 
 /-- What one unit of black-pebble weight costs, in layers. -/
-noncomputable def chung8ChargeRate : ℝ := 1187 / 100
+noncomputable def chargeRate : ℝ := L.lam / E.trackingGain σ
+
+end LevelBudget
 
 /-- A static black/red pebbling position and its latency parameters on an `ℓ`-layer
 stacked graph of width `n`. The width is a parameter, not a field, so that one
@@ -219,30 +323,36 @@ def PebblingGame.LatencyEvent (ℓ n z : ℕ) (απ δ π ρ ζ σ : ℝ)
 -- The public challenge theorem bodies are intentionally omitted; see `README.md`.
 set_option warn.sorry false
 
-/-- **The Chung-8 latency theorem, over the parameters the profile is certified for.**
+/-- **The latency theorem for any expansion profile with a certified level budget.**
 
 The wiring is sampled first, and the event quantifies over every admissible game with the
-displayed parameters and every challenge set of weight `ζ`.  What ties the parameters
-together is one inequality in layers,
+displayed parameters and every challenge set of weight `ζ`.  Nothing about the degree-eight
+Chung construction enters except through `E.le_chung8`, which is what the union bound pays
+for; everything else is a property of the profile `E` and of the level budget `L`.
 
-    `chung8SearchCost (ζ - δ) + (z - 1) · chung8LinkCost + chung8ChargeRate · ρ < ℓ`,
+The parameters are tied together only by relations among themselves: the red fraction and
+the robustness threshold must be within what the profile is certified for, the challenge
+weight must clear the tracking floor after the whole black budget is spent and stay inside
+the active interval, the source weight must clear the expandability slack, and the layer
+count must cover
 
-the initial search, one further chain link, and the black weight, each priced in layers.
-Reading it as a budget for `ℓ` is what the theorem is for: a thinner challenge set, a
-larger black budget or one more link each buy their cost in layers.  The remaining
-hypotheses are the certified ranges: `δ` and `π` may be anything the profile covers, `ρ`
-anything the blocked-range certificate covers, `ζ - δ` anything from the entry condition
-up to the active interval, and `σ` any certified source weight below `απ`. -/
+    `L.searchCost (ζ - δ) + (z - 1) · L.linkCost + L.chargeRate · ρ < ℓ`,
+
+the initial search, one further chain link, and the black weight, each priced in layers by
+the budget. -/
 theorem chung8_pebbling_latency_whp
     {ℓ n : ℕ} (lambda : ℕ) (a b : ℝ) [ChungSecurityConditions n lambda a b]
-    (hn : 1000 ≤ n) (ha : a ≤ chung8ActiveLo) (hb : chung8ActiveHi + 1 / n ≤ b)
-    (απ δ π ρ ζ σ : ℝ) (z : ℕ) (hz : 1 ≤ z)
-    (hδ : δ ≤ chung8Delta) (hπ : π ≤ chung8Pi)
-    (hρ : 0 ≤ ρ) (hρtop : ρ ≤ chung8Rho)
-    (hentry : chung8PiBar + ρ < ζ - δ) (hζ : ζ - δ ≤ chung8ActiveHi)
-    (hσ : chung8SourceLo ≤ σ) (hσtop : σ ≤ chung8SourceHi) (hσαπ : σ < απ)
-    (hlevels : chung8SearchCost (ζ - δ) + ((z : ℝ) - 1) * chung8LinkCost
-      + chung8ChargeRate * ρ < (ℓ : ℝ)) :
+    (E : ExpansionProfile) (σ : ℝ) (L : LevelBudget E σ)
+    (απ δ π ρ ζ : ℝ) (z : ℕ) (hz : 1 ≤ z)
+    (ha : a ≤ E.αmin) (hb : E.αmax + 1 / n ≤ b)
+    (hδ : δ ≤ E.δ) (hπ : π ≤ E.π)
+    (hρ : 0 ≤ ρ) (hρtop : ρ ≤ L.ρmax)
+    (hentry : E.piBar + ρ < ζ - δ) (hζ : ζ - δ ≤ E.αmax)
+    (hnobreak : ρ < E.betaD E.π - E.floor σ)
+    (hslack : E.floor σ + (L.cs - 1) * E.trackingGain σ ≤ σ)
+    (hσαπ : σ < απ)
+    (hlevels : L.searchCost (ζ - δ) + ((z : ℝ) - 1) * L.linkCost
+      + L.chargeRate * ρ < (ℓ : ℝ)) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
       (PebblingGame.LatencyEvent ℓ n z απ δ π ρ ζ σ)
       ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by

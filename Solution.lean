@@ -74,52 +74,156 @@ class ChungSecurityConditions (n : ℕ) (lambda : ℕ) (a b : ℝ) : Prop where
   a_pos : 0 < a
   security : chung8FailureBound n a b ≤ (2 : ℝ≥0∞)⁻¹ ^ lambda
 
-/-! ### The certified profile
+/-! ### Expansion profiles
 
-The degree-eight profile is analysed at one red-pebble fraction and one robustness
-threshold, and at one interval of source weights.  The constants below record that
-certification; they are not choices the latency theorem makes, and everything else it
-says is relative to them. -/
+The deterministic argument runs on any expansion profile with the properties below.  They
+are the expansion calculus of the analysis: the profile maps the unit interval to itself,
+fixes `0`, is strictly increasing, concave and expanding, satisfies Chung's reversal law,
+has a unique gain maximiser `αg`, and has the two zeros of the adjusted gain
+`gain_δ(x) = β(x) - δ - x` as `αmin` and `αmax`.  Only `le_chung8` mentions the sampled
+wiring: it is what makes the profile realizable by the uniform port permutation, and it
+is why the degree-eight failure bound pays for the event. -/
+structure ExpansionProfile where
+  /-- The expansion function of the vertical edges. -/
+  β : ℝ → ℝ
+  /-- The red-pebble fraction the profile is certified at. -/
+  δ : ℝ
+  /-- The intra-layer robustness threshold. -/
+  π : ℝ
+  /-- The unique maximiser of the gain `β - id`. -/
+  αg : ℝ
+  /-- The low zero of the adjusted gain. -/
+  αmin : ℝ
+  /-- The high zero of the adjusted gain. -/
+  αmax : ℝ
+  β_maps : ∀ ⦃x⦄, x ∈ Set.Icc (0 : ℝ) 1 → β x ∈ Set.Icc (0 : ℝ) 1
+  β_zero : β 0 = 0
+  β_strictMonoOn : StrictMonoOn β (Set.Icc (0 : ℝ) 1)
+  β_concaveOn : ConcaveOn ℝ (Set.Icc (0 : ℝ) 1) β
+  β_expands : ∀ ⦃x⦄, x ∈ Set.Ioo (0 : ℝ) 1 → x < β x
+  β_reversal : ∀ ⦃x⦄, x ∈ Set.Ioo (0 : ℝ) 1 → β (1 - β x) = 1 - x
+  αg_mem : αg ∈ Set.Ioo (0 : ℝ) 1
+  αg_max : ∀ ⦃x⦄, x ∈ Set.Icc (0 : ℝ) 1 → x ≠ αg → β x - x < β αg - αg
+  δ_nonneg : 0 ≤ δ
+  π_mem : π ∈ Set.Ioo (0 : ℝ) 1
+  αg_lt_π : αg < π
+  /-- `δ` is small enough that the fertile gain `g_π` is positive. -/
+  gpi_pos : 0 < β π - δ - π
+  αmin_mem : αmin ∈ Set.Icc (0 : ℝ) αg
+  αmax_mem : αmax ∈ Set.Icc αg 1
+  gainD_αmin : β αmin - δ - αmin = 0
+  gainD_αmax : β αmax - δ - αmax = 0
+  /-- The sampled degree-eight wiring realizes the profile. -/
+  le_chung8 : ∀ ⦃x⦄, x ∈ Set.Icc (0 : ℝ) 1 → β x ≤ chung8Beta x
 
-/-- The red-pebble fraction the profile is certified at. -/
-noncomputable def chung8Delta : ℝ := 189 / 5000
+namespace ExpansionProfile
 
-/-- The intra-layer robustness threshold it is certified at. -/
-noncomputable def chung8Pi : ℝ := 4 / 5
+variable (E : ExpansionProfile)
 
-/-- `π̄ = 1 - β(π)`: the floor a tracked footprint cannot be pushed below. -/
-noncomputable def chung8PiBar : ℝ := 5089 / 100000
+/-- `gain_δ(x) = β(x) - δ - x`. -/
+def gainD (x : ℝ) : ℝ := E.β x - E.δ - x
 
-/-- The largest black-pebble weight the blocked-range certificate covers.  The
-certificate is tight there, so this bound is not slack that can be spent. -/
-noncomputable def chung8Rho : ℝ := 4 / 5
+/-- `β_δ(x) = β(x) - δ`, one level of growth against a full red layer. -/
+def betaD (x : ℝ) : ℝ := E.β x - E.δ
 
-/-- `α_δ^min`: the low end of the interval where the certified profile has nonnegative
-adjusted gain.  Expansion is queried exactly on that interval. -/
-noncomputable def chung8ActiveLo : ℝ := 961821 / 74555000
+/-- `g_π = gain_δ(π)`, the gain at the fertility threshold. -/
+def gpi : ℝ := E.gainD E.π
 
-/-- `α_δ^max`: its high end. -/
-noncomputable def chung8ActiveHi : ℝ := 14155 / 14911
+/-- `π̄ = 1 - β(π)`, the lower member of the equal-gain mirror pair. -/
+def piBar : ℝ := 1 - E.β E.π
 
-/-- The lowest certified source weight: `gain_δ(σ) ≥ 2 g_π` holds from here up, with
-equality at this point, and the tracking constant drops below it. -/
-noncomputable def chung8SourceLo : ℝ := 74 / 625
+/-- `π̂ = min{π̄, σ, 1 - β(σ)}`: the weight a tracked source cannot be pushed below. -/
+noncomputable def floor (σ : ℝ) : ℝ := min E.piBar (min σ (1 - E.β σ))
 
-/-- The highest certified source weight, the doubled-gain midpoint. -/
-noncomputable def chung8SourceHi : ℝ := 3 / 5
+/-- `ĝ = min{g_π, gain_δ(σ)/2}`: the gain the tracking argument runs at. -/
+noncomputable def trackingGain (σ : ℝ) : ℝ := min E.gpi (E.gainD σ / 2)
 
-/-- What the initial search costs, in layers, at red-free challenge weight `w = ζ - δ`:
-a saturation allowance of `0.43` layers, plus `6.46` layers for every unit of weight the
-challenge falls short of `0.89`, the weight from which the profile's own growth already
-saturates the ledger.  A thinner challenge set is paid for here. -/
-noncomputable def chung8SearchCost (w : ℝ) : ℝ :=
-  43 / 100 + 646 / 100 * max 0 (89 / 100 - w)
+end ExpansionProfile
+
+/-! ### Certified level budgets
+
+A level budget is a reference trajectory for the profile together with the certificate
+that prices one step of the search along it.  The trajectory is a finite increasing
+sequence from the tracking floor to the fertility threshold, each step within one free
+level of growth and each bucket at least `ĝ` wide; `refPotOf` interpolates it, measuring
+in levels how far a weight has climbed.  The certificate turns that into the three prices
+the layer count is spent on. -/
+
+/-- The piecewise-linear interpolation of `x k ↦ k`: how many free levels of the
+trajectory the weight `v` has already covered. -/
+noncomputable def refPotOf (m : ℕ) (x : ℕ → ℝ) (v : ℝ) : ℝ :=
+  ∑ k ∈ Finset.range m, max 0 (min 1 ((v - x k) / (x (k + 1) - x k)))
+
+/-- A **certified level budget** for the profile `E` at source weight `σ`, valid for black
+weights up to `ρmax`. -/
+structure LevelBudget (E : ExpansionProfile) (σ : ℝ) where
+  /-- The largest black weight the blocked-range clauses are certified for. -/
+  ρmax : ℝ
+  σ_gt : E.αmin < σ
+  σ_lt : σ < E.π
+  /-- A doubled-gain midpoint: `gain_δ ≥ 2 ĝ` still holds there, and concavity spreads it
+  over `[σ, mid]`. -/
+  mid : ℝ
+  mid_ge : σ ≤ mid
+  mid_le : mid ≤ E.π
+  mid_gain : 2 * E.trackingGain σ ≤ E.gainD mid
+  /-- The number of buckets of the reference trajectory. -/
+  m : ℕ
+  /-- Its points. -/
+  x : ℕ → ℝ
+  m_pos : 0 < m
+  base : x 0 ≤ E.floor σ
+  width : ∀ k, k < m → E.trackingGain σ ≤ x (k + 1) - x k
+  step : ∀ k, k < m → x (k + 1) ≤ E.betaD (x k)
+  mem : ∀ k, k ≤ m → x k ∈ Set.Icc (0 : ℝ) 1
+  top : E.π ≤ x m
+  /-- Levels charged per unit of black weight, in units of `1/ĝ`. -/
+  lam : ℝ
+  /-- Bound on the potential a subfertile weight is short of saturation. -/
+  loss : ℝ
+  /-- The expandability slack the search runs at. -/
+  cs : ℝ
+  /-- The width of the top bucket. -/
+  wtop : ℝ
+  /-- The top-bucket chord slope of `β_δ`, per unit of potential. -/
+  kappa : ℝ
+  /-- Slope and offset of the blocked-range drop. -/
+  a2 : ℝ
+  b2 : ℝ
+  one_le_lam : 1 ≤ lam
+  loss_nonneg : 0 ≤ loss
+  one_le_cs : 1 ≤ cs
+  wtop_pos : 0 < wtop
+  kappa_nonneg : 0 ≤ kappa
+  loss_ge : ∀ v, x 0 ≤ v → v ≤ E.π → refPotOf m x v - ((m : ℝ) - 1) ≤ loss
+  topLip : ∀ u v : ℝ, x m ≤ u → v ≤ u →
+    refPotOf m x u - refPotOf m x v ≤ (u - v) / wtop
+  chord : ∀ v : ℝ, x (m - 1) ≤ v → v ≤ E.π →
+    x m + kappa * (refPotOf m x v - ((m : ℝ) - 1)) ≤ E.betaD v
+  ghat_le_lam_wtop : E.trackingGain σ ≤ lam * wtop
+  inf_rate : ∀ θ s : ℝ, 0 ≤ θ → θ ≤ loss → 0 ≤ s →
+    (x m - E.π) + kappa * θ ≤ s → θ + (s - kappa * θ) / wtop ≤ lam * s / E.trackingGain σ
+  blockDrop : ∀ y : ℝ, (1 + cs) * E.trackingGain σ ≤ y → y ≤ ρmax →
+    ((m : ℝ)) - refPotOf m x (E.betaD E.π - y) ≤ a2 * y + b2
+  blockDrop_one : ∀ y : ℝ, (1 + cs) * E.trackingGain σ ≤ y → 1 ≤ a2 * y + b2
+  blk_rate : ∀ y w : ℝ, (1 + cs) * E.trackingGain σ ≤ y → y ≤ ρmax → 0 ≤ w →
+    (y / E.trackingGain σ - cs + 1) + (a2 * y + b2 - 1) + w / E.trackingGain σ
+      ≤ -loss + lam * (y + w) / E.trackingGain σ
+
+namespace LevelBudget
+
+variable {E : ExpansionProfile} {σ : ℝ} (L : LevelBudget E σ)
+
+/-- What the initial search costs, in layers, at red-free challenge weight `w`. -/
+noncomputable def searchCost (w : ℝ) : ℝ := ((L.m : ℝ) - refPotOf L.m L.x w) + L.loss
 
 /-- What one further chain link costs, in layers. -/
-noncomputable def chung8LinkCost : ℝ := 1911 / 500
+noncomputable def linkCost : ℝ := ((L.m : ℝ) - refPotOf L.m L.x σ) + L.loss
 
 /-- What one unit of black-pebble weight costs, in layers. -/
-noncomputable def chung8ChargeRate : ℝ := 1187 / 100
+noncomputable def chargeRate : ℝ := L.lam / E.trackingGain σ
+
+end LevelBudget
 
 /-- A static black/red pebbling position on an `ℓ`-layer stacked graph of width `n`. -/
 structure PebblingGame (ℓ n : ℕ) where
@@ -382,14 +486,17 @@ removal of the red pebbles from the challenge set, and the potential ledger at t
 symbolic budget, challenge weight and source weight. -/
 theorem chung8_pebbling_latency_whp
     {ℓ n : ℕ} (lambda : ℕ) (a b : ℝ) [ChungSecurityConditions n lambda a b]
-    (hn : 1000 ≤ n) (ha : a ≤ chung8ActiveLo) (hb : chung8ActiveHi + 1 / n ≤ b)
-    (απ δ π ρ ζ σ : ℝ) (z : ℕ) (hz : 1 ≤ z)
-    (hδ : δ ≤ chung8Delta) (hπ : π ≤ chung8Pi)
-    (hρ : 0 ≤ ρ) (hρtop : ρ ≤ chung8Rho)
-    (hentry : chung8PiBar + ρ < ζ - δ) (hζ : ζ - δ ≤ chung8ActiveHi)
-    (hσ : chung8SourceLo ≤ σ) (hσtop : σ ≤ chung8SourceHi) (hσαπ : σ < απ)
-    (hlevels : chung8SearchCost (ζ - δ) + ((z : ℝ) - 1) * chung8LinkCost
-      + chung8ChargeRate * ρ < (ℓ : ℝ)) :
+    (E : ExpansionProfile) (σ : ℝ) (L : LevelBudget E σ)
+    (απ δ π ρ ζ : ℝ) (z : ℕ) (hz : 1 ≤ z)
+    (ha : a ≤ E.αmin) (hb : E.αmax + 1 / n ≤ b)
+    (hδ : δ ≤ E.δ) (hπ : π ≤ E.π)
+    (hρ : 0 ≤ ρ) (hρtop : ρ ≤ L.ρmax)
+    (hentry : E.piBar + ρ < ζ - δ) (hζ : ζ - δ ≤ E.αmax)
+    (hnobreak : ρ < E.betaD E.π - E.floor σ)
+    (hslack : E.floor σ + (L.cs - 1) * E.trackingGain σ ≤ σ)
+    (hσαπ : σ < απ)
+    (hlevels : L.searchCost (ζ - δ) + ((z : ℝ) - 1) * L.linkCost
+      + L.chargeRate * ρ < (ℓ : ℝ)) :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
       (PebblingGame.LatencyEvent ℓ n z απ δ π ρ ζ σ)
       ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
@@ -397,32 +504,38 @@ theorem chung8_pebbling_latency_whp
   refine chung8_of_expands_whp lambda a b _ ?_
   intro P hP N hNαπ hNδ hNπ hNρ hNζ hN B hB hBweight
   have hnR : (0 : ℝ) < n := by exact_mod_cast hN.n_pos
-  have hn1000 : (1000 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn
   let Pc : Concrete.PortInterlayer n := interlayerEquiv n P
-  let S := ChungCurve.chung8SettingAt ρ (ζ - δ) hρ
-  have hamin : a ≤ S.αmin := by
-    refine ha.trans ?_
-    change chung8ActiveLo ≤ ChungCurve.filecoinAlphaMin
-    rw [ChungCurve.filecoinAlphaMin, chung8ActiveLo]
-  have hamax : S.αmax + 1 / (n : ℝ) ≤ b := by
-    have h2 : S.αmax = chung8ActiveHi := by
-      change ChungCurve.filecoinAlphaMax = _
-      rw [ChungCurve.filecoinAlphaMax, chung8ActiveHi]
-    rw [h2]
-    exact hb
+  -- The public profile is the deterministic `Setting`, with the game's budget and its
+  -- red-free challenge weight.
+  let S : Setting :=
+    { β := E.β, αg := E.αg, δ := E.δ, pi := E.π, ρ := ρ, ζδ := ζ - δ
+      αmin := E.αmin, αmax := E.αmax
+      β_maps := E.β_maps, β_zero := E.β_zero, β_strictMonoOn := E.β_strictMonoOn
+      β_concaveOn := E.β_concaveOn, β_expands := E.β_expands, β_reversal := E.β_reversal
+      αg_mem := E.αg_mem, αg_max := E.αg_max, δ_nonneg := E.δ_nonneg, ρ_nonneg := hρ
+      pi_mem := E.π_mem, αg_lt_pi := E.αg_lt_π, gpi_pos := E.gpi_pos
+      αmin_mem := E.αmin_mem, αmax_mem := E.αmax_mem
+      gainD_αmin := E.gainD_αmin, gainD_αmax := E.gainD_αmax }
+  let T : Tracking S :=
+    { σ := σ, σ_gt := L.σ_gt, σ_lt := L.σ_lt, mid := L.mid, mid_ge := L.mid_ge
+      mid_le := L.mid_le, mid_gain := L.mid_gain }
+  let C : RefChain S T :=
+    { m := L.m, x := L.x, m_pos := L.m_pos, base := L.base, width := L.width
+      step := L.step, mem := L.mem, top := L.top }
+  let Cert : LedgerCert S T C :=
+    { lam := L.lam, loss := L.loss, cs := L.cs, wtop := L.wtop, kappa := L.kappa
+      a2 := L.a2, b2 := L.b2
+      one_le_lam := L.one_le_lam, loss_nonneg := L.loss_nonneg, one_le_cs := L.one_le_cs
+      wtop_pos := L.wtop_pos, kappa_nonneg := L.kappa_nonneg
+      loss_ge := L.loss_ge, topLip := L.topLip, chord := L.chord
+      ghat_le_lam_wtop := L.ghat_le_lam_wtop, inf_rate := L.inf_rate
+      blockDrop := fun y hy hyρ => L.blockDrop y hy (le_trans hyρ hρtop)
+      blockDrop_one := L.blockDrop_one
+      blk_rate := fun y w hy hyρ hw => L.blk_rate y w hy (le_trans hyρ hρtop) hw }
   have hPc : Pc.Expands S := by
-    apply portExpands_of_public P hN.n_pos S a b hamin hamax
-    · intro x t _ ht htpos hxt
-      change ChungCurve.filecoinBeta x ≤ chung8Beta t
-      by_cases htone : t = 1
-      · subst t
-        calc
-          ChungCurve.filecoinBeta x ≤ ChungCurve.filecoinBeta 1 :=
-            ChungCurve.filecoinBeta_strictMono.monotone hxt
-          _ = chung8Beta 1 := by simp [chung8Beta]
-      · have htlt : t < 1 := lt_of_le_of_ne ht.2 htone
-        exact (ChungCurve.filecoinBeta_strictMono.monotone hxt).trans
-          (filecoinBeta_le_chung8Beta htpos htlt)
+    apply portExpands_of_public P hN.n_pos S a b ha hb
+    · intro x t hx ht _ hxt
+      exact le_trans (E.β_strictMonoOn.monotoneOn hx ht hxt) (E.le_chung8 ht)
     · exact hP
   let standalone : Concrete.StandaloneGraph n :=
     { edge := N.intra, edge_lt := fun {_ _} h => hN.intra_rank h }
@@ -445,25 +558,21 @@ theorem chung8_pebbling_latency_whp
       intro d
       have h := hN.red_bound d
       rw [hNδ] at h
-      have hmono : δ * (n : ℝ) ≤ chung8Delta * n :=
-        mul_le_mul_of_nonneg_right hδ hnR.le
-      exact h.trans hmono
+      exact h.trans (mul_le_mul_of_nonneg_right hδ hnR.le)
   }
   have hDepth : G.DepthRobust G.αpi := by
     apply Concrete.portStack_depthRobust_of_nodeDR
     intro X hX
-    have hX' : ((X.card : ℝ)) ≤ (1 - N.π) * n := by
-      have hpi : ((X.card : ℝ)) ≤ (1 - (4 : ℝ) / 5) * n := hX
-      have hπ' : π ≤ (4 : ℝ) / 5 := by rw [chung8Pi] at hπ; exact hπ
-      have hmono : (1 - (4 : ℝ) / 5) * n ≤ (1 - π) * n := by nlinarith
-      rw [hNπ]
-      linarith
-    exact hN.depth_robust X hX'
-  -- The challenge set has weight `ζ`; discarding its red nodes leaves the red-free set
-  -- of weight `ζ - δ ≥ ζ_δ` the deterministic argument starts from.
+    refine hN.depth_robust X ?_
+    have hmono : (1 - E.π) * n ≤ (1 - π) * n :=
+      mul_le_mul_of_nonneg_right (by linarith) hnR.le
+    rw [hNπ]
+    exact le_trans hX hmono
+  -- The challenge set has weight `ζ`; discarding its red nodes leaves a red-free set of
+  -- weight at least `ζ - δ`, which is what the deterministic argument starts from.
   have hB' : B \ N.red 0 ⊆ G.layer 0 := Finset.sdiff_subset.trans hB
   have hBred : ∀ v ∈ B \ N.red 0, v ∉ N.red 0 := fun _ hv => (Finset.mem_sdiff.mp hv).2
-  have hweight' : ζ - δ ≤ Concrete.Pebbling.weight n (B \ N.red 0) := by
+  have hweight' : S.ζδ ≤ Concrete.Pebbling.weight n (B \ N.red 0) := by
     have hred0 : ((N.red 0).card : ℝ) ≤ δ * n := by
       have h := hN.red_bound 0
       rw [hNδ] at h
@@ -474,20 +583,27 @@ theorem chung8_pebbling_latency_whp
     have hcard : (B.card : ℝ) ≤ ((B \ N.red 0).card : ℝ) + ((N.red 0).card : ℝ) := by
       exact_mod_cast hcardNat
     rw [le_div_iff₀ hnR] at hBweight
+    change ζ - δ ≤ _
     simp only [Concrete.Pebbling.weight]
     rw [le_div_iff₀ hnR]
     linarith
-  have hσapi : σ < G.αpi := by
+  have hσapi : T.σ < G.αpi := by
     change σ < N.απ
     rw [hNαπ]; exact hσαπ
-  have hpath := ChungCurve.chung8_latency_window (ρ := ρ) (ζδ := ζ - δ) (σ := σ)
-    hρ (by rw [chung8Rho] at hρtop; exact hρtop)
-    (by rw [chung8ActiveHi] at hζ; exact hζ)
-    (by rw [chung8PiBar] at hentry; exact hentry)
-    (by rw [chung8SourceLo] at hσ; exact hσ)
-    (by rw [chung8SourceHi] at hσtop; exact hσtop) hz
-    (by rw [chung8SearchCost, chung8LinkCost, chung8ChargeRate] at hlevels; exact hlevels)
-    G pebbling hN.n_pos hσapi hDepth (B \ N.red 0) hB' hBred hweight'
+  have hzcond : LedgerCert.potHead C Cert + ((z : ℝ) - 1) * LedgerCert.potSpan C Cert
+      + Cert.lam * S.ρ / T.ghat < (ℓ : ℝ) := by
+    have hcharge : Cert.lam * S.ρ / T.ghat = L.chargeRate * ρ := by
+      change L.lam * ρ / E.trackingGain σ = L.lam / E.trackingGain σ * ρ
+      ring
+    rw [hcharge]
+    exact hlevels
+  have hpath := latency_potential G pebbling T Cert hN.n_pos hσapi hDepth
+    (show S.ζδ ≤ S.αmax from hζ) (show S.piBar < S.ζδ - S.ρ from by
+      change E.piBar < ζ - δ - ρ
+      linarith [hentry])
+    (show S.ρ < S.betaD S.pi - T.lam from hnobreak)
+    (show T.lam + (Cert.cs - 1) * T.ghat ≤ T.σ from hslack)
+    hz hzcond (B \ N.red 0) hB' hBred hweight'
   rcases hpath with ⟨u, v, hv, Q, hfirst, hlast, hlength⟩
   refine ⟨v, (Finset.mem_sdiff.mp hv).1, Q.nodes, Q.nonempty, Q.chain,
     Q.unpebbled', ?_, ?_⟩
@@ -500,10 +616,155 @@ theorem chung8_pebbling_latency_whp
     rw [hlat]
     exact hlength
 
+/-! ### The degree-eight Chung profile as an instance -/
+
+private theorem chung8Beta_nonneg {x : ℝ} (hx : 0 ≤ x) : 0 ≤ chung8Beta x := by
+  rw [chung8Beta]
+  split_ifs with h
+  · norm_num
+  · exact Real.sSup_nonneg fun y hy => le_trans hx hy.1.1.le
+
+/-- **The degree-eight Chung profile.**  Every field is a theorem about the constructed
+finite-size profile of `ChungFilecoinCurve.lean`; `le_chung8` is the certificate that the
+sampled port permutation realizes it. -/
+noncomputable def chung8Profile : ExpansionProfile where
+  β := ChungCurve.chungBeta8
+  δ := 189 / 5000
+  π := 4 / 5
+  αg := ChungCurve.filecoinAlphaG
+  αmin := ChungCurve.FiniteSizeProfile.αmin
+  αmax := ChungCurve.FiniteSizeProfile.αmax
+  β_maps := fun _ hx => ChungCurve.chungBeta8_maps hx
+  β_zero := ChungCurve.chungBeta8_zero
+  β_strictMonoOn := ChungCurve.chungBeta8_strictMonoOn
+  β_concaveOn := ChungCurve.filecoinBeta_concaveOn
+  β_expands := fun _ hx => ChungCurve.chungBeta8_expands hx
+  β_reversal := fun _ hx => ChungCurve.chungBeta8_reversal hx
+  αg_mem := ChungCurve.filecoinAlphaG_mem
+  αg_max := fun _ hx hne => ChungCurve.filecoinAlphaG_max hx hne
+  δ_nonneg := by norm_num
+  π_mem := by norm_num
+  αg_lt_π := ChungCurve.chung8_αg_lt_pi
+  gpi_pos := by norm_num [ChungCurve.chungBeta8]
+  αmin_mem := ChungCurve.FiniteSizeProfile.αmin_mem
+  αmax_mem := ChungCurve.FiniteSizeProfile.αmax_mem
+  gainD_αmin := ChungCurve.FiniteSizeProfile.gainD_αmin
+  gainD_αmax := ChungCurve.FiniteSizeProfile.gainD_αmax
+  le_chung8 := by
+    intro x hx
+    rcases eq_or_lt_of_le hx.1 with hx0 | hx0
+    · rw [← hx0]
+      simpa [ChungCurve.chungBeta8_zero] using chung8Beta_nonneg (le_refl (0 : ℝ))
+    rcases eq_or_lt_of_le hx.2 with hx1 | hx1
+    · rw [hx1]
+      have : ChungCurve.chungBeta8 1 ≤ 1 := (ChungCurve.chungBeta8_maps (by norm_num)).2
+      simpa [chung8Beta] using this
+    · exact filecoinBeta_le_chung8Beta hx0 hx1
+
+/-- **The Chung-8 level budget**, at any source weight of the certified window.  The
+reference trajectory and its certificate do not move with `σ`: the tracking constants
+`ĝ` and `π̂` are constant there, because `gain_δ(σ) ≥ 2 g_π` holds across the window by
+concavity between its two certified endpoints. -/
+noncomputable def chung8BudgetAt (σ : ℝ)
+    (h1 : (74 : ℝ) / 625 ≤ σ) (h2 : σ ≤ (3 : ℝ) / 5) : LevelBudget chung8Profile σ :=
+  let hρ : (0 : ℝ) ≤ 4 / 5 := by norm_num
+  let T := ChungCurve.chung8TrackingAt (ρ := 4 / 5) (ζδ := 4311 / 5000) hρ h1 h2
+  let C := ChungCurve.chung8RefChainAt (ρ := 4 / 5) (ζδ := 4311 / 5000) hρ h1 h2
+  let Cert := ChungCurve.chung8LedgerCertAt (ρ := 4 / 5) (ζδ := 4311 / 5000)
+    hρ le_rfl h1 h2
+  { ρmax := 4 / 5
+    σ_gt := T.σ_gt
+    σ_lt := T.σ_lt
+    mid := 3 / 5
+    mid_ge := h2
+    mid_le := by change (3 : ℝ) / 5 ≤ (4 : ℝ) / 5; norm_num
+    mid_gain := T.mid_gain
+    m := 4
+    x := ChungCurve.chainX
+    m_pos := by norm_num
+    base := C.base
+    width := C.width
+    step := C.step
+    mem := C.mem
+    top := C.top
+    lam := 33 / 25
+    loss := 331 / 774
+    cs := 8 / 5
+    wtop := 387 / 2500
+    kappa := 447 / 10000
+    a2 := 819 / 200
+    b2 := 91 / 500
+    one_le_lam := by norm_num
+    loss_nonneg := by norm_num
+    one_le_cs := by norm_num
+    wtop_pos := by norm_num
+    kappa_nonneg := by norm_num
+    -- these three read only the trajectory and the profile, so the fixed-source
+    -- certificate serves every source weight
+    loss_ge := ChungCurve.chung8LedgerCert.loss_ge
+    topLip := ChungCurve.chung8LedgerCert.topLip
+    chord := ChungCurve.chung8LedgerCert.chord
+    ghat_le_lam_wtop := Cert.ghat_le_lam_wtop
+    inf_rate := Cert.inf_rate
+    blockDrop := Cert.blockDrop
+    blockDrop_one := Cert.blockDrop_one
+    blk_rate := Cert.blk_rate }
+
+/-- The budget at the Filecoin source weight `σ = 0.1184`. -/
+noncomputable def chung8Budget : LevelBudget chung8Profile ((74 : ℝ) / 625) :=
+  chung8BudgetAt ((74 : ℝ) / 625) le_rfl (by norm_num)
+
+/-! ### The prices of the Chung-8 budget
+
+The level condition is `searchCost (ζ - δ) + (z - 1)·linkCost + chargeRate·ρ < ℓ`, and at
+the Chung-8 budget its three terms evaluate.  That is what makes the theorem answer
+questions about other parameters. -/
+
+theorem chung8Budget_searchCost :
+    chung8Budget.searchCost ((4311 : ℝ) / 5000) = 463 / 774 :=
+  ChungCurve.chung8_potHead_eq
+
+theorem chung8Budget_linkCost :
+    chung8Budget.linkCost < 4 - 675 / 1113 + 331 / 774 :=
+  ChungCurve.chung8_potSpan_lt
+
+theorem chung8Budget_chargeRate : chung8Budget.chargeRate = 132000 / 11131 := by
+  have h : (33 : ℝ) / 25 * (4 / 5) / ChungCurve.chung8Tracking.ghat = 105600 / 11131 :=
+    ChungCurve.chung8_ledgerCharge_eq
+  have hg : (0 : ℝ) < ChungCurve.chung8Tracking.ghat := by
+    rw [ChungCurve.chung8_ghat_eq, ChungCurve.gpi8_eq]; norm_num
+  change (33 : ℝ) / 25 / ChungCurve.chung8Tracking.ghat = _
+  field_simp at h ⊢
+  linarith
+
+/-- Two links at the Filecoin parameters need fourteen layers: `13.907 < 14`. -/
+example : chung8Budget.searchCost ((4311 : ℝ) / 5000)
+    + (2 - 1) * chung8Budget.linkCost + chung8Budget.chargeRate * (4 / 5) < 14 := by
+  rw [chung8Budget_searchCost, chung8Budget_chargeRate]
+  linarith [chung8Budget_linkCost]
+
+/-- Taking a tenth of the space back buys a layer: at `ρ = 7/10`, `12.720 < 13`. -/
+example : chung8Budget.searchCost ((4311 : ℝ) / 5000)
+    + (2 - 1) * chung8Budget.linkCost + chung8Budget.chargeRate * (7 / 10) < 13 := by
+  rw [chung8Budget_searchCost, chung8Budget_chargeRate]
+  linarith [chung8Budget_linkCost]
+
+/-- A third link at the Filecoin budget needs eighteen layers: `17.729 < 18`. -/
+example : chung8Budget.searchCost ((4311 : ℝ) / 5000)
+    + (3 - 1) * chung8Budget.linkCost + chung8Budget.chargeRate * (4 / 5) < 18 := by
+  rw [chung8Budget_searchCost, chung8Budget_chargeRate]
+  linarith [chung8Budget_linkCost]
+
+/-- Asymptotically one link per `3.822` layers: six links at `ℓ = 30`. -/
+example : chung8Budget.searchCost ((4311 : ℝ) / 5000)
+    + (6 - 1) * chung8Budget.linkCost + chung8Budget.chargeRate * (4 / 5) < 30 := by
+  rw [chung8Budget_searchCost, chung8Budget_chargeRate]
+  linarith [chung8Budget_linkCost]
+
 /-- **The 14-layer Filecoin latency lower bound** at `lambda` bits of security: an
-unpebbled path of length `0.2816 n`.  It is the point
-`(απ, δ, π, ρ, ζ, σ, z, ℓ) = (0.2, 0.0378, 0.8, 0.8, 0.9, 0.1184, 2, 14)` of
-`chung8_pebbling_latency_whp`, whose level condition reads `0.6 + 3.822 + 9.496 < 14`. -/
+unpebbled path of length `0.2816 n`.  It is `chung8_pebbling_latency_whp` at the
+degree-eight profile and its level budget, whose level condition reads
+`0.5982 + 3.8212 + 9.4870 < 14`. -/
 theorem chung8_pebbling_latency_14
     {n : ℕ} (lambda : ℕ) (hn : 1000 ≤ n)
     [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
@@ -517,27 +778,44 @@ theorem chung8_pebbling_latency_14
             (9 : ℝ) / 10 ≤ (A.card : ℝ) / n →
               M.HasUnpebbledPathTo A ((176 : ℝ) / 625 * n) P)
       ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
-  have hb : chung8ActiveHi + 1 / (n : ℝ) ≤ 24 / 25 := by
-    have hn1000 : (1000 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn
+  have hn1000 : (1000 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn
+  have ha : (1 : ℝ) / 100 ≤ chung8Profile.αmin := by
+    change (1 : ℝ) / 100 ≤ ChungCurve.filecoinAlphaMin
+    rw [ChungCurve.filecoinAlphaMin]; norm_num
+  have hb : chung8Profile.αmax + 1 / (n : ℝ) ≤ 24 / 25 := by
     have h1 : (1 : ℝ) / n ≤ 1 / 1000 :=
       one_div_le_one_div_of_le (by norm_num) hn1000
-    rw [chung8ActiveHi]
-    linarith
-  have hlevels : chung8SearchCost ((9 : ℝ) / 10 - 189 / 5000)
-      + (((2 : ℕ) : ℝ) - 1) * chung8LinkCost + chung8ChargeRate * (4 / 5)
-      < ((14 : ℕ) : ℝ) := by
-    rw [chung8SearchCost, chung8LinkCost, chung8ChargeRate,
-      max_eq_right (by norm_num : (0 : ℝ) ≤ 89 / 100 - (9 / 10 - 189 / 5000))]
+    have h2 : chung8Profile.αmax = (14155 : ℝ) / 14911 := by
+      change ChungCurve.filecoinAlphaMax = _
+      rw [ChungCurve.filecoinAlphaMax]
+    rw [h2]; linarith
+  have hζδ : (9 : ℝ) / 10 - 189 / 5000 = 4311 / 5000 := by norm_num
+  have hhead : chung8Budget.searchCost ((9 : ℝ) / 10 - 189 / 5000) = 463 / 774 := by
+    rw [hζδ]
+    exact ChungCurve.chung8_potHead_eq
+  have hspan : chung8Budget.linkCost < 4 - 675 / 1113 + 331 / 774 :=
+    ChungCurve.chung8_potSpan_lt
+  have hcharge : chung8Budget.chargeRate * (4 / 5) = 105600 / 11131 := by
+    have h : (33 : ℝ) / 25 * (4 / 5) / ChungCurve.chung8Tracking.ghat = 105600 / 11131 :=
+      ChungCurve.chung8_ledgerCharge_eq
+    change (33 : ℝ) / 25 / ChungCurve.chung8Tracking.ghat * (4 / 5) = _
+    rw [← h]; ring
+  have hlevels : chung8Budget.searchCost ((9 : ℝ) / 10 - 189 / 5000)
+      + (((2 : ℕ) : ℝ) - 1) * chung8Budget.linkCost
+      + chung8Budget.chargeRate * (4 / 5) < ((14 : ℕ) : ℝ) := by
+    rw [hhead, hcharge]
     push_cast
-    norm_num
+    linarith
   have hmain := chung8_pebbling_latency_whp (ℓ := 14) (n := n) lambda (1 / 100) (24 / 25)
-    hn (by rw [chung8ActiveLo]; norm_num) hb
-    ((1 : ℝ) / 5) ((189 : ℝ) / 5000) ((4 : ℝ) / 5) ((4 : ℝ) / 5) ((9 : ℝ) / 10)
-    ((74 : ℝ) / 625) 2 (by norm_num)
-    (by rw [chung8Delta]) (by rw [chung8Pi]) (by norm_num) (by rw [chung8Rho])
-    (by rw [chung8PiBar]; norm_num) (by rw [chung8ActiveHi]; norm_num)
-    (by rw [chung8SourceLo]) (by rw [chung8SourceHi]; norm_num) (by norm_num)
-    hlevels
+    chung8Profile ((74 : ℝ) / 625) chung8Budget ((1 : ℝ) / 5) ((189 : ℝ) / 5000)
+    ((4 : ℝ) / 5) ((4 : ℝ) / 5) ((9 : ℝ) / 10) 2 (by norm_num) ha hb le_rfl le_rfl
+    (by norm_num) le_rfl
+    (by change ChungCurve.chung8Setting.piBar + (4 : ℝ) / 5 < _
+        rw [Setting.piBar]
+        norm_num [ChungCurve.chungBeta8])
+    (by change (9 : ℝ) / 10 - 189 / 5000 ≤ ChungCurve.filecoinAlphaMax
+        rw [ChungCurve.filecoinAlphaMax]; norm_num)
+    ChungCurve.chung8_nobreak ChungCurve.chung8_cs_slack (by norm_num) hlevels
   rw [HoldsWithFailureAtMost] at hmain ⊢
   refine hmain.trans (probabilityOf_mono _ ?_)
   intro P hev M hαπ hδ hπ hρ hζ hAdm A hA hweight

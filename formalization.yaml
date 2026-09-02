@@ -51,10 +51,12 @@ related_formalizations: []
 
 status:
   scope: >-
-    ProofOfSpaceStatement.chung8_pebbling_latency_whp is the latency theorem: all six
-    game parameters, the source weight, the link count and the layer count are symbolic
-    within the window the Chung-8 profile is certified on, related by the potential
-    ledger's level condition 0.6 + (z-1)*3.822 + 11.87*rho < ell.
+    ProofOfSpaceStatement.chung8_pebbling_latency_whp is the latency theorem, generic in
+    the expander: it quantifies over an expansion profile (a concave, strictly increasing,
+    reversal-symmetric expansion function under the degree-eight Chung threshold) and a
+    certified level budget for it, with all game parameters, the source weight, the link
+    count and the layer count symbolic and related only by the budget's level condition
+    searchCost(zeta - delta) + (z-1)*linkCost + chargeRate*rho < ell.
     ProofOfSpaceStatement.chung8_pebbling_latency_14 is the registered probabilistic
     latency theorem, the point (0.2, 0.0378, 0.8, 0.8, 0.9, 0.1184, 2, 14) of it, and
     returns an explicit unpebbled-path event in a static red/black pebbling snapshot. The vertical graph is constructed from one
