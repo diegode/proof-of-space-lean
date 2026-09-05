@@ -4,15 +4,10 @@ version: "v0.4"
 project:
   name: "Formalized latency bounds for stacked proofs of space"
   description: >-
-    A Lean 4 formalization of the static latency argument for stacked
-    proof-of-space graphs. A degree-eight Chung interlayer is sampled as one
-    uniform permutation of all 8n ports and reused throughout the stack. Under explicit
-    intra-layer depth robustness and pebbling-budget hypotheses, every
-    sufficiently large red-free challenge footprint contains, with an exact
-    quantified failure bound, an unpebbled directed path of length
-    Omega(ell*n). All constants are explicit, and the finite-size
-    Filecoin-shaped analysis proves Reyzin's simplified expansion-failure
-    bound, including its finite-size and security-parameter conditions.
+    A Lean 4 uniform-gain latency theorem for stacked depth-robust graphs,
+    with exact integer source counting and a finite Chung port-model union bound.
+    Under explicit graph and security assumptions, the Filecoin specialization
+    gives at least 0.205n path vertices at 18 layers for n at least 10000.
   authors:
     - "Diego de Estrada (@diegode)"
   license: "Apache-2.0"
@@ -31,10 +26,9 @@ sources:
     location: "65th IEEE Symposium on Foundations of Computer Science, 2024, pages 1159-1177"
     relationship: "adapts"
     note: >-
-      The formalization uses Reyzin's footprint recurrence, expansion
-      profile, and chain-growth framework. Its theorem permits continuation
-      chains to break and restart and supplies a global ledger and path
-      witness.
+      Adapts the footprint and expansion framework to path latency using
+      ordinary depth robustness, an integer source lemma, and uniform-gain
+      affine accounting. The notation pi, alpha_pi, and zeta_delta follows Reyzin.
     author_endorsement: "not-contacted"
   - title: "Tight proofs of space and replication"
     authors: ["Ben Fisch"]
@@ -51,34 +45,26 @@ related_formalizations: []
 
 status:
   scope: >-
-    ProofOfSpaceStatement.chung8_pebbling_latency_mixed is the generic latency theorem: it
-    reads the depth-robustness threshold at the game's own pi and spends the slack up to the
-    profile's fertility threshold on j full-length source nodes, so a completed chain link is
-    worth (alpha_pi - sigma) n + j. ProofOfSpaceStatement.chung8_pebbling_latency_whp is its
-    j = 0 case and is likewise generic in
-    the expander: it quantifies over an expansion profile (a concave, strictly increasing,
-    reversal-symmetric expansion function under the degree-eight Chung threshold) and a
-    certified level budget for it, with all game parameters, the source weight, the link
-    count and the layer count symbolic and related only by the budget's level condition
-    searchCost(zeta - delta) + (z-1)*linkCost + chargeRate*rho < ell.
-    ProofOfSpaceStatement.chung8_pebbling_latency_14 is the registered probabilistic
-    latency theorem, the point (0.2, 0.0378, 0.8, 0.8, 0.9, 0.1184, 2, 14) of it, and
-    returns an explicit unpebbled-path event in a static red/black pebbling snapshot. The vertical graph is constructed from one
-    uniformly sampled permutation of all 8n Chung ports. Its expansion failure
-    is bounded by exp(1/8)/(2*pi*alpha*sqrt(delta_n))*2^(-n*epsilon_chung),
-    a simplified exponential union-bound expression. The statement exposes the
-    required positivity, grid-rounding, and security condition on n and
-    epsilon_chung = 2^-22. The security parameter lambda is a number of bits and the failure probability is 2^-lambda. Its integer failure profile is defined only from
-    Reyzin's exponent and the finite-grid margin conditions; the rational polygon
-    is used only in the proof. Intra-layer depth robustness and pebbling budgets
-    remain explicit. The formalization does not include the reduction to a
-    time-indexed cryptographic game, nor identify Filecoin's Feistel wiring
-    with a uniform port permutation.
+    The deterministic pebbling_latency theorem proves ceil(alpha_pi*n)+(z-1)q
+    path vertices from interval expansion and ordinary depth robustness.
+    The integer source increment is
+    q=min(ceil(alpha_pi*n),ceil(alpha_pi*n)+m-ceil(pi*n)-s+1).
+    The gain is defined as g=beta(m/n)-delta-m/n and assumed positive and
+    minimal throughout the query interval. For zeta-delta at least m/n,
+    the layer condition is ell > 1+rho/g+z*(1+(beta(m/n)-beta(s/n))/g).
+    The challenge set is S; footprint and source cardinalities are m and s.
+    chung8_pebbling_latency_whp lifts this to one uniform permutation of 8n
+    ports reused throughout the stack. The event quantifies over all admissible
+    graphs, positions, and challenges after the wiring is sampled.
+    chung8_pebbling_latency_18 yields 0.205n at the Filecoin pebble fractions
+    for n at least 10000, assuming the exact functional Chung failure sum on
+    [0.01,0.96] is at most 2^-lambda. This security condition remains explicit;
+    n at least 10000 only supplies the finite-width latency estimates.
   sorry_count: 0
   sorry_in_definitions: 0
   axioms: ["propext", "Classical.choice", "Quot.sound"]
   main_results:
-    - declaration: "ProofOfSpaceStatement.chung8_pebbling_latency_mixed"
+    - declaration: "ProofOfSpaceStatement.pebbling_latency"
       file: "Solution.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
@@ -90,7 +76,7 @@ status:
       axioms: ["propext", "Classical.choice", "Quot.sound"]
       comparator_config: "comparator.json"
       literature_dependencies: []
-    - declaration: "ProofOfSpaceStatement.chung8_pebbling_latency_14"
+    - declaration: "ProofOfSpaceStatement.chung8_pebbling_latency_18"
       file: "Solution.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
@@ -130,15 +116,14 @@ automation:
 
 fidelity:
   divergences: >-
-    The theorem samples one uniform permutation of all eight ports per vertex rather
-    than Filecoin's Feistel wiring, and reuses one sampled interlayer throughout
-    the stack. It permits continuation chains to break and restart and tracks
-    those events in a global ledger. Lean counts depth forward from the
-    challenge layer, opposite to Reyzin's level numbering. The result concerns
-    a static pebbling snapshot and does not formalize a time-indexed sequential
-    game. Reyzin's deployed-scale numerical failure estimate is not imported;
-    the theorem proves the simplified expansion-failure bound and its displayed
-    sufficient width condition.
+    The theorem concerns path latency in a static pebbling snapshot, using
+    ordinary depth robustness and a nondecreasing interval expansion bound.
+    Its probability model samples one uniform permutation of all 8n ports and
+    reuses it across layers; no equivalence with deployed Feistel wiring is
+    asserted. Within-layer depth robustness and the exact finite security
+    inequality remain assumptions. No time-indexed cryptographic reduction
+    is formalized. Lean depth increases away from the challenge, whereas the
+    explanation uses Reyzin's levels decreasing toward the top of the stack.
 
 review:
   status: "self-assessed"
@@ -153,15 +138,14 @@ review:
 alignment:
   namespace: "ProofOfSpaceStatement"
   statements:
-    - source: "Reyzin, Proofs of Space with Maximal Hardness (FOCS 2024), footprint and chain-growth framework"
-      lean: "ProofOfSpaceStatement.chung8_pebbling_latency_14"
+    - source: "Reyzin, Proofs of Space with Maximal Hardness (FOCS 2024), footprint and expansion framework"
+      lean: "ProofOfSpaceStatement.chung8_pebbling_latency_whp"
       module: "Solution"
       status: "adapted and proved"
       note: >-
-        Palomar-facing probabilistic Chung-8 latency theorem. It constructs the
-        vertical graph from one uniform permutation of all 8n ports, proves the
-        simplified expansion-failure bound, and proves the explicit unpebbled path
-        event while permitting broken and restarted continuation chains.
+        A uniform-gain path latency theorem using exact integer source counts.
+        The Chung port-model union bound is uniform over admissible positions
+        and challenges chosen after the sampled wiring is known.
 
 acknowledgements: >-
   Built with Lean and Mathlib. The proof architecture builds on work by Ben

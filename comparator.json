@@ -2,11 +2,9 @@
   "challenge_module": "Challenge",
   "solution_module": "Solution",
   "theorem_names": [
-    "ProofOfSpaceStatement.chung8_pebbling_latency_mixed",
+    "ProofOfSpaceStatement.pebbling_latency",
     "ProofOfSpaceStatement.chung8_pebbling_latency_whp",
-    "ProofOfSpaceStatement.chung8_pebbling_latency_14",
-    "ProofOfSpaceStatement.chung8_pebbling_latency_full_asymptotic",
-    "ProofOfSpaceStatement.chung8_pebbling_latency_asymptotic"
+    "ProofOfSpaceStatement.chung8_pebbling_latency_18"
   ],
   "definition_names": [],
   "permitted_axioms": [

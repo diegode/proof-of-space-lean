@@ -4,9 +4,8 @@ import ProofOfSpace.ChungShifted
 # The Chung exponent along a straight chord
 
 `ChungShifted.lean` constructs the finite-size threshold `shiftedBeta d ε` as an exact
-root and records why that root cannot serve as a global `Setting.β`.  A rational polygon
-is used instead, and the question this file settles is what it takes to certify one: are
-the *vertices* enough?
+root. This module certifies a rational polygon below the entropy threshold by
+checking its vertices and the curvature along each segment.
 
 They are, and the reason is elementary.  Restrict the exponent to a straight line
 `y = p x + q`.  Every summand of `sec` is then `κ · g x · log (g x)` for an affine `g`,

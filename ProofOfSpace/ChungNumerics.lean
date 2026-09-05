@@ -1,12 +1,9 @@
 /-
 # Numerical certificates for the finite-size Chung profile
 
-The rational profile of `ChungFilecoinCurve.lean` is a polygon; the scalar conditions of
-`cor:filecoin` (the source condition `gain_δ(σ) ≥ 2 g_π` at `σ = 0.1184`, the reference
-chain, the ledger constants) are therefore exact rational arithmetic and need nothing
-from this file.  What does need this file is the *justification* of the polygon: every
-one of its non-endpoint vertices, and one point of the ray that opens it, must be shown
-to lie strictly inside the finite-size Chung region `E₈(x,y) < -2⁻²²`.
+The rational profile of `ChungFilecoinCurve.lean` is certified by showing that
+its interior vertices and a point of its opening ray lie strictly inside the
+finite-size Chung region `E₈(x,y) < -2⁻²²`.
 
 Each such sign is settled by bracketing the five logarithms it involves.  Each
 `log (a/b)` is rescaled by a power of two into the fast-convergence range and then
@@ -131,15 +128,7 @@ theorem log_14911_100000 :
   rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
   constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
 
-/-! ### Brackets for the `σ̃ = 3 / 5` mid-point certificate -/
-
-/-! ### Brackets for the left-root certificate
-
-`log_255_256`, `log_31_32` and `log_7_8` are the three series needed to decide the sign
-of the exponent at `(x, y) = (1 / 256, 1 / 32)`.  Both coordinates are powers of two and
-`y - x = 7 / 256`, so every logarithm in `sec` reduces to `log 2` plus a Mercator series
-with argument at most `1 / 8`; five terms already suffice for `1 / 256`. -/
-/-! ### Signs of the exponent at four explicit points -/
+/-! ### Entropy certificates for polygon vertices -/
 
 theorem shiftedSec_neg_08_vertex :
     shiftedSec 8 filecoinEpsilon (4 / 5) (94911 / 100000) < 0 := by
@@ -157,56 +146,7 @@ theorem shiftedSec_neg_1184_vertex :
   norm_num
   linarith [e1.1, e1.2, e2.1, e2.2, e3.1, e3.2, e4.1, e4.2, e5.1, e5.2]
 
-/-! ### Brackets for the threshold curve -/
-
-/-! ### the source condition, decided -/
-
-/-- The adjusted gain of the finite-size Filecoin profile at `δ = 0.0378`. -/
-noncomputable def gainD8 (t : ℝ) : ℝ := filecoinBeta t - 189 / 5000 - t
-
-/-- `g_π = gain_δ(0.8)`. -/
-noncomputable def gpi8 : ℝ := gainD8 (4 / 5)
-
-/-- **`σ = 0.1184` satisfies the source condition `gain_δ(σ) ≥ 2 g_π`.** -/
-theorem condB_holds_at_1184 : 2 * gpi8 ≤ gainD8 (74 / 625) := by
-  norm_num [gainD8, gpi8]
-
-/-- `g_π ∈ (0.1113, 0.1114)`: the bracket asserted by `FilecoinLatencyParameters`,
-here derived from the construction. -/
-theorem gpi8_bounds : (1113 : ℝ)/10000 < gpi8 ∧ gpi8 < (557 : ℝ)/5000 := by
-  norm_num [gpi8, gainD8]
-
-/-! ### The left root of `gain_δ`
-
-`gain_δ(0) = -δ < 0` but `chungBeta8` is only *defined* to be `0` at `0`, so the sign of
-`gain_δ` just to the right of `0` has to be certified separately.  One point suffices:
-at `x = 1 / 256` the threshold is below `1 / 32`, hence
-`gain_δ(1 / 256) < 1 / 32 - δ - 1 / 256 = -0.0104 < 0`.  Together with `gain_δ(0.1184) > 0`
-(`condB_holds_at_1184`) and continuity this brackets the left zero `α_δ^min`. -/
-
-/-! ### The mid-point certificate `2 g_π ≤ gain_δ(3 / 5)`
-
-This is the single extra Chung-8 evaluation needed by the two-piece growth potential
-`ProofOfSpace.growthPot`.  Together with the source condition at `σ` and concavity of `gain_δ`
-it certifies `gain_δ ≥ 2 g_π` on the whole segment `[σ, 3 / 5]`, which is what lets the
-growth window drop from `a = 6.13` levels to `Φ_{3 / 5}(π) + 1 = 4.97`. -/
-
-/-- The mid-point certificate: the doubled tracking gain survives all the way to
-`σ̃ = 3 / 5`. -/
-theorem two_gpi_le_gainD8_06 : 2 * gpi8 ≤ gainD8 (3 / 5) := by
-  norm_num [gainD8, gpi8]
-
-
-/-! ### Brackets for the reference-chain steps
-
-The potential ledger of `PotentialLedger.lean` needs a reference chain: a finite
-increasing sequence each of whose steps one free level of the footprint recurrence can
-achieve.  For the Chung-8 Filecoin parameters that chain is the `β_δ` orbit of the
-tracking floor, rationalized downwards, and certifying it means four more `β₈` lower
-brackets.  Each needs the five logarithms `log x`, `log (1-x)`, `log y`, `log (1-y)` and
-`log (y-x)`, produced by the same Mercator-plus-`log 2` recipe as above. -/
-
-/-! #### Chain point `x_1 = 0.1622` -/
+/-! ### Logarithm brackets for the remaining polygon vertices -/
 
 theorem log_811_5000 :
     (-1.818925138021 : ℝ) < log ((811 : ℝ)/5000) ∧
@@ -264,7 +204,7 @@ theorem log_3041_10000 :
   rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
   constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
 
-/-! #### Chain point `x_2 = 0.4285` -/
+/-! #### Polygon vertex `x_2 = 0.4285` -/
 
 theorem log_857_2000 :
     (-0.847464541185 : ℝ) < log ((857 : ℝ)/2000) ∧
@@ -322,7 +262,7 @@ theorem log_3431_10000 :
   rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
   constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
 
-/-! #### Chain point `x_3 = 0.7338` -/
+/-! #### Polygon vertex `x_3 = 0.7338` -/
 
 theorem log_3669_5000 :
     (-0.309518767061 : ℝ) < log ((3669 : ℝ)/5000) ∧
@@ -376,21 +316,7 @@ theorem log_963_5000 :
   rw [hsplit, Real.log_div (by norm_num) (by norm_num), hlog2]
   constructor <;> linarith [Real.log_two_lt_d9, Real.log_two_gt_d9, h.1, h.2]
 
-/-! #### Chain point `x_4 = 0.8886` -/
-
-
-/-! ### The four chain-step certificates of the potential ledger
-
-`Potential.lean`'s reference chain for the Chung-8 Filecoin parameters is the `β_δ`
-orbit of the tracking floor `π̂`, rationalized downwards:
-
-  `x₀ = π̄`, `x₁ = 0.1622`, `x₂ = 0.4285`, `x₃ = 0.7338`, `x₄ = 0.8886`,
-
-together with the chord extension point `x_top = 0.9333` used by the `t1` certificate.
-The first step `x₁ = β_δ(π̄)` is exact — the mirror law gives `β(π̄) = 1 - π`, so
-`β_δ(π̄) = 1 - π - δ = 811 / 5000` on the nose — and needs no numerics.  The remaining
-four steps `x_{k+1} + δ ≤ β₈(x_k)` are the brackets below, each with `3·10⁻⁴` or more
-of room. -/
+/-! ### Entropy certificates at the remaining vertices -/
 
 theorem shiftedSec_neg_1622_vertex :
     shiftedSec 8 filecoinEpsilon (811 / 5000) (4663 / 10000) < 0 := by

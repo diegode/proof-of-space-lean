@@ -1,6 +1,5 @@
-import ProofOfSpace.ChungFilecoin
-import ProofOfSpace.ChungFilecoinGeneral
-import ProofOfSpace.ChungFilecoinExpansion
-import ProofOfSpace.FullSources
-import ProofOfSpace.FullSourcesFilecoin
-import ProofOfSpace.ChungFilecoinMirror
+import ProofOfSpace.Amplification
+import ProofOfSpace.PortStack
+import ProofOfSpace.PortExpansionProbability
+import ProofOfSpace.ChungRelative
+import ProofOfSpace.UniformGainNumerics
