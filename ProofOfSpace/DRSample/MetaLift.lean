@@ -131,4 +131,27 @@ theorem blockDepthRobust_of_meta {n m M e b : ℕ} {d : ℝ}
   apply hH
   exact (card_discardedBlocks_blockDeleted_le (by omega) hb M S).trans (by omega)
 
+theorem blockDepthRobust_of_meta_wide {n m M e b : ℕ} {d : ℝ}
+    (G : OrderedGraph n) (H : OrderedGraph M) (hline : HasLine G)
+    (hm : 3 ≤ m) (hn : M * m ≤ n) (hb : b ≤ m) (hd : 0 < d)
+    (hedges : ∀ i j, H.edge i j → PortEdge G m i j)
+    (he : 2 * e ≤ M / 24) (hH : DepthRobust H (M / 24) d) :
+    BlockDepthRobust G e ((m : ℝ) / 3 * d) b := by
+  intro S hS
+  apply lift_meta_path G H hline hm hn hedges _ hd
+  apply hH
+  exact (card_discardedBlocks_blockDeleted_le (by omega) hb M S).trans (by omega)
+
+theorem blockDepthRobust_of_meta_third {n m M e b : ℕ} {d : ℝ}
+    (G : OrderedGraph n) (H : OrderedGraph M) (hline : HasLine G)
+    (hm : 3 ≤ m) (hn : M * m ≤ n) (hb : b ≤ m) (hd : 0 < d)
+    (hedges : ∀ i j, H.edge i j → PortEdge G m i j)
+    (he : 2 * e ≤ M / 3) (hH : DepthRobust H (M / 3) d) :
+    BlockDepthRobust G e ((m : ℝ) / 3 * d) b := by
+  intro S hS
+  apply lift_meta_path G H hline hm hn hedges _ hd
+  apply hH
+  exact (card_discardedBlocks_blockDeleted_le (by omega) hb M S).trans (by omega)
+
+
 end ProofOfSpace.DRSample

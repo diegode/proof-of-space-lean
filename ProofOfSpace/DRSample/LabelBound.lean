@@ -78,4 +78,20 @@ theorem multiscale_scalar {M d : ℕ} {lambda g W : ℝ}
   have he := Real.exp_le_exp.mpr hratio
   exact (mul_le_mul hg he (Real.exp_pos _).le hg0.le).trans hdepth
 
+/-- The deletion-heavy tuning: reducing the mass cutoff to `8M/(3lambda)`
+keeps the same exponential term when only `M/2` good labels remain. -/
+theorem multiscale_scalar_wide {M d : ℕ} {lambda g W : ℝ}
+    (hM : 0 < M) (hlambda : 0 < lambda) (hW : 0 ≤ W)
+    (hg : M / 2 ≤ g) (hmass : W ≤ 8 * M / (3 * lambda))
+    (hdepth : g * Real.exp (-4 * W / g) ≤ d) :
+    (M / 2 : ℝ) * Real.exp (-64 / (3 * lambda)) ≤ d := by
+  have hMR : (0 : ℝ) < M := by exact_mod_cast hM
+  have hg0 : 0 < g := by linarith
+  have hratio : -64 / (3 * lambda) ≤ -4 * W / g := by
+    apply (div_le_div_iff₀ (by positivity : 0 < 3 * lambda) hg0).mpr
+    have hm := (le_div_iff₀ (by positivity : 0 < 3 * lambda)).mp hmass
+    nlinarith
+  have he := Real.exp_le_exp.mpr hratio
+  exact (mul_le_mul hg he (Real.exp_pos _).le hg0.le).trans hdepth
+
 end ProofOfSpace.DRSample

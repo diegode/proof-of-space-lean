@@ -60,4 +60,35 @@ theorem multiscale_mapped {α : Type*} [Fintype α] {M : ℕ} (hM : 0 < M)
     exact havoid j hj A)
   rwa [independentSamples_map_probability] at h
 
+theorem multiscale_mapped_wide {α : Type*} [Fintype α] {M : ℕ} (hM : 0 < M)
+    (p : ℕ → FiniteLaw α) (f : ℕ → α → Finset (Fin M)) {lambda : ℝ} (hlambda : 0 < lambda)
+    (havoid : ∀ j < M, ∀ A : Finset (Fin M),
+      (p j).probability (fun row => Disjoint (f j row) A) ≤
+        Real.exp (-lambda * ∑ i ∈ A, harmonicAt M j i)) :
+    (independentSamples p M).probability (fun s =>
+      DepthRobust (exposedGraph M (mapSamples f M s)) (M / 24)
+        ((M / 2 : ℝ) * Real.exp (-64 / (3 * lambda)))) ≥
+      1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * M) := by
+  have h := multiscale_wide hM (fun j => (p j).map (f j)) hlambda (by
+    intro j hj A
+    rw [FiniteLaw.probability_map]
+    exact havoid j hj A)
+  rwa [independentSamples_map_probability] at h
+
+theorem multiscale_mapped_third {α : Type*} [Fintype α] {M : ℕ} (hM : 0 < M)
+    (p : ℕ → FiniteLaw α) (f : ℕ → α → Finset (Fin M)) {lambda : ℝ} (hlambda : 0 < lambda)
+    (havoid : ∀ j < M, ∀ A : Finset (Fin M),
+      (p j).probability (fun row => Disjoint (f j row) A) ≤
+        Real.exp (-lambda * ∑ i ∈ A, harmonicAt M j i)) :
+    (independentSamples p M).probability (fun s =>
+      DepthRobust (exposedGraph M (mapSamples f M s)) (M / 3)
+        ((M / 6 : ℝ) * Real.exp (-160 / lambda))) ≥
+      1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * M) := by
+  have h := multiscale_third hM (fun j => (p j).map (f j)) hlambda (by
+    intro j hj A
+    rw [FiniteLaw.probability_map]
+    exact havoid j hj A)
+  rwa [independentSamples_map_probability] at h
+
+
 end ProofOfSpace.DRSample

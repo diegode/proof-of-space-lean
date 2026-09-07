@@ -153,5 +153,64 @@ theorem uniform_mass_bound (p : FiniteLaw α) (M : ℕ) (lambda : ℝ)
   rw [heq]
   linarith
 
+/-- A second tuning of the same weighted union bound.  The smaller mass
+threshold weakens the failure exponent, but permits twice as many deletions in
+the multiscale application below. -/
+theorem uniform_mass_bound_wide (p : FiniteLaw α) (M : ℕ) (lambda : ℝ)
+    (hlambda : 0 < lambda) (W : Finset (Fin M) → α → ℝ)
+    (hmoment : ∀ S, p.expectation (fun a => Real.exp (lambda / 2 * W S a)) ≤
+      2 ^ (M - S.card)) :
+    p.probability (fun a => ∀ S, W S a ≤ 8 * M / (3 * lambda)) ≥
+      1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * M) := by
+  classical
+  have htail (S : Finset (Fin M)) :
+      p.probability (fun a => 8 * M / (3 * lambda) < W S a) ≤
+        Real.exp (-(4 * M / 3)) * 2 ^ (M - S.card) := by
+    have hmono : p.probability (fun a => 8 * M / (3 * lambda) < W S a) ≤
+        p.probability (fun a => Real.exp (4 * M / 3) ≤
+          Real.exp (lambda / 2 * W S a)) := by
+      apply p.probability_mono
+      intro a ha
+      apply Real.exp_le_exp.mpr
+      have hden : 0 < 3 * lambda := by positivity
+      have := (div_lt_iff₀ hden).mp ha
+      nlinarith
+    have hmarkov := p.mul_probability_le_expectation
+      (fun a => (Real.exp_pos (lambda / 2 * W S a)).le)
+      (Real.exp_pos (4 * M / 3)).le
+    have hbound : Real.exp (4 * M / 3) *
+        p.probability (fun a => 8 * M / (3 * lambda) < W S a) ≤ 2 ^ (M - S.card) :=
+      (mul_le_mul_of_nonneg_left hmono (Real.exp_pos _).le).trans
+        (hmarkov.trans (hmoment S))
+    have : p.probability (fun a => 8 * M / (3 * lambda) < W S a) ≤
+        2 ^ (M - S.card) / Real.exp (4 * M / 3) :=
+      (le_div_iff₀ (Real.exp_pos (4 * M / 3))).mpr (by rwa [mul_comm])
+    simpa only [div_eq_mul_inv, ← Real.exp_neg, mul_comm] using this
+  have hsum : ∑ S : Finset (Fin M), (2 : ℝ) ^ (M - S.card) = 3 ^ M := by
+    simpa only [Fintype.card_fin, one_pow, one_mul, show (1 : ℝ) + 2 = 3 by norm_num] using
+      Fintype.sum_pow_mul_eq_add_pow (Fin M) (1 : ℝ) 2
+  have hfail : p.probability (fun a => ∃ S, 8 * M / (3 * lambda) < W S a) ≤
+      Real.exp (-((4 / 3 : ℝ) - Real.log 3) * M) := by
+    calc p.probability (fun a => ∃ S, 8 * M / (3 * lambda) < W S a)
+        ≤ ∑ S, p.probability (fun a => 8 * M / (3 * lambda) < W S a) :=
+          p.probability_exists_le_sum _
+      _ ≤ ∑ S, Real.exp (-(4 * M / 3)) * 2 ^ (M - S.card) :=
+        sum_le_sum fun S _ => htail S
+      _ = Real.exp (-(4 * M / 3)) * 3 ^ M := by rw [← mul_sum, hsum]
+      _ = Real.exp (-((4 / 3 : ℝ) - Real.log 3) * M) := by
+        rw [show (3 : ℝ) ^ M = Real.exp (M * Real.log 3) by
+          rw [Real.exp_nat_mul, Real.exp_log (by norm_num)]]
+        rw [← Real.exp_add]
+        congr 1
+        ring
+  have heq : p.probability (fun a => ∀ S, W S a ≤ 8 * M / (3 * lambda)) =
+      1 - p.probability (fun a => ∃ S, 8 * M / (3 * lambda) < W S a) := by
+    rw [← p.probability_compl]
+    congr 1
+    funext a
+    simp only [not_exists, not_lt]
+  rw [heq]
+  linarith
+
 end FiniteLaw
 end ProofOfSpace.DRSample

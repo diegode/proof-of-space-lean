@@ -94,4 +94,46 @@ theorem outgoingPorts_harmonic_ge {n m M j : ℕ} (hm : 3 ≤ m) (hn : M * m ≤
       intro a _
       exact harmonicAt_outgoing_ge hm hn i (hA i hi) a k
 
+theorem harmonicAt_outgoing_ge_sharp {n m M j : ℕ} (hm : 3 ≤ m) (hn : M * m ≤ n)
+    (i : Fin M) (hij : i.val + 2 ≤ j) (a : Fin (m / 3))
+    (k : Fin m) (hkthird : k.val < m / 3) :
+    (1 : ℝ) / (m : ℝ) * harmonicAt M j i ≤
+      harmonicAt n (j * m + k.val) (outgoingVertex hm hn i a) := by
+  have hk := k.isLt
+  have hu := outgoingVertex_bounds hm hn i a
+  have hd := port_distance hm hij hu.1 hu.2 (Nat.le_add_right _ _)
+    (show j * m + k.val < (j + 1) * m by nlinarith)
+  have hdsharp : j * m + k.val - (outgoingVertex hm hn i a).val ≤ m * (j - i.val) := by
+    have ht : m / 3 ≤ m := Nat.div_le_self _ _
+    have he : j - i.val + i.val = j := by omega
+    have hmul : m * (j - i.val) + i.val * m = j * m := by nlinarith
+    dsimp [outgoingVertex]
+    omega
+  unfold harmonicAt
+  rw [if_pos (show i.val < j by omega), if_pos (show (outgoingVertex hm hn i a).val < j * m + k.val by omega)]
+  rw [div_mul_div_comm, one_mul]
+  have hp : (0 : ℝ) < (j * m + k.val - (outgoingVertex hm hn i a).val : ℕ) := by
+    exact_mod_cast (show 0 < j * m + k.val - (outgoingVertex hm hn i a).val by omega)
+  apply one_div_le_one_div_of_le hp
+  exact_mod_cast hdsharp
+
+theorem outgoingPorts_harmonic_ge_sharp {n m M j : ℕ} (hm : 3 ≤ m) (hn : M * m ≤ n)
+    (A : Finset (Fin M)) (hA : ∀ i ∈ A, i.val + 2 ≤ j) (k : Fin m) (hkthird : k.val < m / 3) :
+    ((m / 3 : ℕ) : ℝ) / (m : ℝ) * (∑ i ∈ A, harmonicAt M j i) ≤
+      ∑ u ∈ outgoingPorts hm hn A, harmonicAt n (j * m + k.val) u := by
+  rw [outgoingPorts, sum_image (fun x _ y _ he => outgoingVertex_injective hm hn he), sum_product]
+  calc ((m / 3 : ℕ) : ℝ) / (m : ℝ) * (∑ i ∈ A, harmonicAt M j i)
+      = ∑ i ∈ A, ∑ a : Fin (m / 3), (1 : ℝ) / (m : ℝ) * harmonicAt M j i := by
+        simp only [sum_const, card_univ, Fintype.card_fin, nsmul_eq_mul]
+        simp_rw [← mul_assoc]
+        rw [← mul_sum]
+        ring
+    _ ≤ ∑ i ∈ A, ∑ a : Fin (m / 3), harmonicAt n (j * m + k.val) (outgoingVertex hm hn i a) := by
+      apply sum_le_sum
+      intro i hi
+      apply sum_le_sum
+      intro a _
+      exact harmonicAt_outgoing_ge_sharp hm hn i (hA i hi) a k hkthird
+
+
 end ProofOfSpace.DRSample

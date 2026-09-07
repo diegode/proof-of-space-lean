@@ -109,4 +109,47 @@ theorem good_survivor_reciprocal {n i j : ℕ} {S : Finset ℕ} (hS : S ⊆ rang
   apply (div_le_div_iff₀ hp hq).mpr
   simpa using (show ((j - i : ℕ) : ℝ) ≤ 2 * (survivorRank (range n \ S) j - survivorRank (range n \ S) i : ℕ) by exact_mod_cast hdist)
 
+/-- At a four-fifths-good endpoint, rank distance is at least one fifth of distance. -/
+theorem goodFourFifths_survivor_distance {n i j : ℕ} {S : Finset ℕ} (hS : S ⊆ range n)
+    (hi : i ∈ range n \ S) (hj : j ∈ range n \ S) (hij : i < j)
+    (hgood : i ∈ goodVerticesFourFifths S n ∨ j ∈ goodVerticesFourFifths S n) :
+    j - i ≤ 5 * (survivorRank (range n \ S) j - survivorRank (range n \ S) i) := by
+  have hjn := mem_range.mp (mem_sdiff.mp hj).1
+  have hdense : 5 * (S ∩ Ico i j).card ≤ 4 * (j - i) := by
+    rcases hgood with hg | hg
+    · exact goodVerticesFourFifths_right hS hg hij hjn.le
+    · have heq : S ∩ Ico (i + 1) (j + 1) = S ∩ Ico i j := by
+        ext x
+        simp only [mem_inter, mem_Ico]
+        have hiS := (mem_sdiff.mp hi).2
+        have hjS := (mem_sdiff.mp hj).2
+        constructor
+        · rintro ⟨hx, hlo, hhi⟩
+          have hxj : x ≠ j := fun he => hjS (he ▸ hx)
+          exact ⟨hx, by omega, by omega⟩
+        · rintro ⟨hx, hlo, hhi⟩
+          have hxi : x ≠ i := fun he => hiS (he ▸ hx)
+          exact ⟨hx, by omega, by omega⟩
+      have hh := goodVerticesFourFifths_left hg (show i + 1 ≤ j by omega)
+      rw [heq] at hh
+      have he : j + 1 - (i + 1) = j - i := by omega
+      rwa [he] at hh
+  have hp := survivor_interval_partition (S := S) hij.le hjn.le
+  rw [survivorRank_sub hij.le]
+  omega
+
+theorem goodFourFifths_survivor_reciprocal {n i j : ℕ} {S : Finset ℕ} (hS : S ⊆ range n)
+    (hi : i ∈ range n \ S) (hj : j ∈ range n \ S) (hij : i < j)
+    (hgood : i ∈ goodVerticesFourFifths S n ∨ j ∈ goodVerticesFourFifths S n) :
+    (1 : ℝ) / (survivorRank (range n \ S) j - survivorRank (range n \ S) i : ℕ)
+      ≤ 5 / (j - i : ℕ) := by
+  have hdist := goodFourFifths_survivor_distance hS hi hj hij hgood
+  have hrank := survivorRank_strictMono hi hij
+  have hp : (0 : ℝ) < (survivorRank (range n \ S) j - survivorRank (range n \ S) i : ℕ) := by
+    exact_mod_cast Nat.sub_pos_of_lt hrank
+  have hq : (0 : ℝ) < (j - i : ℕ) := by exact_mod_cast Nat.sub_pos_of_lt hij
+  apply (div_le_div_iff₀ hp hq).mpr
+  simpa using (show ((j - i : ℕ) : ℝ) ≤ 5 * (survivorRank (range n \ S) j - survivorRank (range n \ S) i : ℕ) by exact_mod_cast hdist)
+
+
 end ProofOfSpace.DRSample

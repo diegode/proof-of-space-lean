@@ -556,10 +556,10 @@ theorem drsample_multiscale {M : ℕ} (hM : 0 < M)
       (p j).probability (fun parents => Disjoint parents A) ≤
         Real.exp (-lambda * ∑ i ∈ A, harmonicAt M j i)) :
     (independentSamples p M).probability (fun s =>
-      DepthRobust (exposedGraph M s) (M / 48)
-        ((3 * M / 4 : ℝ) * Real.exp (-64 / (3 * lambda)))) ≥
-      1 - Real.exp (-(2 - Real.log 3) * M) := by
-  exact ProofOfSpace.DRSample.multiscale hM p hlambda havoid
+      DepthRobust (exposedGraph M s) (M / 3)
+        ((M / 6 : ℝ) * Real.exp (-160 / lambda))) ≥
+      1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * M) := by
+  exact ProofOfSpace.DRSample.multiscale_third hM p hlambda havoid
 
 theorem drsample_conjecture1 : ∀ᶠ n : ℕ in atTop,
     (drsampleLaw n (blockWidth n)).probability (fun s =>
@@ -576,10 +576,10 @@ theorem drsample_conjecture2 : ∀ᶠ n : ℕ in atTop,
 theorem filecoin_bucket6_finite {n m : ℕ} (hm : 12 ≤ m) (hmn : m ≤ n) :
     (graphLaw m (filecoinIncomingLaw (by omega))).probability (fun s =>
       IndegreeAtMost (rowGraph (by omega) (n / m + 1) s) 6 ∧
-      BlockDepthRobust (rowGraph (by omega) (n / m + 1) s) ((n / m) / 96)
-        (((m : ℝ) * (n / m : ℕ) / 4) * Real.exp (-(8192 * Real.logb 2 n / (3 * m)))) m) ≥
-      1 - Real.exp (-(2 - Real.log 3) * (n / m : ℕ)) := by
-  exact ProofOfSpace.DRSample.filecoin_bucket6_finite_with_degree hm hmn
+      BlockDepthRobust (rowGraph (by omega) (n / m + 1) s) ((n / m) / 6)
+        (((m : ℝ) * (n / m : ℕ) / 18) * Real.exp (-(160 * m * (Real.logb 2 n + 1) / (m / 3 : ℕ) ^ 2))) m) ≥
+      1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / m : ℕ)) := by
+  exact ProofOfSpace.DRSample.filecoin_bucket6_finite_sharp_with_degree hm hmn
 
 theorem filecoin_bucket6_depth_robustness : ∀ᶠ n : ℕ in atTop,
     (filecoinBucket6Law n (blockWidth n)).probability (fun s =>

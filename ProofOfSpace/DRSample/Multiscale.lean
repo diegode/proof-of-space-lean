@@ -111,4 +111,91 @@ theorem multiscale {M : ℕ} (hM : 0 < M)
   intro s hs S hS
   exact depth_of_mass_bound hM hlambda S hS s (hs S)
 
+theorem depth_of_mass_bound_wide {M : ℕ} (hM : 0 < M) {lambda : ℝ}
+    (hlambda : 0 < lambda) (S : Finset (Fin M)) (hS : S.card ≤ M / 24)
+    (s : SampleSpace (Finset (Fin M)) M)
+    (hmass : actualMass S s ≤ 8 * M / (3 * lambda)) :
+    HasPath (exposedGraph M s) S ((M / 2 : ℝ) * Real.exp (-64 / (3 * lambda))) := by
+  have h24 : 24 * S.card ≤ M := by omega
+  have hsmall : 12 * (natDeleted S).card < M := by rw [natDeleted_card]; omega
+  have hlabels : ∀ i ∈ range M \ natDeleted S,
+      1 ≤ exposedLabels (natDeleted S) M s i ∧
+        exposedLabels (natDeleted S) M s i ≤ labelDepth S s := by
+    intro i hi
+    have hiM := mem_range.mp (mem_sdiff.mp hi).1
+    refine ⟨exposedLabels_positive (natDeleted S) s hiM (mem_sdiff.mp hi).2, ?_⟩
+    exact Finset.le_sup (f := fun v : Fin M => exposedLabels (natDeleted S) M s v.val)
+      (mem_univ (⟨i, hiM⟩ : Fin M))
+  have hshallow := shallow_labels (natDeleted_subset S) hsmall
+    (exposedLabels (natDeleted S) M s) hlabels
+  have hg : (M / 2 : ℝ) ≤ ((M - 12 * (natDeleted S).card : ℕ) : ℝ) := by
+    rw [Nat.cast_sub hsmall.le, natDeleted_card, Nat.cast_mul, Nat.cast_ofNat]
+    have h24R : (24 : ℝ) * S.card ≤ M := by exact_mod_cast h24
+    linarith
+  have hbound := multiscale_scalar_wide hM hlambda (forbiddenMass_nonneg _ _) hg hmass hshallow
+  exact path_of_le_labelDepth S s (by positivity) hbound
+
+/-- A deletion-heavy form of `multiscale`.  It tolerates twice the deletion
+fraction at the cost of a `2/3` prefactor and a smaller, still exponential,
+success exponent. -/
+theorem multiscale_wide {M : ℕ} (hM : 0 < M)
+    (p : ℕ → FiniteLaw (Finset (Fin M))) {lambda : ℝ} (hlambda : 0 < lambda)
+    (havoid : ∀ j < M, ∀ A : Finset (Fin M),
+      (p j).probability (fun parents => Disjoint parents A) ≤
+        Real.exp (-lambda * ∑ i ∈ A, harmonicAt M j i)) :
+    (independentSamples p M).probability (fun s =>
+      DepthRobust (exposedGraph M s) (M / 24)
+        ((M / 2 : ℝ) * Real.exp (-64 / (3 * lambda)))) ≥
+      1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * M) := by
+  have hmass := (independentSamples p M).uniform_mass_bound_wide M lambda hlambda actualMass
+    (actualMass_moment p hlambda havoid)
+  apply hmass.trans
+  apply FiniteLaw.probability_mono
+  intro s hs S hS
+  exact depth_of_mass_bound_wide hM hlambda S hS s (hs S)
+
+theorem depth_of_mass_bound_third {M : ℕ} (hM : 0 < M) {lambda : ℝ}
+    (hlambda : 0 < lambda) (S : Finset (Fin M)) (hS : S.card ≤ M / 3)
+    (s : SampleSpace (Finset (Fin M)) M)
+    (hmass : actualMass S s ≤ 8 * M / (3 * lambda)) :
+    HasPath (exposedGraph M s) S ((M / 6 : ℝ) * Real.exp (-160 / lambda)) := by
+  have hlabels : ∀ i ∈ range M \ natDeleted S,
+      1 ≤ exposedLabels (natDeleted S) M s i ∧
+        exposedLabels (natDeleted S) M s i ≤ labelDepth S s := by
+    intro i hi
+    have hiM := mem_range.mp (mem_sdiff.mp hi).1
+    refine ⟨exposedLabels_positive (natDeleted S) s hiM (mem_sdiff.mp hi).2, ?_⟩
+    exact Finset.le_sup (f := fun v : Fin M => exposedLabels (natDeleted S) M s v.val)
+      (mem_univ (⟨i, hiM⟩ : Fin M))
+  have hshallow := shallow_labels_third (natDeleted_subset S) hM (by simpa using hS)
+    (exposedLabels (natDeleted S) M s) hlabels
+  apply path_of_le_labelDepth S s (by positivity)
+  apply le_trans _ hshallow
+  apply mul_le_mul_of_nonneg_left _ (by positivity)
+  apply Real.exp_le_exp.mpr
+  have hMR : (0 : ℝ) < M := by exact_mod_cast hM
+  have hm : actualMass S s * (3 * lambda) ≤ 8 * M :=
+    (le_div_iff₀ (by positivity)).mp hmass
+  change -160 / lambda ≤ -60 * actualMass S s / M
+  apply (div_le_div_iff₀ hlambda hMR).mpr
+  nlinarith
+
+/-- Multiscale robustness against deletion of one third of the vertices. -/
+theorem multiscale_third {M : ℕ} (hM : 0 < M)
+    (p : ℕ → FiniteLaw (Finset (Fin M))) {lambda : ℝ} (hlambda : 0 < lambda)
+    (havoid : ∀ j < M, ∀ A : Finset (Fin M),
+      (p j).probability (fun parents => Disjoint parents A) ≤
+        Real.exp (-lambda * ∑ i ∈ A, harmonicAt M j i)) :
+    (independentSamples p M).probability (fun s =>
+      DepthRobust (exposedGraph M s) (M / 3)
+        ((M / 6 : ℝ) * Real.exp (-160 / lambda))) ≥
+      1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * M) := by
+  have hmass := (independentSamples p M).uniform_mass_bound_wide M lambda hlambda actualMass
+    (actualMass_moment p hlambda havoid)
+  apply hmass.trans
+  apply FiniteLaw.probability_mono
+  intro s hs S hS
+  exact depth_of_mass_bound_third hM hlambda S hS s (hs S)
+
+
 end ProofOfSpace.DRSample

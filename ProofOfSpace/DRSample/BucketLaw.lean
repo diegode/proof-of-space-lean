@@ -107,4 +107,65 @@ theorem bucketLaw_weight_ge (roundUp : Bool) {v B : ℕ} (hv : 2 ≤ v) (hB : 0 
   apply one_div_le_one_div_of_le (mul_pos hBpos hcpos)
   nlinarith
 
+/-- The useful bucket has at most as many choices as the requested distance. -/
+theorem useful_bucket_sharp (roundUp : Bool) {v B r : ℕ} (hr : 2 ≤ r) (hrv : r ≤ v)
+    (hB : Nat.clog 2 v ≤ B) :
+    ∃ k : Fin B, (⟨r, by omega⟩ : Fin (v + 1)) ∈ bucketDistances roundUp v (k.val + 1) ∧
+      (bucketDistances roundUp v (k.val + 1)).card ≤ r := by
+  have hk0 := Nat.clog_pos (by norm_num : 1 < 2) (by omega : 1 < r)
+  have hkB : Nat.clog 2 r ≤ B := (Nat.clog_mono_right 2 hrv).trans hB
+  have he : Nat.clog 2 r - 1 + 1 = Nat.clog 2 r := by omega
+  have hg0 : r ≤ bucketUpper v (Nat.clog 2 r) :=
+    le_min hrv (Nat.le_pow_clog (by norm_num) r)
+  have hp := Nat.pow_pred_clog_lt_self (by norm_num : 1 < 2) (by omega : 1 < r)
+  rw [Nat.pred_eq_sub_one] at hp
+  have hpow : 2 ^ Nat.clog 2 r ≤ 2 * r - 2 := by
+    rw [← he, pow_succ]
+    omega
+  have hg1 : bucketUpper v (Nat.clog 2 r) ≤ 2 * r - 2 :=
+    (min_le_right _ _).trans hpow
+  refine ⟨⟨Nat.clog 2 r - 1, by omega⟩, ?_, ?_⟩
+  · apply mem_filter.mpr
+    simp only [he]
+    refine ⟨mem_univ _, ?_, hg0⟩
+    unfold bucketLower
+    apply max_le hr
+    cases roundUp <;> simp only [Bool.false_eq_true, ↓reduceIte] <;> omega
+  · simp only [he]
+    have hsub : (bucketDistances roundUp v (Nat.clog 2 r)).image Fin.val ⊆
+        Icc (bucketLower roundUp v (Nat.clog 2 r)) (bucketUpper v (Nat.clog 2 r)) := by
+      intro x hx
+      obtain ⟨q, hq, rfl⟩ := mem_image.mp hx
+      exact mem_Icc.mpr (mem_filter.mp hq).2
+    have hc := card_le_card hsub
+    rw [card_image_of_injective _ Fin.val_injective, Nat.card_Icc] at hc
+    have hl := bucketLower_le_upper roundUp (show 2 ≤ v by omega) hk0
+    have hh : bucketUpper v (Nat.clog 2 r) / 2 ≤ bucketLower roundUp v (Nat.clog 2 r) := by
+      unfold bucketLower
+      have := le_max_right 2 ((bucketUpper v (Nat.clog 2 r) + if roundUp then 1 else 0) / 2)
+      cases roundUp <;> simp_all only [Bool.false_eq_true, ↓reduceIte, Nat.add_zero] <;> omega
+    omega
+
+/-- The exact finite bucket law has a harmonic pointwise lower bound. -/
+theorem bucketLaw_weight_ge_sharp (roundUp : Bool) {v B : ℕ} (hv : 2 ≤ v) (hB : 0 < B)
+    (hcover : Nat.clog 2 v ≤ B) (r : Fin (v + 1)) (hr : 2 ≤ r.val) :
+    (1 : ℝ) / (B * r.val) ≤ (bucketLaw roundUp v B hv hB).weight r := by
+  obtain ⟨k, hmem, hcard⟩ := useful_bucket_sharp roundUp hr (by omega : r.val ≤ v) hcover
+  have hcardpos := card_pos.mpr (bucketDistances_nonempty roundUp hv (show 1 ≤ k.val + 1 by omega))
+  have hBpos : (0 : ℝ) < B := by exact_mod_cast hB
+  have hrpos : (0 : ℝ) < r.val := by exact_mod_cast (show 0 < r.val by omega)
+  have hcpos : (0 : ℝ) < (bucketDistances roundUp v (k.val + 1)).card := by exact_mod_cast hcardpos
+  have hc : ((bucketDistances roundUp v (k.val + 1)).card : ℝ) ≤ r.val := by exact_mod_cast hcard
+  have hbound := FiniteLaw.bind_weight_ge
+    (FiniteLaw.uniformOn (univ : Finset (Fin B)) ⟨⟨0, hB⟩, mem_univ _⟩)
+    (fun k => FiniteLaw.uniformOn (bucketDistances roundUp v (k.val + 1))
+      (bucketDistances_nonempty roundUp hv (by omega))) k r
+  change _ ≤ (bucketLaw roundUp v B hv hB).weight r at hbound
+  simp only [FiniteLaw.uniformOn, mem_univ, ↓reduceIte, card_univ, Fintype.card_fin, hmem] at hbound
+  apply le_trans _ hbound
+  rw [div_mul_div_comm, one_mul]
+  apply one_div_le_one_div_of_le (mul_pos hBpos hcpos)
+  nlinarith
+
+
 end ProofOfSpace.DRSample

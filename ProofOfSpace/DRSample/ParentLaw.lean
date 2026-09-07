@@ -126,4 +126,56 @@ theorem bucketCount_real_bound {v N : ℕ} (hv : 2 ≤ v) (hvN : v ≤ N) :
     (Real.logb_le_logb (by norm_num) (by positivity) hN).mpr (by exact_mod_cast hvN)
   linarith
 
+/-- Contracting `q` consecutive fine positions preserves the harmonic constant. -/
+theorem contractedBucketLaw_weight_ge_sharp {n : ℕ} (roundUp : Bool) (q j B : ℕ)
+    (hq : 0 < q) (hj : j < n) (hv : 2 ≤ q * j) (hB : 0 < B)
+    (hcover : Nat.clog 2 (q * j) ≤ B) (u : Fin n) (hu : u.val + 2 ≤ j) :
+    (1 : ℝ) / (B * (j - u.val : ℕ)) ≤
+      (contractedBucketLaw roundUp q j B hq hj hv hB).weight u := by
+  let distances := univ.image (parentDistance q j hq u hu)
+  have hcard : distances.card = q := by
+    rw [card_image_of_injective _ (parentDistance_injective q j hq u hu), card_univ, Fintype.card_fin]
+  have hprob := (bucketLaw roundUp (q * j) B hv hB).probability_ge_sum
+    (fun r => contractedParent q j hq hj r = u) distances (by
+      intro r hr
+      obtain ⟨a, _, rfl⟩ := mem_image.mp hr
+      exact contractedParent_parentDistance q j hq hj u hu a)
+  have hlower : (∑ r ∈ distances, (1 : ℝ) / (B * (q * (j - u.val) : ℕ))) ≤
+      ∑ r ∈ distances, (bucketLaw roundUp (q * j) B hv hB).weight r := by
+    apply sum_le_sum
+    intro r hr
+    obtain ⟨a, _, rfl⟩ := mem_image.mp hr
+    apply le_trans _ (bucketLaw_weight_ge_sharp roundUp hv hB hcover _ (parentDistance_ge_two q j hq u hu a))
+    apply one_div_le_one_div_of_le (by
+      have := parentDistance_ge_two q j hq u hu a
+      positivity)
+    have hle : (parentDistance q j hq u hu a).val ≤ q * (j - u.val) := Nat.sub_le _ _
+    exact mul_le_mul_of_nonneg_left (by exact_mod_cast hle) (by positivity)
+  have hqR : (q : ℝ) ≠ 0 := by exact_mod_cast hq.ne'
+  have hBR : (B : ℝ) ≠ 0 := by exact_mod_cast hB.ne'
+  have hrR : ((j - u.val : ℕ) : ℝ) ≠ 0 := by exact_mod_cast (show j - u.val ≠ 0 by omega)
+  have hconstant : (∑ r ∈ distances, (1 : ℝ) / (B * (q * (j - u.val) : ℕ))) =
+      (1 : ℝ) / (B * (j - u.val : ℕ)) := by
+    rw [sum_const, nsmul_eq_mul, hcard, Nat.cast_mul]
+    field_simp
+  rw [hconstant] at hlower
+  rw [← FiniteLaw.probability_singleton, contractedBucketLaw, FiniteLaw.probability_map]
+  exact hlower.trans hprob
+
+theorem bucketCount_real_bound_sharp {v N : ℕ} (hv : 2 ≤ v) (hvN : v ≤ N) :
+    (Nat.clog 2 v : ℝ) ≤ Real.logb 2 N + 1 := by
+  have hvR : (1 : ℝ) ≤ v := by exact_mod_cast (show 1 ≤ v by omega)
+  have hlog : 1 ≤ Real.logb 2 v := by
+    rw [Real.le_logb_iff_rpow_le (by norm_num) (by positivity)]
+    simpa using (show (2 : ℝ) ≤ v by exact_mod_cast hv)
+  have hceil := Nat.ceil_lt_add_one (show 0 ≤ Real.logb 2 v by linarith)
+  have heq : Nat.ceil (Real.logb 2 (v : ℝ)) = Nat.clog 2 v := by
+    simpa using Real.natCeil_logb_natCast 2 v
+  rw [heq] at hceil
+  have hN : (0 : ℝ) < N := by exact_mod_cast (show 0 < N by omega)
+  have hmono : Real.logb 2 v ≤ Real.logb 2 N :=
+    (Real.logb_le_logb (by norm_num) (by positivity) hN).mpr (by exact_mod_cast hvN)
+  linarith
+
+
 end ProofOfSpace.DRSample

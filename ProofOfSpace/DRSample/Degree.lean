@@ -99,4 +99,23 @@ theorem filecoin_bucket6_finite_with_degree {n m : ℕ} (hm : 12 ≤ m) (hmn : m
   rw [FiniteLaw.probability_and_of_support _ _ _ (filecoin_bucket6_indegree (by omega) (by omega))]
   exact filecoin_bucket6_finite hm hmn
 
+theorem filecoin_bucket6_finite_wide_with_degree {n m : ℕ} (hm : 12 ≤ m) (hmn : m ≤ n) :
+    (graphLaw m (filecoinIncomingLaw (by omega))).probability (fun s =>
+      IndegreeAtMost (rowGraph (by omega) (n / m + 1) s) 6 ∧
+      BlockDepthRobust (rowGraph (by omega) (n / m + 1) s) ((n / m) / 48)
+        (((m : ℝ) * (n / m : ℕ) / 6) * Real.exp (-(2048 * Real.logb 2 n / m))) m) ≥
+      1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / m : ℕ)) := by
+  rw [FiniteLaw.probability_and_of_support _ _ _ (filecoin_bucket6_indegree (by omega) (by omega))]
+  exact filecoin_bucket6_finite_wide hm hmn
+
+theorem filecoin_bucket6_finite_sharp_with_degree {n m : ℕ} (hm : 12 ≤ m) (hmn : m ≤ n) :
+    (graphLaw m (filecoinIncomingLaw (by omega))).probability (fun s =>
+      IndegreeAtMost (rowGraph (by omega) (n / m + 1) s) 6 ∧
+      BlockDepthRobust (rowGraph (by omega) (n / m + 1) s) ((n / m) / 6)
+        (((m : ℝ) * (n / m : ℕ) / 18) * Real.exp (-(160 * m * (Real.logb 2 n + 1) / (m / 3 : ℕ) ^ 2))) m) ≥
+      1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / m : ℕ)) := by
+  rw [FiniteLaw.probability_and_of_support _ _ _ (filecoin_bucket6_indegree (by omega) (by omega))]
+  exact filecoin_bucket6_finite_sharp hm hmn
+
+
 end ProofOfSpace.DRSample

@@ -116,4 +116,78 @@ theorem goodVertices_interval {n lo hi j : ℕ} {S : Finset ℕ} (hS : S ⊆ ran
     (card_le_card hcover).trans (card_union_le _ _)
   omega
 
+/-- The right-directed maximal set, obtained by reflecting the left-directed one. -/
+noncomputable def rightDenseFourFifths (S : Finset ℕ) (n : ℕ) : Finset ℕ :=
+  reflected n (leftDenseFourFifths (reflected n S) n)
+
+theorem card_rightDenseFourFifths_le {n : ℕ} {S : Finset ℕ} (hS : S ⊆ range n) :
+    4 * (rightDenseFourFifths S n).card ≤ 5 * S.card := by
+  have hsub : leftDenseFourFifths (reflected n S) n ⊆ range n := filter_subset _ _
+  rw [rightDenseFourFifths, reflected_card hsub]
+  simpa [reflected_card hS] using card_leftDenseFourFifths_le (reflected n S) n
+
+theorem mem_rightDenseFourFifths_of_interval {n j hi : ℕ} {S : Finset ℕ}
+    (hS : S ⊆ range n) (hj : j < hi) (hhi : hi ≤ n)
+    (hdense : 4 * (hi - j) < 5 * (S ∩ Ico j hi).card) : j ∈ rightDenseFourFifths S n := by
+  have hjn : j < n := hj.trans_le hhi
+  have hcard : (reflected n S ∩ Ico (n - hi) (n - j)).card = (S ∩ Ico j hi).card := by
+    rw [← reflected_inter_Ico hS hj.le hhi]
+    exact reflected_card (inter_subset_left.trans hS)
+  apply mem_image.mpr
+  refine ⟨n - 1 - j, ?_, by omega⟩
+  apply mem_filter.mpr
+  refine ⟨mem_range.mpr (by omega), n - hi, by omega, ?_⟩
+  have heq : n - 1 - j + 1 = n - j := by omega
+  rw [heq, hcard]
+  have hlen : n - j - (n - hi) = hi - j := by omega
+  rwa [hlen]
+
+/-- Vertices outside both one-sided exceptional sets. -/
+noncomputable def goodVerticesFourFifths (S : Finset ℕ) (n : ℕ) : Finset ℕ :=
+  range n \ (leftDenseFourFifths S n ∪ rightDenseFourFifths S n)
+
+theorem goodVerticesFourFifths_subset_range (S : Finset ℕ) (n : ℕ) :
+    goodVerticesFourFifths S n ⊆ range n := sdiff_subset
+
+theorem card_goodVerticesFourFifths_ge {n : ℕ} {S : Finset ℕ} (hS : S ⊆ range n) :
+    2 * n ≤ 2 * (goodVerticesFourFifths S n).card + 5 * S.card := by
+  have hleft := card_leftDenseFourFifths_le S n
+  have hright := card_rightDenseFourFifths_le hS
+  have hc := card_union_le (leftDenseFourFifths S n) (rightDenseFourFifths S n)
+  have hs := card_sdiff_add_card_inter (range n)
+    (leftDenseFourFifths S n ∪ rightDenseFourFifths S n)
+  have hi := card_le_card (inter_subset_right :
+    range n ∩ (leftDenseFourFifths S n ∪ rightDenseFourFifths S n) ⊆
+      leftDenseFourFifths S n ∪ rightDenseFourFifths S n)
+  simp only [card_range] at hs
+  change 2 * n ≤ 2 * (range n \ (leftDenseFourFifths S n ∪ rightDenseFourFifths S n)).card + 5 * S.card
+  omega
+
+theorem goodVerticesFourFifths_survive {n j : ℕ} {S : Finset ℕ} (hj : j ∈ goodVerticesFourFifths S n) : j ∉ S := by
+  intro hjS
+  have hjn : j < n := mem_range.mp (mem_sdiff.mp hj).1
+  have hnot : j ∉ leftDenseFourFifths S n := fun h => (mem_sdiff.mp hj).2 (mem_union_left _ h)
+  apply hnot
+  apply mem_filter.mpr
+  refine ⟨mem_range.mpr hjn, j, le_rfl, ?_⟩
+  have hpos : 0 < (S ∩ Ico j (j + 1)).card := card_pos.mpr
+    ⟨j, mem_inter.mpr ⟨hjS, mem_Ico.mpr ⟨le_rfl, by omega⟩⟩⟩
+  omega
+
+
+theorem goodVerticesFourFifths_left {n lo j : ℕ} {S : Finset ℕ}
+    (hj : j ∈ goodVerticesFourFifths S n) (hlo : lo ≤ j) :
+    5 * (S ∩ Ico lo (j + 1)).card ≤ 4 * (j + 1 - lo) := by
+  by_contra! h
+  exact (mem_sdiff.mp hj).2 (mem_union_left _
+    (mem_filter.mpr ⟨(mem_sdiff.mp hj).1, lo, hlo, h⟩))
+
+theorem goodVerticesFourFifths_right {n j hi : ℕ} {S : Finset ℕ}
+    (hS : S ⊆ range n) (hj : j ∈ goodVerticesFourFifths S n)
+    (hjhi : j < hi) (hhi : hi ≤ n) :
+    5 * (S ∩ Ico j hi).card ≤ 4 * (hi - j) := by
+  by_contra! h
+  exact (mem_sdiff.mp hj).2 (mem_union_right _
+    (mem_rightDenseFourFifths_of_interval hS hjhi hhi h))
+
 end ProofOfSpace.DRSample

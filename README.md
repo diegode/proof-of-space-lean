@@ -141,9 +141,9 @@ line parent. The supporting proofs are in `ProofOfSpace/DRSample/`.
 For all sufficiently large `n`, the parameters are
 
 ```text
-e = floor(n log₂log₂ n / (1572864 log₂ n))
+e = floor(n log₂log₂ n / (20000 log₂ n))
 d = n log₂log₂ n / log₂ n
-b = floor(8192 log₂ n / log₂log₂ n).
+b = floor(3072 log₂ n / log₂log₂ n).
 ```
 
 The block deletion convention removes the at most `b` vertices ending at each
@@ -151,7 +151,7 @@ chosen endpoint; path lengths count vertices. The success event quantifies over
 all deleted sets after the graph has been sampled. Failure is at most
 
 ```text
-exp(-((2 - ln 3) / 16384) n log₂log₂ n / log₂ n),
+exp(-((4/3 - ln 3) / 3300) n log₂log₂ n / log₂ n),
 ```
 
 and `drsample_failure_tends_to_zero` proves this bound tends to zero.
@@ -159,16 +159,20 @@ and `drsample_failure_tends_to_zero` proves this bound tends to zero.
 The added public declarations, all registered with Comparator, are:
 
 - `drsample_multiscale`: the finite harmonic-avoidance theorem, with deletion
-  budget `floor(M/48)`, depth `(3M/4) exp(-64/(3λ))`, and failure
-  `exp(-(2 - ln 3) M)`.
+  budget `floor(M/3)`, depth `(M/6) exp(-160/λ)`, and failure
+  `exp(-(4/3 - ln 3) M)`.
 - `drsample_conjecture1`: ordinary depth robustness with the displayed parameters.
 - `drsample_conjecture2`: block depth robustness with the displayed parameters.
 - `filecoin_bucket6_finite`: for `12 <= m <= n`, indegree at most six and block
-  depth robustness with `e = floor(floor(n/m)/96)`, `b = m`, and
-  `d = (m floor(n/m)/4) exp(-8192 log₂ n/(3m))`.
+  depth robustness with `e = floor(floor(n/m)/6)`, `b = m`, and
+  `d = (m floor(n/m)/18) exp(-160 m (log₂ n+1)/floor(m/3)²)`.
 - `filecoin_bucket6_depth_robustness`: the eventual block and ordinary robustness
   statements together with the indegree-six bound.
 - `drsample_failure_tends_to_zero`: the limiting probability guarantee.
+
+The finite depth bound retains the stronger asymptotic depth
+`(n/18) (log₂ n)^(-15/(32 ln 2))` at the displayed block width.
+The earlier finite tradeoffs remain available in the supporting modules.
 
 The sampler definitions include capped and overlapping buckets. DRSample rounds
 its lower distance endpoint upward. Filecoin rounds downward, anchors all five

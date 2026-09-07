@@ -64,6 +64,48 @@ theorem finite_block_robustness {n m e b : ℕ} (hm : 12 ≤ m) (hmn : m ≤ n)
   rw [hdepth] at htransfer
   exact htransfer.mono_graph (fun _ _ h => rowGraph_mono hm0 s.1 s.2 h)
 
+theorem finite_block_robustness_wide {n m e b : ℕ} (hm : 12 ≤ m) (hmn : m ≤ n)
+    (hb : b ≤ m) (he : 2 * e ≤ (n / m) / 24)
+    (p : ℕ → FiniteLaw (Finset (Fin n)))
+    (havoid : ∀ v < n, ∀ A : Finset (Fin n),
+      (p v).probability (fun parents => Disjoint parents A) ≤
+        Real.exp (-(1 / (3 * Real.logb 2 n)) * ∑ i ∈ A, harmonicAt n v i)) :
+    (graphLaw m p).probability (fun s =>
+      BlockDepthRobust (rowGraph (by omega) (n / m + 1) s) e
+        (((m : ℝ) * (n / m : ℕ) / 6) * Real.exp (-(2048 * Real.logb 2 n / m))) b) ≥
+      1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / m : ℕ)) := by
+  have hm0 : 0 < m := by omega
+  have hM : 0 < n / m := Nat.div_pos hmn hm0
+  have hn : (n / m) * m ≤ n := Nat.div_mul_le_self _ _
+  have hlog : 0 < Real.logb 2 n := lt_of_lt_of_le (by norm_num)
+    (logb_two_ge_one (show 2 ≤ n by omega))
+  have hlambda : 0 < (m : ℝ) / (96 * Real.logb 2 n) := by positivity
+  have hmeta := multiscale_mapped_wide hM (rowLaw m p) (metaParents (by omega) hn) hlambda
+    (fun j hj A => metaParents_avoidance_explicit_three hm hn hj hlog p havoid A)
+  have hfinite : (graphLaw m p).probability (fun s =>
+      DepthRobust (exposedGraph (n / m) (mapSamples (metaParents (by omega) hn) (n / m) s.1))
+        ((n / m) / 24) (((n / m : ℕ) / 2 : ℝ) *
+          Real.exp (-64 / (3 * (m / (96 * Real.logb 2 n)))))) ≥
+        1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / m : ℕ)) := by
+    exact hmeta.trans_eq (FiniteLaw.probability_product_fst
+      (independentSamples (rowLaw m p) (n / m)) (rowLaw m p (n / m)) _).symm
+  apply hfinite.trans
+  apply FiniteLaw.probability_mono
+  intro s hs
+  have htransfer := blockDepthRobust_of_meta_wide (rowGraph hm0 (n / m) s.1)
+    (exposedGraph (n / m) (mapSamples (metaParents (by omega) hn) (n / m) s.1))
+    (rowGraph_hasLine hm0 s.1) (by omega) hn hb (by positivity)
+    (mapped_meta_edge_port (by omega) hn s.1) he hs
+  have hdepth : (m : ℝ) / 3 * (((n / m : ℕ) / 2 : ℝ) *
+      Real.exp (-64 / (3 * (m / (96 * Real.logb 2 n))))) =
+      ((m : ℝ) * (n / m : ℕ) / 6) * Real.exp (-(2048 * Real.logb 2 n / m)) := by
+    have hexp : -64 / (3 * ((m : ℝ) / (96 * Real.logb 2 n))) =
+        -(2048 * Real.logb 2 n / m) := by field_simp; ring
+    rw [hexp]
+    ring
+  rw [hdepth] at htransfer
+  exact htransfer.mono_graph (fun _ _ h => rowGraph_mono hm0 s.1 s.2 h)
+
 theorem drsample_finite {n m : ℕ} (hm : 12 ≤ m) (hmn : m ≤ n) :
     (graphLaw m (drIncomingLaw (by omega))).probability (fun s =>
       BlockDepthRobust (rowGraph (by omega) (n / m + 1) s) ((n / m) / 96)
@@ -79,5 +121,87 @@ theorem filecoin_bucket6_finite {n m : ℕ} (hm : 12 ≤ m) (hmn : m ≤ n) :
       1 - Real.exp (-(2 - Real.log 3) * (n / m : ℕ)) := by
   exact finite_block_robustness hm hmn le_rfl (by omega) _
     (fun _ hv A => filecoinIncomingLaw_avoidance (by omega) hv A)
+
+theorem drsample_finite_wide {n m : ℕ} (hm : 12 ≤ m) (hmn : m ≤ n) :
+    (graphLaw m (drIncomingLaw (by omega))).probability (fun s =>
+      BlockDepthRobust (rowGraph (by omega) (n / m + 1) s) ((n / m) / 48)
+        (((m : ℝ) * (n / m : ℕ) / 6) * Real.exp (-(2048 * Real.logb 2 n / m))) m) ≥
+      1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / m : ℕ)) := by
+  exact finite_block_robustness_wide hm hmn le_rfl (by omega) _
+    (fun _ hv A => drIncomingLaw_avoidance_three (by omega) hv A)
+
+theorem filecoin_bucket6_finite_wide {n m : ℕ} (hm : 12 ≤ m) (hmn : m ≤ n) :
+    (graphLaw m (filecoinIncomingLaw (by omega))).probability (fun s =>
+      BlockDepthRobust (rowGraph (by omega) (n / m + 1) s) ((n / m) / 48)
+        (((m : ℝ) * (n / m : ℕ) / 6) * Real.exp (-(2048 * Real.logb 2 n / m))) m) ≥
+      1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / m : ℕ)) := by
+  exact finite_block_robustness_wide hm hmn le_rfl (by omega) _
+    (fun _ hv A => filecoinIncomingLaw_avoidance_three (by omega) hv A)
+
+theorem finite_block_robustness_sharp {n m e b : ℕ} (hm : 12 ≤ m) (hmn : m ≤ n)
+    (hb : b ≤ m) (he : 2 * e ≤ (n / m) / 3)
+    (p : ℕ → FiniteLaw (Finset (Fin n)))
+    (havoid : ∀ v < n, ∀ A : Finset (Fin n),
+      (p v).probability (fun parents => Disjoint parents A) ≤
+        Real.exp (-(1 / (Real.logb 2 n + 1)) * ∑ i ∈ A, harmonicAt n v i)) :
+    (graphLaw m p).probability (fun s =>
+      BlockDepthRobust (rowGraph (by omega) (n / m + 1) s) e
+        (((m : ℝ) * (n / m : ℕ) / 18) * Real.exp (-(160 * m * (Real.logb 2 n + 1) / (m / 3 : ℕ) ^ 2))) b) ≥
+      1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / m : ℕ)) := by
+  have hm0 : 0 < m := by omega
+  have hM : 0 < n / m := Nat.div_pos hmn hm0
+  have hn : (n / m) * m ≤ n := Nat.div_mul_le_self _ _
+  have hlog : 0 < Real.logb 2 n := lt_of_lt_of_le (by norm_num)
+    (logb_two_ge_one (show 2 ≤ n by omega))
+  have ht : 0 < m / 3 := by omega
+  have hlambda : 0 < ((m / 3 : ℕ) : ℝ) ^ 2 / (m * (Real.logb 2 n + 1)) := by positivity
+  have hmeta := multiscale_mapped_third hM (rowLaw m p) (metaParents (by omega) hn) hlambda
+    (fun j hj A => by
+      have h := metaParents_avoidance_sharp (by omega) hn hj p
+        (by positivity) havoid A
+      convert h using 2
+      congr 1
+      field_simp)
+  have hfinite : (graphLaw m p).probability (fun s =>
+      DepthRobust (exposedGraph (n / m) (mapSamples (metaParents (by omega) hn) (n / m) s.1))
+        ((n / m) / 3) (((n / m : ℕ) / 6 : ℝ) *
+          Real.exp (-160 / (((m / 3 : ℕ) : ℝ) ^ 2 / (m * (Real.logb 2 n + 1)))))) ≥
+        1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / m : ℕ)) := by
+    exact hmeta.trans_eq (FiniteLaw.probability_product_fst
+      (independentSamples (rowLaw m p) (n / m)) (rowLaw m p (n / m)) _).symm
+  apply hfinite.trans
+  apply FiniteLaw.probability_mono
+  intro s hs
+  have htransfer := blockDepthRobust_of_meta_third (rowGraph hm0 (n / m) s.1)
+    (exposedGraph (n / m) (mapSamples (metaParents (by omega) hn) (n / m) s.1))
+    (rowGraph_hasLine hm0 s.1) (by omega) hn hb (by positivity)
+    (mapped_meta_edge_port (by omega) hn s.1) he hs
+  have hdepth : (m : ℝ) / 3 * (((n / m : ℕ) / 6 : ℝ) *
+      Real.exp (-160 / (((m / 3 : ℕ) : ℝ) ^ 2 / (m * (Real.logb 2 n + 1))))) =
+      ((m : ℝ) * (n / m : ℕ) / 18) * Real.exp (-(160 * m * (Real.logb 2 n + 1) / (m / 3 : ℕ) ^ 2)) := by
+    have hexp : -160 / (((m / 3 : ℕ) : ℝ) ^ 2 / (m * (Real.logb 2 n + 1))) =
+        -(160 * m * (Real.logb 2 n + 1) / (m / 3 : ℕ) ^ 2) := by field_simp
+    rw [hexp]
+    ring
+  rw [hdepth] at htransfer
+  exact htransfer.mono_graph (fun _ _ h => rowGraph_mono hm0 s.1 s.2 h)
+
+
+theorem drsample_finite_sharp {n m : ℕ} (hm : 12 ≤ m) (hmn : m ≤ n) :
+    (graphLaw m (drIncomingLaw (by omega))).probability (fun s =>
+      BlockDepthRobust (rowGraph (by omega) (n / m + 1) s) ((n / m) / 6)
+        (((m : ℝ) * (n / m : ℕ) / 18) * Real.exp (-(160 * m * (Real.logb 2 n + 1) / (m / 3 : ℕ) ^ 2))) m) ≥
+      1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / m : ℕ)) := by
+  exact finite_block_robustness_sharp hm hmn le_rfl (by omega) _
+    (fun _ hv A => drIncomingLaw_avoidance_sharp (by omega) hv A)
+
+theorem filecoin_bucket6_finite_sharp {n m : ℕ} (hm : 12 ≤ m) (hmn : m ≤ n) :
+    (graphLaw m (filecoinIncomingLaw (by omega))).probability (fun s =>
+      BlockDepthRobust (rowGraph (by omega) (n / m + 1) s) ((n / m) / 6)
+        (((m : ℝ) * (n / m : ℕ) / 18) * Real.exp (-(160 * m * (Real.logb 2 n + 1) / (m / 3 : ℕ) ^ 2))) m) ≥
+      1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / m : ℕ)) := by
+  exact finite_block_robustness_sharp hm hmn le_rfl (by omega) _
+    (fun _ hv A => filecoinIncomingLaw_avoidance_sharp (by omega) hv A)
+
 
 end ProofOfSpace.DRSample
