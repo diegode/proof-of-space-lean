@@ -63,7 +63,7 @@ and an appendix with the Filecoin specialization.
 
 ## Public results
 
-All three are stated in [Challenge.lean](Challenge.lean), proved in
+The latency results are stated in [Challenge.lean](Challenge.lean), proved in
 [Solution.lean](Solution.lean), and registered in [comparator.json](comparator.json).
 
 - `pebbling_latency`: deterministic uniform-gain amplification for a port-wired stack.
@@ -130,3 +130,59 @@ are pinned by the repository.
 The argument builds on Leonid Reyzin's *Proofs of Space with Maximal Hardness*
 (FOCS 2024) and Ben Fisch's *Tight Proofs of Space and Replication*
 (EUROCRYPT 2019). Licensed under Apache-2.0.
+
+## DRSample conjectures and the Filecoin base graph
+
+`Solution.lean` also proves Conjectures 1 and 2 from Appendix F of Blocki,
+Harsha, Kang, Lee, Xing, and Zhou (CRYPTO 2019), and the corresponding result
+for Filecoin's BucketSample/MetaBucket graph with five sampled parents and a
+line parent. The supporting proofs are in `ProofOfSpace/DRSample/`.
+
+For all sufficiently large `n`, the parameters are
+
+```text
+e = floor(n log₂log₂ n / (1572864 log₂ n))
+d = n log₂log₂ n / log₂ n
+b = floor(8192 log₂ n / log₂log₂ n).
+```
+
+The block deletion convention removes the at most `b` vertices ending at each
+chosen endpoint; path lengths count vertices. The success event quantifies over
+all deleted sets after the graph has been sampled. Failure is at most
+
+```text
+exp(-((2 - ln 3) / 16384) n log₂log₂ n / log₂ n),
+```
+
+and `drsample_failure_tends_to_zero` proves this bound tends to zero.
+
+The added public declarations, all registered with Comparator, are:
+
+- `drsample_multiscale`: the finite harmonic-avoidance theorem, with deletion
+  budget `floor(M/48)`, depth `(3M/4) exp(-64/(3λ))`, and failure
+  `exp(-(2 - ln 3) M)`.
+- `drsample_conjecture1`: ordinary depth robustness with the displayed parameters.
+- `drsample_conjecture2`: block depth robustness with the displayed parameters.
+- `filecoin_bucket6_finite`: for `12 <= m <= n`, indegree at most six and block
+  depth robustness with `e = floor(floor(n/m)/96)`, `b = m`, and
+  `d = (m floor(n/m)/4) exp(-8192 log₂ n/(3m))`.
+- `filecoin_bucket6_depth_robustness`: the eventual block and ordinary robustness
+  statements together with the indegree-six bound.
+- `drsample_failure_tends_to_zero`: the limiting probability guarantee.
+
+The sampler definitions include capped and overlapping buckets. DRSample rounds
+its lower distance endpoint upward. Filecoin rounds downward, anchors all five
+samples at the same fine position `5v`, and maps the distance to
+`floor((5v-R)/5)`. The formal probability laws use independent uniform bucket
+and distance draws. They do not assert that a fixed ChaCha8 seed or the deployed
+machine-word modular reductions are independent uniform randomness. The graph
+is sampled in independent rows for the proof; an extra row supplies the
+incomplete suffix, and choices beyond vertex `n-1` are ignored.
+
+The deterministic subsequence estimate is formalized by finite pivot averaging.
+The probability proof exposes the actual depth labels and proves the factor-two
+exponential moment by finite sums. Rank compression, the deletion-density bound,
+metagraph avoidance, path lifting, and eventual rounding estimates are all proved;
+none of these conclusions is an assumed sampler property. As elsewhere in the
+project, `Challenge.lean` has intentional statement placeholders; `Solution.lean`
+and the supporting proof modules have no proof holes.

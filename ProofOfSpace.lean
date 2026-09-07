@@ -3,3 +3,5 @@ import ProofOfSpace.PortStack
 import ProofOfSpace.PortExpansionProbability
 import ProofOfSpace.ChungRelative
 import ProofOfSpace.UniformGainNumerics
+
+import ProofOfSpace.DRSample.Conjectures

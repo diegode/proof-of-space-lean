@@ -1,3 +1,4 @@
+import ProofOfSpace.DRSample.Conjectures
 import ProofOfSpace.Amplification
 import ProofOfSpace.PortStack
 import ProofOfSpace.PortExpansionProbability
@@ -541,5 +542,55 @@ theorem chung8_pebbling_latency_18 (n lambda : ℕ) (hn : 10000 ≤ n)
   intro W hW G hGαπ hGδ hGπ hGρ hGζ hG S hS hSweight
   obtain ⟨v, hv, Q, hQ, hc, hu, he, hl⟩ := hW G hGαπ hGδ hGπ hGρ hGζ hG S hS hSweight
   exact ⟨v, hv, Q, hQ, hc, hu, he, hlength.trans hl⟩
+
+end ProofOfSpaceStatement
+
+
+namespace ProofOfSpaceStatement
+
+open ProofOfSpace.DRSample Filter
+
+theorem drsample_multiscale {M : ℕ} (hM : 0 < M)
+    (p : ℕ → FiniteLaw (Finset (Fin M))) {lambda : ℝ} (hlambda : 0 < lambda)
+    (havoid : ∀ j < M, ∀ A : Finset (Fin M),
+      (p j).probability (fun parents => Disjoint parents A) ≤
+        Real.exp (-lambda * ∑ i ∈ A, harmonicAt M j i)) :
+    (independentSamples p M).probability (fun s =>
+      DepthRobust (exposedGraph M s) (M / 48)
+        ((3 * M / 4 : ℝ) * Real.exp (-64 / (3 * lambda)))) ≥
+      1 - Real.exp (-(2 - Real.log 3) * M) := by
+  exact ProofOfSpace.DRSample.multiscale hM p hlambda havoid
+
+theorem drsample_conjecture1 : ∀ᶠ n : ℕ in atTop,
+    (drsampleLaw n (blockWidth n)).probability (fun s =>
+      DepthRobust (sampledGraph n (blockWidth n) s)
+        (deletionBudget n) (targetDepth n)) ≥ 1 - failureBound n := by
+  exact ProofOfSpace.DRSample.drsample_conjecture1
+
+theorem drsample_conjecture2 : ∀ᶠ n : ℕ in atTop,
+    (drsampleLaw n (blockWidth n)).probability (fun s =>
+      BlockDepthRobust (sampledGraph n (blockWidth n) s)
+        (deletionBudget n) (targetDepth n) (intervalWidth n)) ≥ 1 - failureBound n := by
+  exact ProofOfSpace.DRSample.drsample_conjecture2
+
+theorem filecoin_bucket6_finite {n m : ℕ} (hm : 12 ≤ m) (hmn : m ≤ n) :
+    (graphLaw m (filecoinIncomingLaw (by omega))).probability (fun s =>
+      IndegreeAtMost (rowGraph (by omega) (n / m + 1) s) 6 ∧
+      BlockDepthRobust (rowGraph (by omega) (n / m + 1) s) ((n / m) / 96)
+        (((m : ℝ) * (n / m : ℕ) / 4) * Real.exp (-(8192 * Real.logb 2 n / (3 * m)))) m) ≥
+      1 - Real.exp (-(2 - Real.log 3) * (n / m : ℕ)) := by
+  exact ProofOfSpace.DRSample.filecoin_bucket6_finite_with_degree hm hmn
+
+theorem filecoin_bucket6_depth_robustness : ∀ᶠ n : ℕ in atTop,
+    (filecoinBucket6Law n (blockWidth n)).probability (fun s =>
+      IndegreeAtMost (sampledGraph n (blockWidth n) s) 6 ∧
+      BlockDepthRobust (sampledGraph n (blockWidth n) s)
+        (deletionBudget n) (targetDepth n) (intervalWidth n) ∧
+      DepthRobust (sampledGraph n (blockWidth n) s)
+        (deletionBudget n) (targetDepth n)) ≥ 1 - failureBound n := by
+  exact ProofOfSpace.DRSample.filecoin_bucket6
+
+theorem drsample_failure_tends_to_zero : Tendsto failureBound atTop (nhds 0) := by
+  exact ProofOfSpace.DRSample.failureBound_tendsto_zero
 
 end ProofOfSpaceStatement
