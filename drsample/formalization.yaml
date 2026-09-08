@@ -1,0 +1,97 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/mathlib-initiative/formalization.yaml/main/schema/formalization.schema.json
+version: "v0.4"
+project:
+  name: "Block depth robustness of DRSample"
+  description: >-
+    A proof of Conjecture 2 from Appendix F of Blocki et al. (CRYPTO 2019)
+    for the explicitly specified independent DRSample distribution.
+    For all sufficiently large n, the graph is block depth robust with
+    e=floor(n log_2 log_2 n/(20000 log_2 n)),
+    d=n log_2 log_2 n/log_2 n, and
+    b=floor(3072 log_2 n/log_2 log_2 n), except with probability at most
+    exp(-((4/3-ln 3)/3300) n log_2 log_2 n/log_2 n).
+    The proof establishes harmonic avoidance, a multiscale depth theorem,
+    path lifting, and the integer rounding estimates.
+  authors: ["Diego de Estrada (@diegode)"]
+  responsible_maintainers: ["Diego de Estrada (@diegode)"]
+  license: "Apache-2.0"
+classification:
+  arxiv: ["cs.CR", "math.CO"]
+  msc2020: ["94A60", "05C80", "68Q25"]
+sources:
+  - title: "Data-Independent Memory Hard Functions: New Attacks and Stronger Constructions"
+    authors: ["Jeremiah Blocki", "Benjamin Harsha", "Siteng Kang", "Seunghoon Lee", "Lu Xing", "Samson Zhou"]
+    type: "paper"
+    id: "https://eprint.iacr.org/2018/944"
+    location: "CRYPTO 2019; Conjecture 2 in Appendix F of the full version"
+    relationship: "adapts"
+    note: >-
+      Proves the stated conjectural block-depth-robustness regime, with explicit
+      constants, for the independent sampler and integer rounding in Challenge.lean.
+    author_endorsement: "not-contacted"
+  - title: "Practical Graphs for Optimal Side-Channel Resistant Memory-Hard Functions"
+    authors: ["Joel Alwen", "Jeremiah Blocki", "Ben Harsha"]
+    type: "paper"
+    id: "https://doi.org/10.1145/3133956.3134031"
+    relationship: "background"
+    note: >-
+      Source of DRSample and the restricted metagraph construction. Claim 2 gives
+      the good-vertex estimate, attributed there to Erdos, Graham, and Szemeredi;
+      the proof development proves its required four-fifths density instance.
+    author_endorsement: "not-contacted"
+  - title: "Randomized Search Trees"
+    authors: ["Raimund Seidel", "Cecilia R. Aragon"]
+    type: "paper"
+    id: "https://doi.org/10.1007/BF01940876"
+    relationship: "background"
+    note: "The treap ancestor probability is classical; the increasing-subsequence bound is proved in the development."
+    author_endorsement: "not-contacted"
+related_formalizations: []
+status:
+  scope: >-
+    The single registered statement is drsample_conjecture2. Ordinary depth
+    robustness follows by deleting singleton endpoints. The library also retains
+    the finite multiscale estimates and the ideal indegree-six Filecoin corollary;
+    these are supporting results, not additional declarations selected by Comparator.
+  sorry_count: 0
+  sorry_in_definitions: 0
+  axioms: ["propext", "Classical.choice", "Quot.sound"]
+  main_results:
+    - declaration: "ProofOfSpaceStatement.drsample_conjecture2"
+      file: "Solution.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
+automation:
+  methods:
+    - method: "agent"
+      models: ["OpenAI Codex"]
+      framework: "Codex"
+      tool_setup: >-
+        Human-directed mathematical and Lean development, literature checking,
+        constant optimization, elaboration diagnostics, and packaging. Lean,
+        Comparator, and NanoDa are used for proof verification.
+      prompting_notes: "The human supplied the mathematical task, source proof, target parameters, and packaging requirements."
+  notes: "Exact costs and wall times were not tracked; no prompt transcript is included."
+fidelity:
+  divergences: >-
+    The distribution uses independent uniform bucket and distance choices.
+    The statement includes capped overlapping buckets and upward rounding and
+    measures path length in vertices. A theorem in the proof library identifies
+    this direct per-vertex distribution with the grouped distribution used by
+    the multiscale proof. No numerical threshold for sufficiently large n,
+    fixed pseudorandom seed, or machine-word implementation is certified.
+review:
+  status: "self-assessed"
+  notes: >-
+    The development is checked by Lean and the configured Comparator and NanoDa
+    kernels. These checks establish proof validity and statement agreement;
+    no independent human mathematical review is claimed.
+alignment:
+  namespace: "ProofOfSpaceStatement"
+  statements:
+    - source: "Blocki et al., CRYPTO 2019 full version, Appendix F, Conjecture 2"
+      lean: "ProofOfSpaceStatement.drsample_conjecture2"
+      module: "Solution"
+      status: "proved with explicit constants for the stated independent sampler"

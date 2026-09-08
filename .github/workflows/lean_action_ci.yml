@@ -10,6 +10,9 @@ permissions:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        project: [drsample, pebbling_latency]
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -20,19 +23,18 @@ jobs:
 
       - uses: leanprover/lean-action@38fbc41a8c28c4cbaec22d7f7de508ec2e7c0dd9
         with:
+          lake-package-directory: ${{ matrix.project }}
+          use-github-cache: false
           build: true
 
-      - name: Palomar source limits
-        run: |
-          test "$(wc -l < Challenge.lean)" -le 1000
-          test "$(wc -c < Challenge.lean)" -le 102400
-          test "$(grep -R -n -E '\b(sorry|admit|native_decide)\b' --include='*.lean' . \
-            | grep -v '^./Challenge.lean:' \
-            | grep -v '^./.lake/' \
-            | wc -l)" -eq 0
+      - name: Check public statement surface
+        run: python3 scripts/check-statement-surface.py "${{ matrix.project }}"
 
   comparator:
     name: Check statement against solution
+    strategy:
+      matrix:
+        project: [drsample, pebbling_latency]
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -43,6 +45,8 @@ jobs:
 
       - uses: leanprover/lean-action@38fbc41a8c28c4cbaec22d7f7de508ec2e7c0dd9
         with:
+          lake-package-directory: ${{ matrix.project }}
+          use-github-cache: false
           build: false
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
@@ -51,4 +55,4 @@ jobs:
           cache: false
 
       - name: Run pinned Comparator toolchain
-        run: ./scripts/verify-comparator.sh
+        run: ./scripts/verify-comparator.sh "${{ matrix.project }}"

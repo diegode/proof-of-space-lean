@@ -2,6 +2,17 @@
 set -euo pipefail
 
 repository_root=$(cd "$(dirname "$0")/.." && pwd)
+selected_project=${1:-all}
+case "$selected_project" in
+  all)
+    "$0" drsample
+    "$0" pebbling_latency
+    exit 0
+    ;;
+  drsample|pebbling_latency) ;;
+  *) echo "usage: $0 [drsample|pebbling_latency|all]" >&2; exit 2 ;;
+esac
+project_root="$repository_root/$selected_project"
 cache_root=${PALOMAR_COMPARATOR_CACHE:-"$repository_root/.cache/palomar-comparator"}
 bin_dir="$cache_root/bin"
 comparator_dir="$cache_root/comparator"
@@ -24,7 +35,7 @@ for required_command in cargo git go lake python3; do
   fi
 done
 
-python3 - "$repository_root/comparator.json" <<'PY'
+python3 - "$project_root/comparator.json" <<'PY'
 import json
 import pathlib
 import sys
@@ -44,7 +55,7 @@ if not isinstance(config, dict) or config.get("enable_nanoda") is not True:
     raise SystemExit(1)
 PY
 
-project_toolchain=$(tr -d '[:space:]' < "$repository_root/lean-toolchain")
+project_toolchain=$(tr -d '[:space:]' < "$project_root/lean-toolchain")
 if [ "$project_toolchain" != "$expected_project_toolchain" ]; then
   echo "error: project toolchain $project_toolchain does not match" >&2
   echo "the reviewed Comparator toolchain $expected_project_toolchain" >&2
@@ -69,14 +80,14 @@ checkout_exact https://github.com/leanprover/comparator.git "$comparator_dir" "$
 checkout_exact https://github.com/robsimmons/nanoda_lib.git "$nanoda_dir" "$nanoda_commit"
 
 # Build the exporter source with the exact Lean patch release used by this project.
-cp "$repository_root/lean-toolchain" "$lean4export_dir/lean-toolchain"
+cp "$project_root/lean-toolchain" "$lean4export_dir/lean-toolchain"
 
 GOBIN="$bin_dir" go install "github.com/zouuup/landrun/cmd/landrun@$landrun_commit"
 
 (cd "$comparator_dir" && lake build comparator)
 (cd "$lean4export_dir" && lake build lean4export)
 (cd "$nanoda_dir" && cargo build --release --locked)
-cd "$repository_root"
+cd "$project_root"
 lake exe cache get
 PALOMAR_LANDRUN_BIN="$bin_dir/landrun" \
 COMPARATOR_LEAN4EXPORT="$lean4export_dir/.lake/build/bin/lean4export" \

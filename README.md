@@ -1,192 +1,39 @@
-# Uniform-gain latency for stacked proofs of space
+# Proofs of space: two Lean projects
 
-This Lean 4 project proves a general latency amplification theorem from ordinary
-within-layer depth robustness, interval expansion, and static black/red pebble budgets.
-The Filecoin corollary gives **at least `0.205n > 0.2n` path vertices at 18 layers**,
-for `n >= 10000`, under the explicit depth-robustness and security conditions.
+This repository contains two independent Lean projects for separate Palomar entries.
+Each has a small self-contained `Challenge.lean`, a matching `Solution.lean`, a
+pinned Lake environment, metadata, and one selected Comparator declaration.
 
-## The theorem
+| Project directory | Registered theorem | Comparator configuration |
+| --- | --- | --- |
+| [drsample](drsample/README.md) | `ProofOfSpaceStatement.drsample_conjecture2` | `drsample/comparator.json` |
+| [pebbling_latency](pebbling_latency/README.md) | `ProofOfSpaceStatement.pebbling_latency` | `pebbling_latency/comparator.json` |
 
-Use Reyzin's parameters: every set of density at least `π` contains an intra-layer
-path on at least `απ n` vertices. Black pebbles have total density at most `ρ`;
-red pebbles have density at most `δ` per layer. A challenge has density at least
-`ζ`, with adjusted density `ζδ = ζ - δ`.
+The DRSample result uses `(c₁,c₂,c₃) = (1/20000,1,3072)` and retains the stronger
+finite depth estimates and the ideal indegree-six Filecoin corollary in its
+proof library. The latency project retains its probability and conditional
+18-layer Filecoin specializations as supporting results.
 
-Choose integer footprint and source sizes `ceil(π n) <= m <= n` and
-`1 <= s <= m`, and set `σ = s/n`. Define the gain explicitly by
+Both Challenges import Mathlib alone. They contain only the definitions needed
+to state their main theorem and one intentional `sorry`. Proofs and auxiliary
+results belong to the supporting modules and `Solution.lean`.
 
-```text
-g = β(m/n) - δ - m/n.
-```
-
-The profile must be nondecreasing on the query interval
-
-```text
-I = [min(ζδ, β(m/n) - δ) - ρ, m/n],
-```
-
-whose lower endpoint must be positive. Require `σ ∈ I`, adjusted gain at least
-`g > 0` throughout `I`, and the source condition
-
-```text
-β(σ) - δ - min(ζδ, β(m/n) - δ) + ρ >= 2g.
-```
-
-For `z >= 1`, the layer condition is
-
-```text
-g ℓ > ρ + g + max(m/n - ζδ, g + β(m/n) - β(σ))
-          + (z - 1)(g + β(m/n) - β(σ)).
-```
-
-It guarantees a path ending in the challenge set `S` on at least
-`ceil(απ n) + (z - 1)q` vertices, where the positive integer increment is
-
-```text
-q = min(ceil(απ n), ceil(απ n) + m - ceil(π n) - s + 1).
-```
-
-When `ζδ >= m/n`, the layer condition simplifies to
-
-```text
-ℓ > 1 + ρ/g + z(1 + (β(m/n) - β(σ))/g).
-```
-
-The source count follows from ordinary depth robustness. The gain condition
-is a hypothesis; it is not automatic from the definition of `g`. With concave
-`β`, it suffices to check it at the lower endpoint of `I`. The public theorem
-fixes the gain at `m/n`; the internal scalar theorem also permits any smaller
-certified positive gain.
-
-The [explanation](../proof_of_space/lean/explanation.tex) gives the complete argument
-and an appendix with the Filecoin specialization.
-
-## Public results
-
-The latency results are stated in [Challenge.lean](Challenge.lean), proved in
-[Solution.lean](Solution.lean), and registered in [comparator.json](comparator.json).
-
-- `pebbling_latency`: deterministic uniform-gain amplification for a port-wired stack.
-- `chung8_pebbling_latency_whp`: the uniform probability theorem for any suitable
-  profile below the entropy-defined Chung-8 curve.
-- `chung8_pebbling_latency_18`: Filecoin fractions `π = 0.8`, `απ = 0.2`,
-  `δ = 0.0378`, `ρ = 0.8`, `ζ = 0.9`; latency at least `(41/200)n`.
-
-The last proof uses `m = ceil(0.8n)`, `s = ceil(0.195n)`, and `z = 2`.
-It proves `0.111 <= g <= 0.11131` and
-`g + β(m/n) - β(σ) <= 0.54212`. Thus the layer cost is at most
-`1.99555 < 1.998 <= 18g`, and the integer path bound
-`2 ceil(0.2n) - ceil(0.195n) + 1` exceeds `0.205n`.
-
-## Probability and scope
-
-The random wiring is one uniform permutation of all `8n` ports, reused between
-consecutive layers. On its expansion event, the result holds simultaneously
-for all admissible within-layer graphs, pebble positions, and challenges,
-including those chosen after observing the wiring. Reuse requires no factor of
-`ℓ` in the expansion failure bound.
-
-`chung8Beta` is defined by the entropy formula. Its exact finite union bound is
-`chung8FailureBound`. The Filecoin corollary assumes
-`ChungSecurityConditions n lambda (1/100) (24/25)`, which requires this sum to be
-at most `2^(-lambda)`. The condition `n >= 10000` handles latency rounding;
-it does not by itself establish a chosen security level.
-
-The theorem is about an unpebbled path in a static snapshot. Within-layer depth
-robustness remains a graph assumption. The development does not include a
-reduction to time-indexed cryptographic latency or identify Filecoin's Feistel
-wiring with a uniform port permutation.
-
-## Proof organization
-
-| Module | Purpose |
-| --- | --- |
-| `Model.lean` | Physical layered DAGs, pebblings, footprints, and path splicing |
-| `Sources.lean` | Exact integer source count from depth robustness |
-| `UniformGain.lean` | Scalar floor invariants and affine layer accounting |
-| `Amplification.lean` | Source chains and the general graph latency theorem |
-| `PortModel.lean`, `PortStack.lean` | Port permutations and their physical stacks |
-| `UnionBound.lean`, `PortExpansionProbability.lean` | Finite sampling and expansion probability |
-| `Chung*.lean` | Entropy analysis and certified expansion lower bound |
-| `UniformGainNumerics.lean` | Exact Filecoin gain and source estimates |
-
-The internal graph theorem permits different layer graphs and interlayers.
-The public game uses a single within-layer relation and a reused port permutation.
-Lean depth zero denotes Reyzin's bottom level `ℓ`.
-
-## Verification
+Build and verify from the repository root:
 
 ```sh
-lake build
+lake -d drsample build
+lake -d pebbling_latency build
 ./scripts/verify-comparator.sh
 ```
 
-The proved library and `Solution.lean` contain no `sorry`. `Challenge.lean`
-intentionally omits proof bodies. Comparator checks all three statements and
-the permitted axioms (`propext`, `Quot.sound`, `Classical.choice`); NanoDa replays
-the solution through its independent kernel. The toolchain and verifier revisions
-are pinned by the repository.
+The verifier script can also select one project by name. It shares its pinned
+tool cache between the projects; each project has its own Lake build state.
+The repository-root Apache-2.0 license covers both.
 
-The argument builds on Leonid Reyzin's *Proofs of Space with Maximal Hardness*
-(FOCS 2024) and Ben Fisch's *Tight Proofs of Space and Replication*
-(EUROCRYPT 2019). Licensed under Apache-2.0.
+For Palomar, select the project directory and repository-relative Comparator
+path from the table, and the corresponding `formalization.yaml` inside that
+project. The two configurations describe two separate entries. These source
+files prepare the entries; they do not submit or publish them.
 
-## DRSample conjectures and the Filecoin base graph
-
-`Solution.lean` also proves Conjectures 1 and 2 from Appendix F of Blocki,
-Harsha, Kang, Lee, Xing, and Zhou (CRYPTO 2019), and the corresponding result
-for Filecoin's BucketSample/MetaBucket graph with five sampled parents and a
-line parent. The supporting proofs are in `ProofOfSpace/DRSample/`.
-
-For all sufficiently large `n`, the parameters are
-
-```text
-e = floor(n log₂log₂ n / (20000 log₂ n))
-d = n log₂log₂ n / log₂ n
-b = floor(3072 log₂ n / log₂log₂ n).
-```
-
-The block deletion convention removes the at most `b` vertices ending at each
-chosen endpoint; path lengths count vertices. The success event quantifies over
-all deleted sets after the graph has been sampled. Failure is at most
-
-```text
-exp(-((4/3 - ln 3) / 3300) n log₂log₂ n / log₂ n),
-```
-
-and `drsample_failure_tends_to_zero` proves this bound tends to zero.
-
-The added public declarations, all registered with Comparator, are:
-
-- `drsample_multiscale`: the finite harmonic-avoidance theorem, with deletion
-  budget `floor(M/3)`, depth `(M/6) exp(-160/λ)`, and failure
-  `exp(-(4/3 - ln 3) M)`.
-- `drsample_conjecture1`: ordinary depth robustness with the displayed parameters.
-- `drsample_conjecture2`: block depth robustness with the displayed parameters.
-- `filecoin_bucket6_finite`: for `12 <= m <= n`, indegree at most six and block
-  depth robustness with `e = floor(floor(n/m)/6)`, `b = m`, and
-  `d = (m floor(n/m)/18) exp(-160 m (log₂ n+1)/floor(m/3)²)`.
-- `filecoin_bucket6_depth_robustness`: the eventual block and ordinary robustness
-  statements together with the indegree-six bound.
-- `drsample_failure_tends_to_zero`: the limiting probability guarantee.
-
-The finite depth bound retains the stronger asymptotic depth
-`(n/18) (log₂ n)^(-15/(32 ln 2))` at the displayed block width.
-The earlier finite tradeoffs remain available in the supporting modules.
-
-The sampler definitions include capped and overlapping buckets. DRSample rounds
-its lower distance endpoint upward. Filecoin rounds downward, anchors all five
-samples at the same fine position `5v`, and maps the distance to
-`floor((5v-R)/5)`. The formal probability laws use independent uniform bucket
-and distance draws. They do not assert that a fixed ChaCha8 seed or the deployed
-machine-word modular reductions are independent uniform randomness. The graph
-is sampled in independent rows for the proof; an extra row supplies the
-incomplete suffix, and choices beyond vertex `n-1` are ignored.
-
-The deterministic subsequence estimate is formalized by finite pivot averaging.
-The probability proof exposes the actual depth labels and proves the factor-two
-exponential moment by finite sums. Rank compression, the deletion-density bound,
-metagraph avoidance, path lifting, and eventual rounding estimates are all proved;
-none of these conclusions is an assumed sampler property. As elsewhere in the
-project, `Challenge.lean` has intentional statement placeholders; `Solution.lean`
-and the supporting proof modules have no proof holes.
+See [Palomar's submission rules](https://github.com/PalomarRegistry/PalomarPolicy/blob/main/CONTRIBUTING.md)
+for nested projects and the approved Challenge import closure.

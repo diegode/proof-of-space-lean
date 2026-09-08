@@ -1,4 +1,6 @@
-import ProofOfSpace.Model
+import Mathlib.Data.Real.Basic
+import Mathlib.Data.List.Chain
+import Mathlib.Tactic
 import Mathlib.Data.Finset.Lattice.Fold
 
 /-! # Ordered graphs and block depth robustness

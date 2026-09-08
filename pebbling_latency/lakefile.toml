@@ -1,4 +1,4 @@
-name = "proof_of_space"
+name = "pebbling_latency"
 version = "0.1.0"
 keywords = ["math"]
 defaultTargets = ["ProofOfSpace", "Challenge", "Solution"]

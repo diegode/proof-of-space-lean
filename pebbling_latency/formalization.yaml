@@ -21,7 +21,7 @@ classification:
 sources:
   - title: "Proofs of space with maximal hardness"
     authors: ["Leonid Reyzin"]
-    type: "conference paper"
+    type: "paper"
     id: "https://dblp.org/rec/conf/focs/Reyzin24"
     location: "65th IEEE Symposium on Foundations of Computer Science, 2024, pages 1159-1177"
     relationship: "adapts"
@@ -32,7 +32,7 @@ sources:
     author_endorsement: "not-contacted"
   - title: "Tight proofs of space and replication"
     authors: ["Ben Fisch"]
-    type: "conference paper"
+    type: "paper"
     id: "https://doi.org/10.1007/978-3-030-17656-3_12"
     location: "EUROCRYPT 2019, Part II, pages 324-348"
     relationship: "background"
@@ -45,6 +45,8 @@ related_formalizations: []
 
 status:
   scope: >-
+    The single registered statement is pebbling_latency. The probability and
+    Filecoin specializations remain proved supporting results in Solution.lean.
     The deterministic pebbling_latency theorem proves ceil(alpha_pi*n)+(z-1)q
     path vertices from interval expansion and ordinary depth robustness.
     The integer source increment is
@@ -65,18 +67,6 @@ status:
   axioms: ["propext", "Classical.choice", "Quot.sound"]
   main_results:
     - declaration: "ProofOfSpaceStatement.pebbling_latency"
-      file: "Solution.lean"
-      sorry_count: 0
-      axioms: ["propext", "Classical.choice", "Quot.sound"]
-      comparator_config: "comparator.json"
-      literature_dependencies: []
-    - declaration: "ProofOfSpaceStatement.chung8_pebbling_latency_whp"
-      file: "Solution.lean"
-      sorry_count: 0
-      axioms: ["propext", "Classical.choice", "Quot.sound"]
-      comparator_config: "comparator.json"
-      literature_dependencies: []
-    - declaration: "ProofOfSpaceStatement.chung8_pebbling_latency_18"
       file: "Solution.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
@@ -139,7 +129,7 @@ alignment:
   namespace: "ProofOfSpaceStatement"
   statements:
     - source: "Reyzin, Proofs of Space with Maximal Hardness (FOCS 2024), footprint and expansion framework"
-      lean: "ProofOfSpaceStatement.chung8_pebbling_latency_whp"
+      lean: "ProofOfSpaceStatement.pebbling_latency"
       module: "Solution"
       status: "adapted and proved"
       note: >-

@@ -1,6 +1,6 @@
-/.lake
-/.cache
-/.DS_Store
+.lake/
+.cache/
+.DS_Store
 *.aux
 *.log
 *.out
