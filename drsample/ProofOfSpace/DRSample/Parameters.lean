@@ -5,7 +5,7 @@ namespace ProofOfSpace.DRSample
 open Filter
 
 set_option maxHeartbeats 1000000 in
-theorem finite_parameters {n : ℕ} (hn : 16 ≤ n)
+theorem finite_parameters_of_log_bounds {n : ℕ} (hn : 16 ≤ n)
     (hy : 1 ≤ Real.logb 2 (Real.logb 2 n))
     (hyx : Real.logb 2 (Real.logb 2 n) ≤ Real.logb 2 n)
     (hsmall : 65536 * Real.logb 2 n ≤ (n : ℝ))
@@ -131,6 +131,6 @@ theorem eventually_parameters : ∀ᶠ n : ℕ in atTop,
       Real.exp (-(160 * blockWidth n * (Real.logb 2 n + 1) / (blockWidth n / 3 : ℕ) ^ 2)) ∧
     targetDepth n / 3300 ≤ (n / blockWidth n : ℕ) := by
   filter_upwards [eventually_log_parameters] with n hn
-  exact finite_parameters hn.1 hn.2.1 hn.2.2.1 hn.2.2.2.1 hn.2.2.2.2
+  exact finite_parameters_of_log_bounds hn.1 hn.2.1 hn.2.2.1 hn.2.2.2.1 hn.2.2.2.2
 
 end ProofOfSpace.DRSample

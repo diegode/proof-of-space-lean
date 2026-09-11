@@ -39,7 +39,7 @@ theorem finite_block_robustness {n m e b : ℕ} (hm : 12 ≤ m) (hmn : m ≤ n)
     (logb_two_ge_one (show 2 ≤ n by omega))
   have hlambda : 0 < (m : ℝ) / (128 * Real.logb 2 n) := by positivity
   have hmeta := multiscale_mapped hM (rowLaw m p) (metaParents (by omega) hn) hlambda
-    (fun j hj A => metaParents_avoidance_explicit hm hn hj hlog p havoid A)
+    (fun j hj A => metaParents_avoidance_bound hm hn hj hlog p havoid A)
   have hfinite : (graphLaw m p).probability (fun s =>
       DepthRobust (exposedGraph (n / m) (mapSamples (metaParents (by omega) hn) (n / m) s.1))
         ((n / m) / 48) (((3 : ℝ) * (n / m : ℕ) / 4) *
@@ -81,7 +81,7 @@ theorem finite_block_robustness_wide {n m e b : ℕ} (hm : 12 ≤ m) (hmn : m �
     (logb_two_ge_one (show 2 ≤ n by omega))
   have hlambda : 0 < (m : ℝ) / (96 * Real.logb 2 n) := by positivity
   have hmeta := multiscale_mapped_wide hM (rowLaw m p) (metaParents (by omega) hn) hlambda
-    (fun j hj A => metaParents_avoidance_explicit_three hm hn hj hlog p havoid A)
+    (fun j hj A => metaParents_avoidance_bound_three hm hn hj hlog p havoid A)
   have hfinite : (graphLaw m p).probability (fun s =>
       DepthRobust (exposedGraph (n / m) (mapSamples (metaParents (by omega) hn) (n / m) s.1))
         ((n / m) / 24) (((n / m : ℕ) / 2 : ℝ) *

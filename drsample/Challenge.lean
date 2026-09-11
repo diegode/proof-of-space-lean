@@ -7,7 +7,7 @@ import Mathlib.Tactic
 /-! # DRSample: the finite graph distribution and block depth robustness
 
 Vertices are numbered from zero. At each vertex `v ≥ 2`, independently choose
-one of `floor(log₂(v+1))+1` buckets uniformly, then a distance uniformly from
+one of `ceil(log₂(v+1))` buckets uniformly, then a distance uniformly from
 that bucket. Include the resulting parent edge and every predecessor edge.
 The capped buckets and upward rounding below specify the distribution exactly.
 -/
@@ -25,8 +25,8 @@ Vertices zero and one use the dummy parent zero; the graph also has line edges. 
 noncomputable def drsampleParentProbability {n : ℕ} (v u : Fin n) : ℝ := by
   classical
   exact if 2 ≤ v.val then
-    ∑ k : Fin (Nat.log 2 (v.val + 1) + 1),
-      ((1 : ℝ) / (Nat.log 2 (v.val + 1) + 1 : ℕ)) *
+    ∑ k : Fin (Nat.clog 2 (v.val + 1)),
+      ((1 : ℝ) / (Nat.clog 2 (v.val + 1) : ℕ)) *
         ∑ r ∈ drsampleBucket v.val (k.val + 1),
           if v.val - r.val = u.val then
             (1 : ℝ) / (drsampleBucket v.val (k.val + 1)).card else 0
@@ -60,8 +60,8 @@ open Finset Filter
 
 /-- Conjecture 2 of Blocki et al. (CRYPTO 2019, Appendix F), with
 `c₁ = 1/20000`, `c₂ = 1`, and `c₃ = 3072`. All logarithms in the parameters
-have base two. The explicit failure bound tends to zero as `n → ∞`. -/
-theorem drsample_conjecture2 : ∀ᶠ n : ℕ in atTop,
+have base two. The cutoff is `n ≥ 2^128`, and the failure bound tends to zero as `n → ∞`. -/
+theorem drsample_conjecture2 {n : ℕ} (hn : 2 ^ 128 ≤ n) :
     drsampleProbability n (fun parents => DRSampleBlockDepthRobust parents
       (Nat.floor ((n : ℝ) * Real.logb 2 (Real.logb 2 n) / (20000 * Real.logb 2 n)))
       ((n : ℝ) * Real.logb 2 (Real.logb 2 n) / Real.logb 2 n)

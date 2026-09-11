@@ -10,15 +10,16 @@ the deployed implementation.
 namespace ProofOfSpace.DRSample
 open Finset Classical
 
-theorem dr_bucket_cover (j : ℕ) : Nat.clog 2 (1 * j) ≤ Nat.log 2 (j + 1) + 1 := by
-  apply Nat.clog_le_of_le_pow
-  have := Nat.lt_pow_succ_log_self (by norm_num : 1 < 2) (j + 1)
-  simpa only [one_mul] using (show j ≤ 2 ^ (Nat.log 2 (j + 1) + 1) by omega)
+theorem dr_bucket_cover (j : ℕ) : Nat.clog 2 (1 * j) ≤ Nat.clog 2 (j + 1) := by
+  simpa only [one_mul] using Nat.clog_mono_right 2 (Nat.le_succ j)
+
+theorem dr_bucket_count_pos {j : ℕ} (hj : 2 ≤ j) : 0 < Nat.clog 2 (j + 1) :=
+  Nat.clog_pos (by norm_num) (by omega)
 
 noncomputable def drParentLaw {n : ℕ} (hn : 0 < n) (j : ℕ) : FiniteLaw (Fin n) :=
   if hj : j < n then
-    if hj2 : 2 ≤ j then contractedBucketLaw true 1 j (Nat.log 2 (j + 1) + 1)
-      (by norm_num) hj (by omega) (by omega)
+    if hj2 : 2 ≤ j then contractedBucketLaw true 1 j (Nat.clog 2 (j + 1))
+      (by norm_num) hj (by omega) (dr_bucket_count_pos hj2)
     else FiniteLaw.pure ⟨0, hn⟩
   else FiniteLaw.pure ⟨0, hn⟩
 
@@ -34,14 +35,15 @@ theorem logb_two_ge_one {n : ℕ} (hn : 2 ≤ n) : 1 ≤ Real.logb 2 n := by
   simpa using (show (2 : ℝ) ≤ n by exact_mod_cast hn)
 
 theorem dr_bucket_count_le {j n : ℕ} (hj : j < n) (hn : 2 ≤ n) :
-    ((Nat.log 2 (j + 1) + 1 : ℕ) : ℝ) ≤ 2 * Real.logb 2 n := by
-  have hfloor := Real.natLog_le_logb (j + 1) 2
-  have hmono : Real.logb 2 (j + 1 : ℕ) ≤ Real.logb 2 n := by
-    apply (Real.logb_le_logb (by norm_num) (by positivity) (by positivity)).mpr
-    exact_mod_cast (show j + 1 ≤ n by omega)
-  have hlog := logb_two_ge_one hn
-  norm_num only [Nat.cast_add, Nat.cast_one, Nat.cast_ofNat] at hfloor hmono ⊢
-  linarith
+    ((Nat.clog 2 (j + 1) : ℕ) : ℝ) ≤ 2 * Real.logb 2 n := by
+  by_cases hj0 : j = 0
+  · have hlog := logb_two_ge_one (show 2 ≤ n by omega)
+    simp only [hj0, Nat.zero_add, Nat.clog_one_right, Nat.cast_zero]
+    linarith
+  · have hbound := bucketCount_real_bound_sharp (show 2 ≤ j + 1 by omega)
+      (show j + 1 ≤ n by omega)
+    have hlog := logb_two_ge_one hn
+    linarith
 
 theorem drParentLaw_weight_ge {n : ℕ} (hn : 0 < n) {j : ℕ} (hj : j < n)
     (u : Fin n) (hu : u.val + 2 ≤ j) :
@@ -50,10 +52,10 @@ theorem drParentLaw_weight_ge {n : ℕ} (hn : 0 < n) {j : ℕ} (hj : j < n)
   have hn2 : 2 ≤ n := by omega
   rw [drParentLaw, dif_pos hj, dif_pos hj2]
   apply le_trans _ (contractedBucketLaw_weight_ge true 1 j _ (by norm_num) hj
-    (by omega) (by omega) (dr_bucket_cover j) u hu)
+    (by omega) (dr_bucket_count_pos hj2) (dr_bucket_cover j) u hu)
   rw [div_div]
   have hc := dr_bucket_count_le hj hn2
-  have hB : (0 : ℝ) < (Nat.log 2 (j + 1) + 1 : ℕ) := by positivity
+  have hB : (0 : ℝ) < (Nat.clog 2 (j + 1) : ℕ) := by exact_mod_cast dr_bucket_count_pos hj2
   have hr : (0 : ℝ) < (j - u.val : ℕ) := by exact_mod_cast (show 0 < j - u.val by omega)
   apply one_div_le_one_div_of_le (by positivity)
   nlinarith
@@ -94,14 +96,15 @@ theorem logb_two_ge_two {n : ℕ} (hn : 4 ≤ n) : 2 ≤ Real.logb 2 n := by
   exact_mod_cast hn
 
 theorem dr_bucket_count_le_three_halves {j n : ℕ} (hj : j < n) (hn : 4 ≤ n) :
-    ((Nat.log 2 (j + 1) + 1 : ℕ) : ℝ) ≤ (3 / 2 : ℝ) * Real.logb 2 n := by
-  have hfloor := Real.natLog_le_logb (j + 1) 2
-  have hmono : Real.logb 2 (j + 1 : ℕ) ≤ Real.logb 2 n := by
-    apply (Real.logb_le_logb (by norm_num) (by positivity) (by positivity)).mpr
-    exact_mod_cast (show j + 1 ≤ n by omega)
-  have hlog := logb_two_ge_two hn
-  norm_num only [Nat.cast_add, Nat.cast_one, Nat.cast_ofNat] at hfloor hmono ⊢
-  linarith
+    ((Nat.clog 2 (j + 1) : ℕ) : ℝ) ≤ (3 / 2 : ℝ) * Real.logb 2 n := by
+  by_cases hj0 : j = 0
+  · have hlog := logb_two_ge_one (show 2 ≤ n by omega)
+    simp only [hj0, Nat.zero_add, Nat.clog_one_right, Nat.cast_zero]
+    linarith
+  · have hbound := bucketCount_real_bound_sharp (show 2 ≤ j + 1 by omega)
+      (show j + 1 ≤ n by omega)
+    have hlog := logb_two_ge_two hn
+    linarith
 
 theorem drParentLaw_weight_ge_three {n : ℕ} (hn : 4 ≤ n) {j : ℕ} (hj : j < n)
     (u : Fin n) (hu : u.val + 2 ≤ j) :
@@ -109,10 +112,10 @@ theorem drParentLaw_weight_ge_three {n : ℕ} (hn : 4 ≤ n) {j : ℕ} (hj : j <
   have hj2 : 2 ≤ j := by omega
   rw [drParentLaw, dif_pos hj, dif_pos hj2]
   apply le_trans _ (contractedBucketLaw_weight_ge true 1 j _ (by norm_num) hj
-    (by omega) (by omega) (dr_bucket_cover j) u hu)
+    (by omega) (dr_bucket_count_pos hj2) (dr_bucket_cover j) u hu)
   rw [div_div]
   have hc := dr_bucket_count_le_three_halves hj hn
-  have hB : (0 : ℝ) < (Nat.log 2 (j + 1) + 1 : ℕ) := by positivity
+  have hB : (0 : ℝ) < (Nat.clog 2 (j + 1) : ℕ) := by exact_mod_cast dr_bucket_count_pos hj2
   have hr : (0 : ℝ) < (j - u.val : ℕ) := by exact_mod_cast (show 0 < j - u.val by omega)
   apply one_div_le_one_div_of_le (by positivity)
   nlinarith
@@ -178,14 +181,14 @@ theorem filecoinIncomingLaw_avoidance_three {n : ℕ} (hn : 5 ≤ n) {j : ℕ} (
   exact mul_le_mul_of_nonneg_right (neg_le_neg hc) hw
 
 theorem dr_bucket_count_le_sharp {j n : ℕ} (hj : j < n) (hn : 2 ≤ n) :
-    ((Nat.log 2 (j + 1) + 1 : ℕ) : ℝ) ≤ Real.logb 2 n + 1 := by
-  have hfloor := Real.natLog_le_logb (j + 1) 2
-  have hmono : Real.logb 2 (j + 1 : ℕ) ≤ Real.logb 2 n := by
-    apply (Real.logb_le_logb (by norm_num) (by positivity) (by positivity)).mpr
-    exact_mod_cast (show j + 1 ≤ n by omega)
-  have hlog := logb_two_ge_one hn
-  norm_num only [Nat.cast_add, Nat.cast_one, Nat.cast_ofNat] at hfloor hmono ⊢
-  linarith
+    ((Nat.clog 2 (j + 1) : ℕ) : ℝ) ≤ Real.logb 2 n + 1 := by
+  by_cases hj0 : j = 0
+  · have hlog := logb_two_ge_one (show 2 ≤ n by omega)
+    simp only [hj0, Nat.zero_add, Nat.clog_one_right, Nat.cast_zero]
+    linarith
+  · have hbound := bucketCount_real_bound_sharp (show 2 ≤ j + 1 by omega)
+      (show j + 1 ≤ n by omega)
+    exact hbound
 
 theorem drParentLaw_weight_ge_sharp {n : ℕ} (hn : 0 < n) {j : ℕ} (hj : j < n)
     (u : Fin n) (hu : u.val + 2 ≤ j) :
@@ -194,10 +197,10 @@ theorem drParentLaw_weight_ge_sharp {n : ℕ} (hn : 0 < n) {j : ℕ} (hj : j < n
   have hn2 : 2 ≤ n := by omega
   rw [drParentLaw, dif_pos hj, dif_pos hj2]
   apply le_trans _ (contractedBucketLaw_weight_ge_sharp true 1 j _ (by norm_num) hj
-    (by omega) (by omega) (dr_bucket_cover j) u hu)
+    (by omega) (dr_bucket_count_pos hj2) (dr_bucket_cover j) u hu)
   rw [div_div]
   have hc := dr_bucket_count_le_sharp hj hn2
-  have hB : (0 : ℝ) < (Nat.log 2 (j + 1) + 1 : ℕ) := by positivity
+  have hB : (0 : ℝ) < (Nat.clog 2 (j + 1) : ℕ) := by exact_mod_cast dr_bucket_count_pos hj2
   have hr : (0 : ℝ) < (j - u.val : ℕ) := by exact_mod_cast (show 0 < j - u.val by omega)
   apply one_div_le_one_div_of_le (by positivity)
   nlinarith

@@ -88,24 +88,4 @@ theorem incomingGraph_block_statement {n : ℕ} (parents : Fin n → Fin n) (e b
   simp only [BlockDepthRobust, HasPath, hedge, DRSampleBlockDepthRobust,
     blockDeleted, mem_filter, mem_univ, true_and, not_exists, not_and]
 
-/-- The exact public sampling model satisfies the selected conjecture parameters. -/
-theorem registry_conjecture2 : ∀ᶠ n : ℕ in atTop,
-    drsampleProbability n (fun parents => DRSampleBlockDepthRobust parents
-      (Nat.floor ((n : ℝ) * Real.logb 2 (Real.logb 2 n) / (20000 * Real.logb 2 n)))
-      ((n : ℝ) * Real.logb 2 (Real.logb 2 n) / Real.logb 2 n)
-      (Nat.floor (3072 * Real.logb 2 n / Real.logb 2 (Real.logb 2 n)))) ≥
-    1 - Real.exp (-(((4 / 3 : ℝ) - Real.log 3) / 3300) *
-      ((n : ℝ) * Real.logb 2 (Real.logb 2 n) / Real.logb 2 n)) := by
-  filter_upwards [drsample_conjecture2, eventually_parameters] with n h hp
-  have hn : 0 < n := by have := hp.1; have := hp.2.1; omega
-  have hm : 0 < blockWidth n := by have := hp.1; omega
-  simp only [drsampleLaw, dif_pos hn, sampledGraph, dif_pos hm] at h
-  rw [graphLaw_probability_as_pi hm (drIncomingLaw hn)
-    (fun G => BlockDepthRobust G (deletionBudget n) (targetDepth n) (intervalWidth n))] at h
-  simp_rw [drIncomingLaw_as_map] at h
-  rw [← FiniteLaw.pi_map, FiniteLaw.probability_map] at h
-  simp_rw [incomingGraph_block_statement] at h
-  rw [drsampleProbability_eq hn]
-  exact h
-
 end ProofOfSpace.DRSample

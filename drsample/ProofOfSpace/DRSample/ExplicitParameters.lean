@@ -24,7 +24,7 @@ theorem exp_nat_log_two (k : ℕ) :
     Real.exp ((k : ℝ) * Real.log 2) = (2 : ℝ) ^ k := by
   rw [Real.exp_nat_mul, Real.exp_log (by norm_num)]
 
-theorem log_parameters_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n) :
+theorem log_parameters {n : ℕ} (hn : 2 ^ 128 ≤ n) :
     128 ≤ Real.logb 2 n ∧
     7 ≤ Real.logb 2 (Real.logb 2 n) ∧
     16 * Real.logb 2 (Real.logb 2 n) ≤ Real.logb 2 n ∧
@@ -55,7 +55,7 @@ theorem log_parameters_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n) :
 
 /-- The depth comparison is increasing past `log₂log₂ n = 7`.
 The numerical base case uses rational bounds for `exp 1` and `exp (41/400)`. -/
-theorem explicit_depth_scalar {x : ℝ} (hx : 128 ≤ x) :
+theorem depth_scalar {x : ℝ} (hx : 128 ≤ x) :
     (201 / 200 : ℝ) * Real.logb 2 x ≤
       (999 / 6000 : ℝ) * x * Real.exp (-(63 / 400 : ℝ) * Real.logb 2 x) := by
   let y := Real.logb 2 x
@@ -99,7 +99,7 @@ theorem explicit_depth_scalar {x : ℝ} (hx : 128 ≤ x) :
 set_option maxHeartbeats 1000000 in
 -- Clearing the rational rounding bounds creates several polynomial inequalities.
 /-- All rounded parameters satisfy the improved finite theorem for `n ≥ 2^128`. -/
-theorem finite_parameters_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n) :
+theorem finite_parameters {n : ℕ} (hn : 2 ^ 128 ≤ n) :
     12 ≤ blockWidth n ∧ blockWidth n ≤ n ∧ intervalWidth n ≤ blockWidth n ∧
     0 < intervalWidth n ∧ 2 * deletionBudget n ≤ (n / blockWidth n) / 3 ∧
     (201 / 200 : ℝ) * targetDepth n ≤
@@ -107,7 +107,7 @@ theorem finite_parameters_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n) :
         Real.exp (-(160 * blockWidth n * (Real.logb 2 n + 1) /
           (3 * (blockWidth n / 3 : ℕ) ^ 2))) ∧
     targetDepth n / 3300 ≤ (n / blockWidth n : ℕ) := by
-  have hp := log_parameters_explicit hn
+  have hp := log_parameters hn
   let x := Real.logb 2 n
   let y := Real.logb 2 x
   let m := blockWidth n
@@ -203,7 +203,7 @@ theorem finite_parameters_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n) :
   have hexp : Real.exp (-(63 / 400 : ℝ) * y) ≤
       Real.exp (-(160 * m * (x + 1) / (3 * ((m / 3 : ℕ) : ℝ) ^ 2))) := by
     simpa only [neg_mul] using Real.exp_le_exp.mpr (neg_le_neg hexponent)
-  have hscalar := explicit_depth_scalar hx128
+  have hscalar := depth_scalar hx128
   change (201 / 200 : ℝ) * y ≤ (999 / 6000 : ℝ) * x * Real.exp (-(63 / 400 : ℝ) * y) at hscalar
   have htarget : (201 / 200 : ℝ) * ((n : ℝ) * y / x) ≤
       ((999 / 6000 : ℝ) * n) * Real.exp (-(63 / 400 : ℝ) * y) := by
@@ -215,7 +215,7 @@ theorem finite_parameters_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n) :
 
 
 /-- The harmonic-avoidance theorem at an explicit size, retaining all public constants. -/
-theorem harmonic_robustness_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n)
+theorem harmonic_robustness {n : ℕ} (hn : 2 ^ 128 ≤ n)
     (p : ℕ → FiniteLaw (Finset (Fin n)))
     (havoid : ∀ v < n, ∀ A : Finset (Fin n),
       (p v).probability (fun parents => Disjoint parents A) ≤
@@ -223,8 +223,8 @@ theorem harmonic_robustness_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n)
     (graphLaw (blockWidth n) p).probability (fun s =>
       BlockDepthRobust (sampledGraph n (blockWidth n) s)
         (deletionBudget n) (targetDepth n) (intervalWidth n)) ≥ 1 - failureBound n := by
-  obtain ⟨hm, hmn, hb, _, he, hd, hcount⟩ := finite_parameters_explicit hn
-  have hp := log_parameters_explicit hn
+  obtain ⟨hm, hmn, hb, _, he, hd, hcount⟩ := finite_parameters hn
+  have hp := log_parameters hn
   have htarget : 0 ≤ targetDepth n := by
     unfold targetDepth
     exact div_nonneg (mul_nonneg (Nat.cast_nonneg n) (by linarith [hp.2.1]))
@@ -247,13 +247,13 @@ theorem harmonic_robustness_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n)
   exact hs.mono le_rfl ((by nlinarith : targetDepth n ≤ (201 / 200 : ℝ) * targetDepth n).trans hd)
 
 /-- The explicit theorem for the exact public DRSample distribution. -/
-theorem drsample_conjecture2_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n) :
+theorem drsample_conjecture2 {n : ℕ} (hn : 2 ^ 128 ≤ n) :
     ProofOfSpaceStatement.drsampleProbability n (fun parents =>
       ProofOfSpaceStatement.DRSampleBlockDepthRobust parents
         (deletionBudget n) (targetDepth n) (intervalWidth n)) ≥ 1 - failureBound n := by
   have hn0 : 0 < n := by omega
-  have hm : 0 < blockWidth n := by have := (finite_parameters_explicit hn).1; omega
-  have h := harmonic_robustness_explicit hn (drIncomingLaw hn0)
+  have hm : 0 < blockWidth n := by have := (finite_parameters hn).1; omega
+  have h := harmonic_robustness hn (drIncomingLaw hn0)
     (fun _ hv A => drIncomingLaw_avoidance_sharp (by omega) hv A)
   simp only [sampledGraph, dif_pos hm] at h
   rw [graphLaw_probability_as_pi hm (drIncomingLaw hn0)
@@ -264,19 +264,33 @@ theorem drsample_conjecture2_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n) :
   rw [drsampleProbability_eq hn0]
   exact h
 
+/-- Conjecture 1 holds at the same cutoff as Conjecture 2. -/
+theorem drsample_conjecture1 {n : ℕ} (hn : 2 ^ 128 ≤ n) :
+    (drsampleLaw n (blockWidth n)).probability (fun s =>
+      DepthRobust (sampledGraph n (blockWidth n) s)
+        (deletionBudget n) (targetDepth n)) ≥ 1 - failureBound n := by
+  have hn0 : 0 < n := by omega
+  have h := harmonic_robustness hn (drIncomingLaw hn0)
+    (fun _ hv A => drIncomingLaw_avoidance_sharp (by omega) hv A)
+  simp only [drsampleLaw, dif_pos hn0]
+  apply h.trans
+  apply FiniteLaw.probability_mono
+  intro s hs
+  exact hs.depthRobust (finite_parameters hn).2.2.2.1
+
 /-- The same explicit threshold for Filecoin's ideal five-draw sampler. -/
-theorem filecoin_bucket6_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n) :
+theorem filecoin_bucket6 {n : ℕ} (hn : 2 ^ 128 ≤ n) :
     (filecoinBucket6Law n (blockWidth n)).probability (fun s =>
       IndegreeAtMost (sampledGraph n (blockWidth n) s) 6 ∧
       BlockDepthRobust (sampledGraph n (blockWidth n) s)
         (deletionBudget n) (targetDepth n) (intervalWidth n) ∧
       DepthRobust (sampledGraph n (blockWidth n) s)
         (deletionBudget n) (targetDepth n)) ≥ 1 - failureBound n := by
-  have hp := finite_parameters_explicit hn
+  have hp := finite_parameters hn
   have hn0 : 0 < n := by omega
   have hm0 : 0 < blockWidth n := by have := hp.1; omega
   simp only [filecoinBucket6Law, dif_pos hn0]
-  have hblock := harmonic_robustness_explicit hn (filecoinIncomingLaw hn0)
+  have hblock := harmonic_robustness hn (filecoinIncomingLaw hn0)
     (fun _ hv A => filecoinIncomingLaw_avoidance_sharp (by omega) hv A)
   have hdegree : ∀ s : GraphSample n (blockWidth n),
       (graphLaw (blockWidth n) (filecoinIncomingLaw hn0)).weight s ≠ 0 →

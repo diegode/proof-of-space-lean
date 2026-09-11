@@ -63,57 +63,6 @@ theorem conjecture_at_parameters {n : ℕ}
   simp only [sampledGraph, dif_pos (show 0 < blockWidth n by omega)]
   exact hs.mono le_rfl hd
 
-/-- Conjecture 2 with `c₁ = 1/20000`, `c₂ = 1`, and `c₃ = 3072`. -/
-theorem drsample_conjecture2 : ∀ᶠ n : ℕ in atTop,
-    (drsampleLaw n (blockWidth n)).probability (fun s =>
-      BlockDepthRobust (sampledGraph n (blockWidth n) s)
-        (deletionBudget n) (targetDepth n) (intervalWidth n)) ≥ 1 - failureBound n := by
-  filter_upwards [eventually_parameters] with n hn
-  obtain ⟨hm, hmn, hb, _, he, hd, hcount⟩ := hn
-  have hn0 : 0 < n := by omega
-  simp only [drsampleLaw, dif_pos hn0]
-  exact conjecture_at_parameters hm hmn hb he hd hcount _
-    (fun _ hv A => drIncomingLaw_avoidance_sharp (by omega) hv A)
-
-/-- Conjecture 1 follows on the same graph event. -/
-theorem drsample_conjecture1 : ∀ᶠ n : ℕ in atTop,
-    (drsampleLaw n (blockWidth n)).probability (fun s =>
-      DepthRobust (sampledGraph n (blockWidth n) s)
-        (deletionBudget n) (targetDepth n)) ≥ 1 - failureBound n := by
-  filter_upwards [drsample_conjecture2, eventually_parameters] with n hn hp
-  apply hn.trans
-  apply FiniteLaw.probability_mono
-  intro s hs
-  exact hs.depthRobust hp.2.2.2.1
-
-/-- The same two robustness conclusions hold for Filecoin's five bucket draws
-and line parent, and the sampled graph has indegree at most six. -/
-theorem filecoin_bucket6 : ∀ᶠ n : ℕ in atTop,
-    (filecoinBucket6Law n (blockWidth n)).probability (fun s =>
-      IndegreeAtMost (sampledGraph n (blockWidth n) s) 6 ∧
-      BlockDepthRobust (sampledGraph n (blockWidth n) s)
-        (deletionBudget n) (targetDepth n) (intervalWidth n) ∧
-      DepthRobust (sampledGraph n (blockWidth n) s)
-        (deletionBudget n) (targetDepth n)) ≥ 1 - failureBound n := by
-  filter_upwards [eventually_parameters] with n hn
-  obtain ⟨hm, hmn, hb, hbpos, he, hd, hcount⟩ := hn
-  have hn0 : 0 < n := by omega
-  have hm0 : 0 < blockWidth n := by omega
-  simp only [filecoinBucket6Law, dif_pos hn0]
-  have hblock := conjecture_at_parameters hm hmn hb he hd hcount (filecoinIncomingLaw hn0)
-    (fun _ hv A => filecoinIncomingLaw_avoidance_sharp (by omega) hv A)
-  have hdegree : ∀ s : GraphSample n (blockWidth n),
-      (graphLaw (blockWidth n) (filecoinIncomingLaw hn0)).weight s ≠ 0 →
-        IndegreeAtMost (sampledGraph n (blockWidth n) s) 6 := by
-    intro s hs
-    simp only [sampledGraph, dif_pos hm0]
-    exact filecoin_bucket6_indegree hn0 hm0 s hs
-  rw [FiniteLaw.probability_and_of_support _ _ _ hdegree]
-  apply hblock.trans
-  apply FiniteLaw.probability_mono
-  intro s hs
-  exact ⟨hs, hs.depthRobust hbpos⟩
-
 theorem targetDepth_tendsto : Tendsto targetDepth atTop atTop := by
   have hnat : Tendsto (fun n : ℕ => (n : ℝ)) atTop atTop := tendsto_natCast_atTop_atTop
   have hsqrt : Tendsto (fun n : ℕ => Real.sqrt (n : ℝ)) atTop atTop := by

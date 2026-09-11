@@ -117,7 +117,7 @@ theorem metaParents_avoidance {n m M j : ℕ} (hm : 3 ≤ m) (hn : M * m ≤ n)
         congr 1
         ring
 
-theorem metaParents_avoidance_explicit {n m M j : ℕ} (hm : 12 ≤ m) (hn : M * m ≤ n)
+theorem metaParents_avoidance_bound {n m M j : ℕ} (hm : 12 ≤ m) (hn : M * m ≤ n)
     (hj : j < M) (hlog : 0 < Real.logb 2 n) (p : ℕ → FiniteLaw (Finset (Fin n)))
     (havoid : ∀ v < n, ∀ U : Finset (Fin n),
       (p v).probability (fun parents => Disjoint parents U) ≤
@@ -140,7 +140,7 @@ theorem metaParents_avoidance_explicit {n m M j : ℕ} (hm : 12 ≤ m) (hn : M *
     positivity
   exact mul_le_mul_of_nonneg_right (neg_le_neg hcoef) hw
 
-theorem metaParents_avoidance_explicit_three {n m M j : ℕ} (hm : 12 ≤ m)
+theorem metaParents_avoidance_bound_three {n m M j : ℕ} (hm : 12 ≤ m)
     (hn : M * m ≤ n) (hj : j < M) (hlog : 0 < Real.logb 2 n)
     (p : ℕ → FiniteLaw (Finset (Fin n)))
     (havoid : ∀ v < n, ∀ U : Finset (Fin n),

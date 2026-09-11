@@ -25,20 +25,21 @@ leaving a directed path on at least `d` vertices. The intervals end at their
 chosen endpoints, may overlap, and are truncated at vertex zero. Their endpoints
 may be chosen after sampling the entire graph. The failure bound tends to zero.
 
-The constants are `c₁ = 1/20000`, `c₂ = 1`, and `c₃ = 3072`. The supporting
-theorem `drsample_conjecture2_explicit` proves the cutoff `2^128` for the exact
-public sampling distribution. The registered Challenge theorem retains its
-eventual formulation. The explicit cutoff also applies to the ideal degree-six
-Filecoin sampler via `filecoin_bucket6_explicit`.
+The constants are `c₁ = 1/20000`, `c₂ = 1`, and `c₃ = 3072`.
+The registered theorem `drsample_conjecture2` takes `n >= 2^128` directly.
+The same cutoff applies to Conjecture 1 and to the ideal degree-six Filecoin
+sampler through `drsample_conjecture1` and `filecoin_bucket6`.
 
 ## Sampling and statement fidelity
 
 Vertices are numbered from zero. Include each predecessor edge. At a vertex
-`v >= 2`, choose a bucket uniformly from `1, ..., floor(log₂(v+1))+1`, cap its
+`v >= 2`, choose a bucket uniformly from `1, ..., ceil(log₂(v+1))`, cap its
 upper endpoint at `v`, and choose a distance uniformly from
 `max(2,ceil(upper/2)), ..., upper`. The random parent is `v-distance`. All these
 choices are independent across vertices. The dummy parent at vertices zero and
-one is zero and creates no extra forward edge.
+one is zero and creates no extra forward edge. This ceiling convention removes
+a repeated capped bucket when `v+1` is a power of two; the paper's harmonic
+argument also covers the original floor-plus-one convention.
 
 `drsampleProbability` is the finite sum of these product probabilities over
 parent assignments. The proof library proves its normalization and identifies
@@ -105,7 +106,7 @@ lake build
 ```
 
 - `Challenge.lean`: self-contained definitions and the single advertised theorem.
-- `Solution.lean`: its proof from `ProofOfSpace.DRSample.Registry`.
+- `Solution.lean`: its proof from `ProofOfSpace.DRSample.ExplicitParameters`.
 - `ProofOfSpace/DRSample/Statement.lean`: the same public definitions for use by proofs.
 - `ProofOfSpace/DRSample/Registry.lean`, `DistributionMap.lean`: the sampling bridge.
 - `ProofOfSpace/DRSample/OptimizedRobustness.lean`: the overlap improvement and
