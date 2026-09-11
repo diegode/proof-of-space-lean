@@ -6,7 +6,7 @@ Xing, and Zhou (CRYPTO 2019), for the exact independent sampler in
 `ProofOfSpaceStatement.drsample_conjecture2`. The Challenge imports only
 Mathlib and contains no proof-development imports.
 
-For every sufficiently large `n`, with all logarithms below in base two,
+For every `n >= 2^128`, with all logarithms below in base two,
 
 ```text
 e = floor(n log₂log₂ n / (20000 log₂ n))
@@ -25,9 +25,11 @@ leaving a directed path on at least `d` vertices. The intervals end at their
 chosen endpoints, may overlap, and are truncated at vertex zero. Their endpoints
 may be chosen after sampling the entire graph. The failure bound tends to zero.
 
-The constants are `c₁ = 1/20000`, `c₂ = 1`, and `c₃ = 3072`. They improve the
-previous draft's deletion budget by a factor of 11.0592 while keeping its interval
-width. No explicit numerical threshold for `n` is claimed.
+The constants are `c₁ = 1/20000`, `c₂ = 1`, and `c₃ = 3072`. The supporting
+theorem `drsample_conjecture2_explicit` proves the cutoff `2^128` for the exact
+public sampling distribution. The registered Challenge theorem retains its
+eventual formulation. The explicit cutoff also applies to the ideal degree-six
+Filecoin sampler via `filecoin_bucket6_explicit`.
 
 ## Sampling and statement fidelity
 
@@ -51,9 +53,10 @@ The following bounds are proved in the supporting Lean modules.
 1. A useful bucket for distance `r` has at most `r` choices, including capped
    buckets. Hence the harmonic parent coefficient is at least `1/(log₂ n+1)`.
 2. At deletion-density threshold `4/5`, the one-sided covering inequality leaves
-   at least `M-5|S|/2` good vertices. A surviving distance with a good endpoint
-   shrinks by at most five under rank compression. The increasing-subsequence
-   estimate and Jensen's inequality give depth `(M/6) exp(-60W/M)` when
+   at least `M-3|S|/2` good vertices: both exceptional sets contain every
+   deleted vertex, and their overlap is subtracted. A surviving distance with a
+   good endpoint shrinks by at most five under rank compression. The increasing-
+   subsequence estimate and Jensen's inequality give depth `(M/2) exp(-20W/M)` when
    `|S| <= M/3`, where `W` is the forbidden harmonic mass.
 3. Exposing actual depth labels gives an exponential moment at most `2^(M-|S|)`.
    Markov's inequality and the sum over all deleted sets give a single event
@@ -64,20 +67,22 @@ The following bounds are proved in the supporting Lean modules.
    contributing at least `m/3` vertices per visited block. A left interval of
    width at most `m` touches at most two blocks.
 5. With `m = ceil(3072 log₂ n/log₂log₂ n)`, the verified rounding estimates
-   give the displayed eventual constants and failure coefficient.
+   give the displayed constants and failure coefficient for every `n >= 2^128`.
+   The proof certifies at least `201/200` times the target depth, including all
+   floors and ceilings, using rational bounds for the exponential base case.
 
 The finite result, for `12 <= m <= n`, is
 
 ```text
 e = floor(floor(n/m)/6)
-d = (m floor(n/m)/18) exp(-160 m (log₂ n+1)/floor(m/3)²)
+d = (m floor(n/m)/6) exp(-160 m (log₂ n+1)/(3 floor(m/3)²))
 b = m,
 ```
 
 with failure at most `exp(-(4/3-ln 3)floor(n/m))`. This retains the stronger
 depth whose asymptotic expression at the selected block width is
-`(n/18)(log₂ n)^(-15/(32 ln 2))`, with exponent approximately `0.676263`.
-The eventual registered theorem weakens this depth to the conjecture's form.
+`(n/6)(log₂ n)^(-5/(32 ln 2))`, with exponent approximately `0.225421`.
+The public conjecture parameters weaken this depth to `n log₂log₂ n/log₂ n`.
 The library also retains the older finite tradeoffs, Conjecture 1, and the
 indegree-six Filecoin BucketSample/MetaBucket corollary. Filecoin's five
 independent draws and downward rounding are modeled explicitly; a fixed
@@ -103,6 +108,10 @@ lake build
 - `Solution.lean`: its proof from `ProofOfSpace.DRSample.Registry`.
 - `ProofOfSpace/DRSample/Statement.lean`: the same public definitions for use by proofs.
 - `ProofOfSpace/DRSample/Registry.lean`, `DistributionMap.lean`: the sampling bridge.
+- `ProofOfSpace/DRSample/OptimizedRobustness.lean`: the overlap improvement and
+  stronger finite graph theorem.
+- `ProofOfSpace/DRSample/ExplicitParameters.lean`: the verified numerical cutoff,
+  rounded parameters, exact DRSample theorem, and Filecoin specialization.
 - `ProofOfSpace/DRSample/`: the complete multiscale and Filecoin development.
 - `comparator.json`: compares only `drsample_conjecture2`, with NanoDa enabled.
 - `formalization.yaml`: result, provenance, scope, and automation metadata.

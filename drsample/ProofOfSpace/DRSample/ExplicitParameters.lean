@@ -1,0 +1,293 @@
+import ProofOfSpace.DRSample.OptimizedRobustness
+
+/-! # An explicit cutoff with the original conjecture constants
+
+The stronger finite theorem applies to the rounded conjecture parameters for
+every `n ≥ 2^128`. The numerical comparisons use rational exponential bounds;
+the resulting theorems concern the exact DRSample and Filecoin distributions.
+-/
+namespace ProofOfSpace.DRSample
+
+/-- A tangent bound which also proves monotonicity of the exponential-to-linear ratio. -/
+theorem exp_linear_lower {a t t₀ : ℝ} (ht₀ : 0 < t₀) (ht : t₀ ≤ t)
+    (ha : 1 ≤ a * t₀) :
+    t / t₀ * Real.exp (a * t₀) ≤ Real.exp (a * t) := by
+  have hlin : t / t₀ ≤ a * (t - t₀) + 1 := by
+    apply (div_le_iff₀ ht₀).mpr
+    nlinarith [mul_nonneg (sub_nonneg.mpr ha) (sub_nonneg.mpr ht)]
+  calc
+    _ ≤ Real.exp (a * (t - t₀)) * Real.exp (a * t₀) :=
+      mul_le_mul_of_nonneg_right (hlin.trans (Real.add_one_le_exp _)) (by positivity)
+    _ = Real.exp (a * t) := by rw [← Real.exp_add]; congr 1; ring
+
+theorem exp_nat_log_two (k : ℕ) :
+    Real.exp ((k : ℝ) * Real.log 2) = (2 : ℝ) ^ k := by
+  rw [Real.exp_nat_mul, Real.exp_log (by norm_num)]
+
+theorem log_parameters_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n) :
+    128 ≤ Real.logb 2 n ∧
+    7 ≤ Real.logb 2 (Real.logb 2 n) ∧
+    16 * Real.logb 2 (Real.logb 2 n) ≤ Real.logb 2 n ∧
+    3073000 * Real.logb 2 n ≤ (n : ℝ) := by
+  have hn0 : (0 : ℝ) < n := by exact_mod_cast (show 0 < n by omega)
+  have hl2 : 0 < Real.log 2 := Real.log_pos (by norm_num)
+  have hx : (128 : ℝ) ≤ Real.logb 2 n := by
+    apply (Real.le_logb_iff_rpow_le (by norm_num) hn0).mpr
+    norm_cast
+  have hx0 : 0 < Real.logb 2 n := by linarith
+  have hy : (7 : ℝ) ≤ Real.logb 2 (Real.logb 2 n) := by
+    apply (Real.le_logb_iff_rpow_le (by norm_num) hx0).mpr
+    norm_num
+    exact hx
+  have hex (x : ℝ) (hx : 0 < x) : Real.exp (Real.log 2 * Real.logb 2 x) = x := by
+    rw [Real.logb, mul_div_cancel₀ _ hl2.ne', Real.exp_log hx]
+  have hxy := exp_linear_lower (a := Real.log 2) (by norm_num : (0 : ℝ) < 7) hy
+    (by linarith [Real.log_two_gt_d9])
+  have h7 := exp_nat_log_two 7
+  norm_num at h7
+  rw [hex _ hx0, mul_comm (Real.log 2) 7, h7] at hxy
+  have hxn := exp_linear_lower (a := Real.log 2) (by norm_num : (0 : ℝ) < 128) hx
+    (by linarith [Real.log_two_gt_d9])
+  have h128 := exp_nat_log_two 128
+  norm_num at h128
+  rw [hex _ hn0, mul_comm (Real.log 2) 128, h128] at hxn
+  exact ⟨hx, hy, by linarith, by linarith⟩
+
+/-- The depth comparison is increasing past `log₂log₂ n = 7`.
+The numerical base case uses rational bounds for `exp 1` and `exp (41/400)`. -/
+theorem explicit_depth_scalar {x : ℝ} (hx : 128 ≤ x) :
+    (201 / 200 : ℝ) * Real.logb 2 x ≤
+      (999 / 6000 : ℝ) * x * Real.exp (-(63 / 400 : ℝ) * Real.logb 2 x) := by
+  let y := Real.logb 2 x
+  let a : ℝ := Real.log 2 - 63 / 400
+  have hx0 : 0 < x := by linarith
+  have hy : (7 : ℝ) ≤ y := by
+    apply (Real.le_logb_iff_rpow_le (by norm_num) hx0).mpr
+    norm_num
+    exact hx
+  have hlin := exp_linear_lower (a := a) (by norm_num : (0 : ℝ) < 7) hy
+    (by dsimp [a]; linarith [Real.log_two_gt_d9])
+  have hbase : Real.exp (441 / 400 : ℝ) ≤ 2175 / 718 := by
+    have hsmall := Real.exp_bound_div_one_sub_of_interval
+      (by norm_num : (0 : ℝ) ≤ 41 / 400) (by norm_num : (41 / 400 : ℝ) < 1)
+    have hone : Real.exp 1 ≤ 87 / 32 := by linarith [Real.exp_one_lt_d9]
+    rw [show (441 / 400 : ℝ) = 1 + 41 / 400 by norm_num, Real.exp_add]
+    have hprod := mul_le_mul hone hsmall (by positivity) (by norm_num)
+    norm_num at hprod ⊢
+    exact hprod
+  have hcancel : Real.exp (a * 7) * Real.exp (441 / 400 : ℝ) = 128 := by
+    rw [← Real.exp_add, show a * 7 + 441 / 400 = 7 * Real.log 2 by dsimp [a]; ring]
+    have h7 := exp_nat_log_two 7
+    norm_num at h7
+    exact h7
+  have hbaseLower : 91904 / 2175 ≤ Real.exp (a * 7) := by
+    have := mul_le_mul_of_nonneg_left hbase (Real.exp_pos (a * 7)).le
+    rw [hcancel] at this
+    linarith
+  have hratio : Real.exp (a * y) = x * Real.exp (-(63 / 400 : ℝ) * y) := by
+    have hl : Real.log 2 * y = Real.log x := by
+      dsimp [y, Real.logb]
+      field_simp
+    rw [show a * y = Real.log x + -(63 / 400 : ℝ) * y by dsimp [a]; nlinarith,
+      Real.exp_add, Real.exp_log hx0]
+  rw [hratio] at hlin
+  have h := (mul_le_mul_of_nonneg_left hbaseLower (by positivity : 0 ≤ y / 7)).trans hlin
+  change (201 / 200 : ℝ) * y ≤ (999 / 6000 : ℝ) * x * Real.exp (-(63 / 400 : ℝ) * y)
+  nlinarith
+
+
+set_option maxHeartbeats 1000000 in
+-- Clearing the rational rounding bounds creates several polynomial inequalities.
+/-- All rounded parameters satisfy the improved finite theorem for `n ≥ 2^128`. -/
+theorem finite_parameters_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n) :
+    12 ≤ blockWidth n ∧ blockWidth n ≤ n ∧ intervalWidth n ≤ blockWidth n ∧
+    0 < intervalWidth n ∧ 2 * deletionBudget n ≤ (n / blockWidth n) / 3 ∧
+    (201 / 200 : ℝ) * targetDepth n ≤
+      ((blockWidth n : ℝ) * (n / blockWidth n : ℕ) / 6) *
+        Real.exp (-(160 * blockWidth n * (Real.logb 2 n + 1) /
+          (3 * (blockWidth n / 3 : ℕ) ^ 2))) ∧
+    targetDepth n / 3300 ≤ (n / blockWidth n : ℕ) := by
+  have hp := log_parameters_explicit hn
+  let x := Real.logb 2 n
+  let y := Real.logb 2 x
+  let m := blockWidth n
+  have hx128 : 128 ≤ x := hp.1
+  have hy7 : 7 ≤ y := hp.2.1
+  have hy16 : 16 * y ≤ x := hp.2.2.1
+  have hsmall : 3073000 * x ≤ (n : ℝ) := hp.2.2.2
+  have hy : 1 ≤ y := by linarith
+  have hyx : y ≤ x := by linarith
+  change y ≤ x at hyx
+  have hy0 : 0 < y := by linarith
+  have hx1 : 1 ≤ x := hy.trans hyx
+  have hx0 : 0 < x := by linarith
+  have hscale : (3072 : ℝ) ≤ 3072 * x / y := (le_div_iff₀ hy0).mpr (by nlinarith)
+  have hlo : 3072 * x / y ≤ (m : ℝ) := Nat.le_ceil _
+  have hhi : (m : ℝ) < 3072 * x / y + 1 := Nat.ceil_lt_add_one (by positivity)
+  have hm12 : 12 ≤ m := by exact_mod_cast (show (12 : ℝ) ≤ m by linarith)
+  have hm0 : 0 < m := by omega
+  have hmR : (0 : ℝ) < m := by exact_mod_cast hm0
+  have hmy : (m : ℝ) * y ≤ 3073 * x := by
+    have hh := (lt_div_iff₀ hy0).mp (show (m : ℝ) - 1 < 3072 * x / y by linarith)
+    nlinarith
+  have hscaleupper : 3072 * x / y ≤ 3072 * x := by
+    apply (div_le_iff₀ hy0).mpr
+    nlinarith
+  have hnR : (16 : ℝ) ≤ n := by exact_mod_cast (show 16 ≤ n by omega)
+  have hfour : 16 * m ≤ n := by
+    exact_mod_cast (show (16 : ℝ) * m ≤ n by linarith)
+  have hmle : m ≤ n := by omega
+  have hquot : 16 ≤ n / m := (Nat.le_div_iff_mul_le hm0).mpr (by omega)
+  have hquotR : (16 : ℝ) ≤ (n / m : ℕ) := by exact_mod_cast hquot
+  have hdivision : n < m * (n / m + 1) := by
+    have hmod := Nat.mod_lt n hm0
+    have heq := Nat.mod_add_div n m
+    nlinarith
+  have hdivisionR : (n : ℝ) < (m : ℝ) * ((n / m : ℕ) + 1) := by exact_mod_cast hdivision
+  have hm1000 : (1000 : ℝ) * m ≤ n := by linarith
+  have hcomplete999 : (999 / 1000 : ℝ) * n ≤ m * (n / m : ℕ) := by nlinarith
+  have hcomplete : (n : ℝ) ≤ (4 / 3 : ℝ) * m * (n / m : ℕ) := by nlinarith
+  have hcomplete_sharp : (n : ℝ) ≤ (17 / 16 : ℝ) * m * (n / m : ℕ) := by nlinarith
+  have hbudget : (deletionBudget n : ℝ) ≤ (n : ℝ) * y / (20000 * x) :=
+    Nat.floor_le (by positivity)
+  have hbudgetmul := (le_div_iff₀ (by positivity : 0 < 20000 * x)).mp hbudget
+  have hny : (n : ℝ) * y ≤ 3300 * x * (n / m : ℕ) := by
+    have h1 := mul_le_mul_of_nonneg_right hcomplete_sharp hy0.le
+    have h2 := mul_le_mul_of_nonneg_right hmy (Nat.cast_nonneg (n / m))
+    nlinarith
+  have he6 : 6 * deletionBudget n ≤ n / m := by
+    have hR : (6 : ℝ) * deletionBudget n ≤ (n / m : ℕ) := by
+      by_contra! hbad
+      have hpos := mul_pos hx0 (sub_pos.mpr hbad)
+      nlinarith
+    exact_mod_cast hR
+  have hcount : targetDepth n / 3300 ≤ (n / m : ℕ) := by
+    change ((n : ℝ) * y / x) / 3300 ≤ (n / m : ℕ)
+    rw [div_div]
+    apply (div_le_iff₀ (by positivity : 0 < x * 3300)).mpr
+    nlinarith
+  have hb : intervalWidth n ≤ m := Nat.floor_le_ceil _
+  have hbpos : 0 < intervalWidth n := by
+    have hge : 1 ≤ intervalWidth n := by
+      apply Nat.le_floor
+      norm_num only [Nat.cast_one]
+      change (1 : ℝ) ≤ 3072 * x / y
+      linarith
+    omega
+  refine ⟨hm12, hmle, hb, hbpos, ?_, ?_, hcount⟩
+  · change 2 * deletionBudget n ≤ (n / m) / 3
+    omega
+  -- Control the loss from integer port widths before comparing the depths.
+  have hm32768 : 32768 ≤ m := by
+    have hlo' := (div_le_iff₀ hy0).mp hlo
+    exact_mod_cast (show (32768 : ℝ) ≤ m by nlinarith)
+  have ht : 5000 * m ≤ 15001 * (m / 3) := by omega
+  have htR : (5000 : ℝ) * m ≤ 15001 * (m / 3 : ℕ) := by exact_mod_cast ht
+  have htsq : (25000000 : ℝ) * (m : ℝ) ^ 2 ≤
+      225030001 * ((m / 3 : ℕ) : ℝ) ^ 2 := by
+    nlinarith [mul_self_le_mul_self (by positivity : (0 : ℝ) ≤ 5000 * m) htR]
+  have htpos : 0 < m / 3 := by omega
+  have hcoef : 160 * m * (x + 1) / (3 * ((m / 3 : ℕ) : ℝ) ^ 2) ≤
+      12096 * x / (25 * m) := by
+    apply (div_le_div_iff₀ (by positivity) (by positivity : (0 : ℝ) < 25 * m)).mpr
+    have hprod := mul_le_mul_of_nonneg_right htsq hx0.le
+    have hprod2 := mul_le_mul_of_nonneg_left
+      (show x + 1 ≤ 129 * x / 128 by linarith) (sq_nonneg (m : ℝ))
+    nlinarith
+  have hexponent : 160 * m * (x + 1) / (3 * ((m / 3 : ℕ) : ℝ) ^ 2) ≤
+      (63 / 400 : ℝ) * y := by
+    apply hcoef.trans
+    apply (div_le_iff₀ (by positivity : (0 : ℝ) < 25 * m)).mpr
+    have hlo' := (div_le_iff₀ hy0).mp hlo
+    nlinarith
+  have hexp : Real.exp (-(63 / 400 : ℝ) * y) ≤
+      Real.exp (-(160 * m * (x + 1) / (3 * ((m / 3 : ℕ) : ℝ) ^ 2))) := by
+    simpa only [neg_mul] using Real.exp_le_exp.mpr (neg_le_neg hexponent)
+  have hscalar := explicit_depth_scalar hx128
+  change (201 / 200 : ℝ) * y ≤ (999 / 6000 : ℝ) * x * Real.exp (-(63 / 400 : ℝ) * y) at hscalar
+  have htarget : (201 / 200 : ℝ) * ((n : ℝ) * y / x) ≤
+      ((999 / 6000 : ℝ) * n) * Real.exp (-(63 / 400 : ℝ) * y) := by
+    have hh := mul_le_mul_of_nonneg_left hscalar (by positivity : 0 ≤ (n : ℝ) / x)
+    convert hh using 1 <;> first | rfl | field_simp [hx0.ne']
+  apply htarget.trans
+  apply mul_le_mul _ hexp (by positivity) (by positivity)
+  nlinarith
+
+
+/-- The harmonic-avoidance theorem at an explicit size, retaining all public constants. -/
+theorem harmonic_robustness_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n)
+    (p : ℕ → FiniteLaw (Finset (Fin n)))
+    (havoid : ∀ v < n, ∀ A : Finset (Fin n),
+      (p v).probability (fun parents => Disjoint parents A) ≤
+        Real.exp (-(1 / (Real.logb 2 n + 1)) * ∑ i ∈ A, harmonicAt n v i)) :
+    (graphLaw (blockWidth n) p).probability (fun s =>
+      BlockDepthRobust (sampledGraph n (blockWidth n) s)
+        (deletionBudget n) (targetDepth n) (intervalWidth n)) ≥ 1 - failureBound n := by
+  obtain ⟨hm, hmn, hb, _, he, hd, hcount⟩ := finite_parameters_explicit hn
+  have hp := log_parameters_explicit hn
+  have htarget : 0 ≤ targetDepth n := by
+    unfold targetDepth
+    exact div_nonneg (mul_nonneg (Nat.cast_nonneg n) (by linarith [hp.2.1]))
+      (by linarith [hp.1])
+  have hfinite := finite_block_robustness_overlap hm hmn hb he p havoid
+  have hfailure : Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / blockWidth n : ℕ)) ≤
+      failureBound n := by
+    apply Real.exp_le_exp.mpr
+    have h := mul_le_mul_of_nonneg_left hcount failure_coefficient_pos.le
+    change -((4 / 3 : ℝ) - Real.log 3) * (n / blockWidth n : ℕ) ≤
+      -(((4 / 3 : ℝ) - Real.log 3) / 3300) * targetDepth n
+    nlinarith
+  have hbound := (show 1 - failureBound n ≤
+      1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / blockWidth n : ℕ)) by
+    linarith).trans hfinite
+  apply hbound.trans
+  apply FiniteLaw.probability_mono
+  intro s hs
+  simp only [sampledGraph, dif_pos (show 0 < blockWidth n by omega)]
+  exact hs.mono le_rfl ((by nlinarith : targetDepth n ≤ (201 / 200 : ℝ) * targetDepth n).trans hd)
+
+/-- The explicit theorem for the exact public DRSample distribution. -/
+theorem drsample_conjecture2_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n) :
+    ProofOfSpaceStatement.drsampleProbability n (fun parents =>
+      ProofOfSpaceStatement.DRSampleBlockDepthRobust parents
+        (deletionBudget n) (targetDepth n) (intervalWidth n)) ≥ 1 - failureBound n := by
+  have hn0 : 0 < n := by omega
+  have hm : 0 < blockWidth n := by have := (finite_parameters_explicit hn).1; omega
+  have h := harmonic_robustness_explicit hn (drIncomingLaw hn0)
+    (fun _ hv A => drIncomingLaw_avoidance_sharp (by omega) hv A)
+  simp only [sampledGraph, dif_pos hm] at h
+  rw [graphLaw_probability_as_pi hm (drIncomingLaw hn0)
+    (fun G => BlockDepthRobust G (deletionBudget n) (targetDepth n) (intervalWidth n))] at h
+  simp_rw [drIncomingLaw_as_map] at h
+  rw [← FiniteLaw.pi_map, FiniteLaw.probability_map] at h
+  simp_rw [incomingGraph_block_statement] at h
+  rw [drsampleProbability_eq hn0]
+  exact h
+
+/-- The same explicit threshold for Filecoin's ideal five-draw sampler. -/
+theorem filecoin_bucket6_explicit {n : ℕ} (hn : 2 ^ 128 ≤ n) :
+    (filecoinBucket6Law n (blockWidth n)).probability (fun s =>
+      IndegreeAtMost (sampledGraph n (blockWidth n) s) 6 ∧
+      BlockDepthRobust (sampledGraph n (blockWidth n) s)
+        (deletionBudget n) (targetDepth n) (intervalWidth n) ∧
+      DepthRobust (sampledGraph n (blockWidth n) s)
+        (deletionBudget n) (targetDepth n)) ≥ 1 - failureBound n := by
+  have hp := finite_parameters_explicit hn
+  have hn0 : 0 < n := by omega
+  have hm0 : 0 < blockWidth n := by have := hp.1; omega
+  simp only [filecoinBucket6Law, dif_pos hn0]
+  have hblock := harmonic_robustness_explicit hn (filecoinIncomingLaw hn0)
+    (fun _ hv A => filecoinIncomingLaw_avoidance_sharp (by omega) hv A)
+  have hdegree : ∀ s : GraphSample n (blockWidth n),
+      (graphLaw (blockWidth n) (filecoinIncomingLaw hn0)).weight s ≠ 0 →
+        IndegreeAtMost (sampledGraph n (blockWidth n) s) 6 := by
+    intro s hs
+    simp only [sampledGraph, dif_pos hm0]
+    exact filecoin_bucket6_indegree hn0 hm0 s hs
+  rw [FiniteLaw.probability_and_of_support _ _ _ hdegree]
+  apply hblock.trans
+  apply FiniteLaw.probability_mono
+  intro s hs
+  exact ⟨hs, hs.depthRobust hp.2.2.2.1⟩
+
+end ProofOfSpace.DRSample
