@@ -9,10 +9,11 @@ pinned Lake environment, metadata, and one selected Comparator declaration.
 | [drsample](drsample/README.md) | `ProofOfSpaceStatement.drsample_conjecture2` | `drsample/comparator.json` |
 | [pebbling_latency](pebbling_latency/README.md) | `ProofOfSpaceStatement.pebbling_latency` | `pebbling_latency/comparator.json` |
 
-The DRSample result uses `(c₁,c₂,c₃) = (1/20000,1,3072)` and retains the stronger
-finite depth estimates and the ideal indegree-six Filecoin corollary in its
-proof library. The latency project retains its probability and conditional
-18-layer Filecoin specializations as supporting results.
+The DRSample result uses `(c₁,c₂,c₃) = (1/20000,1.01,3072)` with failure
+coefficient `c₀ = 1/14060` and retains the stronger finite depth estimates and
+the ideal indegree-six Filecoin corollary in its proof library. The latency
+project retains its probability and conditional 18-layer Filecoin
+specializations as supporting results.
 
 Both Challenges import Mathlib alone. They contain only the definitions needed
 to state their main theorem and one intentional `sorry`. Proofs and auxiliary

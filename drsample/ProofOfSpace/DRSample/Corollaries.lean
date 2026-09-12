@@ -18,7 +18,7 @@ theorem drsample_multiscale {M : ℕ} (hM : 0 < M)
 theorem drsample_conjecture1 {n : ℕ} (hn : 2 ^ 128 ≤ n) :
     (drsampleLaw n (blockWidth n)).probability (fun s =>
       DepthRobust (sampledGraph n (blockWidth n) s)
-        (deletionBudget n) (targetDepth n)) ≥ 1 - failureBound n := by
+        (deletionBudget n) ((101 / 100 : ℝ) * targetDepth n)) ≥ 1 - failureBound n := by
   exact ProofOfSpace.DRSample.drsample_conjecture1 hn
 
 theorem filecoin_bucket6_finite {n m : ℕ} (hm : 12 ≤ m) (hmn : m ≤ n) :
@@ -33,9 +33,9 @@ theorem filecoin_bucket6_depth_robustness {n : ℕ} (hn : 2 ^ 128 ≤ n) :
     (filecoinBucket6Law n (blockWidth n)).probability (fun s =>
       IndegreeAtMost (sampledGraph n (blockWidth n) s) 6 ∧
       BlockDepthRobust (sampledGraph n (blockWidth n) s)
-        (deletionBudget n) (targetDepth n) (intervalWidth n) ∧
+        (deletionBudget n) ((101 / 100 : ℝ) * targetDepth n) (intervalWidth n) ∧
       DepthRobust (sampledGraph n (blockWidth n) s)
-        (deletionBudget n) (targetDepth n)) ≥ 1 - failureBound n := by
+        (deletionBudget n) ((101 / 100 : ℝ) * targetDepth n)) ≥ 1 - failureBound n := by
   exact ProofOfSpace.DRSample.filecoin_bucket6 hn
 
 theorem drsample_failure_tends_to_zero : Tendsto failureBound atTop (nhds 0) := by

@@ -7,9 +7,9 @@ project:
     for the explicitly specified independent DRSample distribution.
     For every n >= 2^128, the graph is block depth robust with
     e=floor(n log_2 log_2 n/(20000 log_2 n)),
-    d=n log_2 log_2 n/log_2 n, and
+    d=1.01 n log_2 log_2 n/log_2 n, and
     b=floor(3072 log_2 n/log_2 log_2 n), except with probability at most
-    exp(-((4/3-ln 3)/3300) n log_2 log_2 n/log_2 n).
+    exp(-(1/14060) n log_2 log_2 n/log_2 n).
     The proof establishes harmonic avoidance, a multiscale depth theorem,
     path lifting, and the integer rounding estimates.
   authors: ["Diego de Estrada (@diegode)"]

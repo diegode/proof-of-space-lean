@@ -10,14 +10,14 @@ For every `n >= 2^128`, with all logarithms below in base two,
 
 ```text
 e = floor(n log₂log₂ n / (20000 log₂ n))
-d = n log₂log₂ n / log₂ n
+d = 1.01 n log₂log₂ n / log₂ n
 b = floor(3072 log₂ n / log₂log₂ n).
 ```
 
 Except with probability at most
 
 ```text
-exp(-((4/3 - ln 3)/3300) n log₂log₂ n/log₂ n),
+exp(-(1/14060) n log₂log₂ n/log₂ n),
 ```
 
 every union of at most `e` left intervals of width `b` can be deleted while
@@ -25,7 +25,7 @@ leaving a directed path on at least `d` vertices. The intervals end at their
 chosen endpoints, may overlap, and are truncated at vertex zero. Their endpoints
 may be chosen after sampling the entire graph. The failure bound tends to zero.
 
-The constants are `c₁ = 1/20000`, `c₂ = 1`, and `c₃ = 3072`.
+The constants are `c₀ = 1/14060`, `c₁ = 1/20000`, `c₂ = 1.01`, and `c₃ = 3072`.
 The registered theorem `drsample_conjecture2` takes `n >= 2^128` directly.
 The same cutoff applies to Conjecture 1 and to the ideal degree-six Filecoin
 sampler through `drsample_conjecture1` and `filecoin_bucket6`.
@@ -69,8 +69,10 @@ The following bounds are proved in the supporting Lean modules.
    width at most `m` touches at most two blocks.
 5. With `m = ceil(3072 log₂ n/log₂log₂ n)`, the verified rounding estimates
    give the displayed constants and failure coefficient for every `n >= 2^128`.
-   The proof certifies at least `201/200` times the target depth, including all
-   floors and ceilings, using rational bounds for the exponential base case.
+   The proof certifies depth at least `1.01 n log₂log₂ n/log₂ n`, including all
+   floors and ceilings. A quadratic Taylor sum with a bounded cubic remainder
+   gives `exp(441/400) <= 3013/1000` for the numerical base case. The bound on
+   `ln 3` certifies `(4/3-ln 3)/3300 >= 1/14060`.
 
 The finite result, for `12 <= m <= n`, is
 
@@ -83,7 +85,7 @@ b = m,
 with failure at most `exp(-(4/3-ln 3)floor(n/m))`. This retains the stronger
 depth whose asymptotic expression at the selected block width is
 `(n/6)(log₂ n)^(-5/(32 ln 2))`, with exponent approximately `0.225421`.
-The public conjecture parameters weaken this depth to `n log₂log₂ n/log₂ n`.
+The public conjecture parameters give depth `1.01 n log₂log₂ n/log₂ n`.
 The library also retains the older finite tradeoffs, Conjecture 1, and the
 indegree-six Filecoin BucketSample/MetaBucket corollary. Filecoin's five
 independent draws and downward rounding are modeled explicitly; a fixed

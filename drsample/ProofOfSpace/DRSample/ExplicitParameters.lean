@@ -1,6 +1,6 @@
 import ProofOfSpace.DRSample.OptimizedRobustness
 
-/-! # An explicit cutoff with the original conjecture constants
+/-! # An explicit cutoff with the improved conjecture constants
 
 The stronger finite theorem applies to the rounded conjecture parameters for
 every `n ≥ 2^128`. The numerical comparisons use rational exponential bounds;
@@ -54,9 +54,10 @@ theorem log_parameters {n : ℕ} (hn : 2 ^ 128 ≤ n) :
   exact ⟨hx, hy, by linarith, by linarith⟩
 
 /-- The depth comparison is increasing past `log₂log₂ n = 7`.
-The numerical base case uses rational bounds for `exp 1` and `exp (41/400)`. -/
+The numerical base case combines a rational bound for `exp 1` with a quadratic
+Taylor sum and bounded cubic remainder for `exp (41/400)`. -/
 theorem depth_scalar {x : ℝ} (hx : 128 ≤ x) :
-    (201 / 200 : ℝ) * Real.logb 2 x ≤
+    (101 / 100 : ℝ) * Real.logb 2 x ≤
       (999 / 6000 : ℝ) * x * Real.exp (-(63 / 400 : ℝ) * Real.logb 2 x) := by
   let y := Real.logb 2 x
   let a : ℝ := Real.log 2 - 63 / 400
@@ -67,20 +68,22 @@ theorem depth_scalar {x : ℝ} (hx : 128 ≤ x) :
     exact hx
   have hlin := exp_linear_lower (a := a) (by norm_num : (0 : ℝ) < 7) hy
     (by dsimp [a]; linarith [Real.log_two_gt_d9])
-  have hbase : Real.exp (441 / 400 : ℝ) ≤ 2175 / 718 := by
-    have hsmall := Real.exp_bound_div_one_sub_of_interval
-      (by norm_num : (0 : ℝ) ≤ 41 / 400) (by norm_num : (41 / 400 : ℝ) < 1)
+  have hbase : Real.exp (441 / 400 : ℝ) ≤ 3013 / 1000 := by
+    have hsmall := Real.exp_bound' (n := 3)
+      (by norm_num : (0 : ℝ) ≤ 41 / 400) (by norm_num : (41 / 400 : ℝ) ≤ 1)
+      (by norm_num)
+    norm_num [Finset.sum_range_succ] at hsmall
     have hone : Real.exp 1 ≤ 87 / 32 := by linarith [Real.exp_one_lt_d9]
     rw [show (441 / 400 : ℝ) = 1 + 41 / 400 by norm_num, Real.exp_add]
     have hprod := mul_le_mul hone hsmall (by positivity) (by norm_num)
     norm_num at hprod ⊢
-    exact hprod
+    linarith
   have hcancel : Real.exp (a * 7) * Real.exp (441 / 400 : ℝ) = 128 := by
     rw [← Real.exp_add, show a * 7 + 441 / 400 = 7 * Real.log 2 by dsimp [a]; ring]
     have h7 := exp_nat_log_two 7
     norm_num at h7
     exact h7
-  have hbaseLower : 91904 / 2175 ≤ Real.exp (a * 7) := by
+  have hbaseLower : 128000 / 3013 ≤ Real.exp (a * 7) := by
     have := mul_le_mul_of_nonneg_left hbase (Real.exp_pos (a * 7)).le
     rw [hcancel] at this
     linarith
@@ -92,7 +95,7 @@ theorem depth_scalar {x : ℝ} (hx : 128 ≤ x) :
       Real.exp_add, Real.exp_log hx0]
   rw [hratio] at hlin
   have h := (mul_le_mul_of_nonneg_left hbaseLower (by positivity : 0 ≤ y / 7)).trans hlin
-  change (201 / 200 : ℝ) * y ≤ (999 / 6000 : ℝ) * x * Real.exp (-(63 / 400 : ℝ) * y)
+  change (101 / 100 : ℝ) * y ≤ (999 / 6000 : ℝ) * x * Real.exp (-(63 / 400 : ℝ) * y)
   nlinarith
 
 
@@ -102,7 +105,7 @@ set_option maxHeartbeats 1000000 in
 theorem finite_parameters {n : ℕ} (hn : 2 ^ 128 ≤ n) :
     12 ≤ blockWidth n ∧ blockWidth n ≤ n ∧ intervalWidth n ≤ blockWidth n ∧
     0 < intervalWidth n ∧ 2 * deletionBudget n ≤ (n / blockWidth n) / 3 ∧
-    (201 / 200 : ℝ) * targetDepth n ≤
+    (101 / 100 : ℝ) * targetDepth n ≤
       ((blockWidth n : ℝ) * (n / blockWidth n : ℕ) / 6) *
         Real.exp (-(160 * blockWidth n * (Real.logb 2 n + 1) /
           (3 * (blockWidth n / 3 : ℕ) ^ 2))) ∧
@@ -204,8 +207,9 @@ theorem finite_parameters {n : ℕ} (hn : 2 ^ 128 ≤ n) :
       Real.exp (-(160 * m * (x + 1) / (3 * ((m / 3 : ℕ) : ℝ) ^ 2))) := by
     simpa only [neg_mul] using Real.exp_le_exp.mpr (neg_le_neg hexponent)
   have hscalar := depth_scalar hx128
-  change (201 / 200 : ℝ) * y ≤ (999 / 6000 : ℝ) * x * Real.exp (-(63 / 400 : ℝ) * y) at hscalar
-  have htarget : (201 / 200 : ℝ) * ((n : ℝ) * y / x) ≤
+  change (101 / 100 : ℝ) * y ≤
+    (999 / 6000 : ℝ) * x * Real.exp (-(63 / 400 : ℝ) * y) at hscalar
+  have htarget : (101 / 100 : ℝ) * ((n : ℝ) * y / x) ≤
       ((999 / 6000 : ℝ) * n) * Real.exp (-(63 / 400 : ℝ) * y) := by
     have hh := mul_le_mul_of_nonneg_left hscalar (by positivity : 0 ≤ (n : ℝ) / x)
     convert hh using 1 <;> first | rfl | field_simp [hx0.ne']
@@ -222,21 +226,12 @@ theorem harmonic_robustness {n : ℕ} (hn : 2 ^ 128 ≤ n)
         Real.exp (-(1 / (Real.logb 2 n + 1)) * ∑ i ∈ A, harmonicAt n v i)) :
     (graphLaw (blockWidth n) p).probability (fun s =>
       BlockDepthRobust (sampledGraph n (blockWidth n) s)
-        (deletionBudget n) (targetDepth n) (intervalWidth n)) ≥ 1 - failureBound n := by
+        (deletionBudget n) ((101 / 100 : ℝ) * targetDepth n) (intervalWidth n)) ≥
+      1 - failureBound n := by
   obtain ⟨hm, hmn, hb, _, he, hd, hcount⟩ := finite_parameters hn
-  have hp := log_parameters hn
-  have htarget : 0 ≤ targetDepth n := by
-    unfold targetDepth
-    exact div_nonneg (mul_nonneg (Nat.cast_nonneg n) (by linarith [hp.2.1]))
-      (by linarith [hp.1])
   have hfinite := finite_block_robustness_overlap hm hmn hb he p havoid
   have hfailure : Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / blockWidth n : ℕ)) ≤
-      failureBound n := by
-    apply Real.exp_le_exp.mpr
-    have h := mul_le_mul_of_nonneg_left hcount failure_coefficient_pos.le
-    change -((4 / 3 : ℝ) - Real.log 3) * (n / blockWidth n : ℕ) ≤
-      -(((4 / 3 : ℝ) - Real.log 3) / 3300) * targetDepth n
-    nlinarith
+      failureBound n := finite_failureBound_le hcount
   have hbound := (show 1 - failureBound n ≤
       1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / blockWidth n : ℕ)) by
     linarith).trans hfinite
@@ -244,20 +239,22 @@ theorem harmonic_robustness {n : ℕ} (hn : 2 ^ 128 ≤ n)
   apply FiniteLaw.probability_mono
   intro s hs
   simp only [sampledGraph, dif_pos (show 0 < blockWidth n by omega)]
-  exact hs.mono le_rfl ((by nlinarith : targetDepth n ≤ (201 / 200 : ℝ) * targetDepth n).trans hd)
+  exact hs.mono le_rfl hd
 
 /-- The explicit theorem for the exact public DRSample distribution. -/
 theorem drsample_conjecture2 {n : ℕ} (hn : 2 ^ 128 ≤ n) :
     ProofOfSpaceStatement.drsampleProbability n (fun parents =>
       ProofOfSpaceStatement.DRSampleBlockDepthRobust parents
-        (deletionBudget n) (targetDepth n) (intervalWidth n)) ≥ 1 - failureBound n := by
+        (deletionBudget n) ((101 / 100 : ℝ) * targetDepth n) (intervalWidth n)) ≥
+      1 - failureBound n := by
   have hn0 : 0 < n := by omega
   have hm : 0 < blockWidth n := by have := (finite_parameters hn).1; omega
   have h := harmonic_robustness hn (drIncomingLaw hn0)
     (fun _ hv A => drIncomingLaw_avoidance_sharp (by omega) hv A)
   simp only [sampledGraph, dif_pos hm] at h
   rw [graphLaw_probability_as_pi hm (drIncomingLaw hn0)
-    (fun G => BlockDepthRobust G (deletionBudget n) (targetDepth n) (intervalWidth n))] at h
+    (fun G => BlockDepthRobust G (deletionBudget n)
+      ((101 / 100 : ℝ) * targetDepth n) (intervalWidth n))] at h
   simp_rw [drIncomingLaw_as_map] at h
   rw [← FiniteLaw.pi_map, FiniteLaw.probability_map] at h
   simp_rw [incomingGraph_block_statement] at h
@@ -268,7 +265,7 @@ theorem drsample_conjecture2 {n : ℕ} (hn : 2 ^ 128 ≤ n) :
 theorem drsample_conjecture1 {n : ℕ} (hn : 2 ^ 128 ≤ n) :
     (drsampleLaw n (blockWidth n)).probability (fun s =>
       DepthRobust (sampledGraph n (blockWidth n) s)
-        (deletionBudget n) (targetDepth n)) ≥ 1 - failureBound n := by
+        (deletionBudget n) ((101 / 100 : ℝ) * targetDepth n)) ≥ 1 - failureBound n := by
   have hn0 : 0 < n := by omega
   have h := harmonic_robustness hn (drIncomingLaw hn0)
     (fun _ hv A => drIncomingLaw_avoidance_sharp (by omega) hv A)
@@ -283,9 +280,9 @@ theorem filecoin_bucket6 {n : ℕ} (hn : 2 ^ 128 ≤ n) :
     (filecoinBucket6Law n (blockWidth n)).probability (fun s =>
       IndegreeAtMost (sampledGraph n (blockWidth n) s) 6 ∧
       BlockDepthRobust (sampledGraph n (blockWidth n) s)
-        (deletionBudget n) (targetDepth n) (intervalWidth n) ∧
+        (deletionBudget n) ((101 / 100 : ℝ) * targetDepth n) (intervalWidth n) ∧
       DepthRobust (sampledGraph n (blockWidth n) s)
-        (deletionBudget n) (targetDepth n)) ≥ 1 - failureBound n := by
+        (deletionBudget n) ((101 / 100 : ℝ) * targetDepth n)) ≥ 1 - failureBound n := by
   have hp := finite_parameters hn
   have hn0 : 0 < n := by omega
   have hm0 : 0 < blockWidth n := by have := hp.1; omega

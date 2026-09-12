@@ -24,7 +24,7 @@ noncomputable def filecoinBucket6Law (n m : ℕ) : FiniteLaw (GraphSample n m) :
   graphLaw m (fun j => if hn : 0 < n then filecoinIncomingLaw hn j else FiniteLaw.pure ∅)
 
 noncomputable def failureBound (n : ℕ) : ℝ :=
-  Real.exp (-(((4 / 3 : ℝ) - Real.log 3) / 3300) * targetDepth n)
+  Real.exp (-(1 / 14060 : ℝ) * targetDepth n)
 
 theorem failure_coefficient_pos : 0 < (4 / 3 : ℝ) - Real.log 3 := by
   have hlog3 : Real.log 3 < 6 / 5 := by
@@ -33,6 +33,17 @@ theorem failure_coefficient_pos : 0 < (4 / 3 : ℝ) - Real.log 3 := by
     rw [show (3 : ℝ) = 2 * (3 / 2) by norm_num, Real.log_mul (by norm_num) (by norm_num)]
     linarith [Real.log_two_lt_d9]
   linarith
+
+/-- The rounded failure coefficient follows from the finite block count. -/
+theorem finite_failureBound_le {n m : ℕ} (hcount : targetDepth n / 3300 ≤ (m : ℝ)) :
+    Real.exp (-((4 / 3 : ℝ) - Real.log 3) * m) ≤ failureBound n := by
+  have hcoef : (3300 / 14060 : ℝ) ≤ (4 / 3 : ℝ) - Real.log 3 := by
+    linarith [Real.log_three_lt_d9]
+  apply Real.exp_le_exp.mpr
+  change -((4 / 3 : ℝ) - Real.log 3) * m ≤ -(1 / 14060 : ℝ) * targetDepth n
+  have h := mul_le_mul_of_nonneg_left hcount (by norm_num : (0 : ℝ) ≤ 3300 / 14060)
+  have hc := mul_le_mul_of_nonneg_right hcoef (Nat.cast_nonneg m : (0 : ℝ) ≤ m)
+  nlinarith
 
 theorem conjecture_at_parameters {n : ℕ}
     (hm : 12 ≤ blockWidth n) (hmn : blockWidth n ≤ n)
@@ -50,10 +61,7 @@ theorem conjecture_at_parameters {n : ℕ}
         (deletionBudget n) (targetDepth n) (intervalWidth n)) ≥ 1 - failureBound n := by
   have hfinite := finite_block_robustness_sharp hm hmn hb he p havoid
   have hfailure : Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / blockWidth n : ℕ)) ≤
-      failureBound n := by
-    apply Real.exp_le_exp.mpr
-    have h := mul_le_mul_of_nonneg_left hcount failure_coefficient_pos.le
-    nlinarith
+      failureBound n := finite_failureBound_le hcount
   have hbound := (show 1 - failureBound n ≤
       1 - Real.exp (-((4 / 3 : ℝ) - Real.log 3) * (n / blockWidth n : ℕ)) by
     linarith).trans hfinite
@@ -83,11 +91,10 @@ theorem targetDepth_tendsto : Tendsto targetDepth atTop atTop := by
 
 /-- The explicit exponentially small failure bound tends to zero. -/
 theorem failureBound_tendsto_zero : Tendsto failureBound atTop (nhds 0) := by
-  have hc : 0 < ((4 / 3 : ℝ) - Real.log 3) / 3300 :=
-    div_pos failure_coefficient_pos (by norm_num)
+  have hc : 0 < (1 / 14060 : ℝ) := by norm_num
   have h := targetDepth_tendsto.const_mul_atTop hc
   have he := Real.tendsto_exp_neg_atTop_nhds_zero.comp h
-  change Tendsto (fun n => Real.exp (-(((4 / 3 : ℝ) - Real.log 3) / 3300) *
+  change Tendsto (fun n => Real.exp (-(1 / 14060 : ℝ) *
     targetDepth n)) atTop (nhds 0)
   simpa only [Function.comp_def, neg_mul] using he
 

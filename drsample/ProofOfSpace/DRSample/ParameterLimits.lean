@@ -16,6 +16,7 @@ noncomputable def intervalWidth (n : ℕ) : ℕ :=
 noncomputable def deletionBudget (n : ℕ) : ℕ :=
   Nat.floor ((n : ℝ) * Real.logb 2 (Real.logb 2 n) / (20000 * Real.logb 2 n))
 
+/-- The logarithmic depth scale `n/L(n)`, before the final factor `1.01`. -/
 noncomputable def targetDepth (n : ℕ) : ℝ :=
   n * Real.logb 2 (Real.logb 2 n) / Real.logb 2 n
 
