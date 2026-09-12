@@ -6,12 +6,12 @@ Xing, and Zhou (CRYPTO 2019), for the exact independent sampler in
 `ProofOfSpaceStatement.drsample_conjecture2`. The Challenge imports only
 Mathlib and contains no proof-development imports.
 
-For every `n >= 2^128`, with all logarithms below in base two,
+For every `n >= 2^120`, with all logarithms below in base two,
 
 ```text
 e = floor(n log₂log₂ n / (20000 log₂ n))
 d = 1.01 n log₂log₂ n / log₂ n
-b = floor(3072 log₂ n / log₂log₂ n).
+b = floor(3200 log₂ n / log₂log₂ n).
 ```
 
 Except with probability at most
@@ -25,8 +25,8 @@ leaving a directed path on at least `d` vertices. The intervals end at their
 chosen endpoints, may overlap, and are truncated at vertex zero. Their endpoints
 may be chosen after sampling the entire graph. The failure bound tends to zero.
 
-The constants are `c₀ = 1/14060`, `c₁ = 1/20000`, `c₂ = 1.01`, and `c₃ = 3072`.
-The registered theorem `drsample_conjecture2` takes `n >= 2^128` directly.
+The constants are `c₀ = 1/14060`, `c₁ = 1/20000`, `c₂ = 1.01`, and `c₃ = 3200`.
+The registered theorem `drsample_conjecture2` takes `n >= 2^120` directly.
 The same cutoff applies to Conjecture 1 and to the ideal degree-six Filecoin
 sampler through `drsample_conjecture1` and `filecoin_bucket6`.
 
@@ -67,11 +67,12 @@ The following bounds are proved in the supporting Lean modules.
    `λ = floor(m/3)²/[m(log₂ n+1)]`. A metagraph path lifts through intact blocks,
    contributing at least `m/3` vertices per visited block. A left interval of
    width at most `m` touches at most two blocks.
-5. With `m = ceil(3072 log₂ n/log₂log₂ n)`, the verified rounding estimates
-   give the displayed constants and failure coefficient for every `n >= 2^128`.
+5. With `m = ceil(3200 log₂ n/log₂log₂ n)`, the verified rounding estimates
+   give the displayed constants and failure coefficient for every `n >= 2^120`.
    The proof certifies depth at least `1.01 n log₂log₂ n/log₂ n`, including all
    floors and ceilings. A quadratic Taylor sum with a bounded cubic remainder
-   gives `exp(441/400) <= 3013/1000` for the numerical base case. The bound on
+   gives `exp((303/2000) log₂ 120) <= 57/20` for the numerical base case,
+   using `6 <= log₂ 120 <= 691/100`. The bound on
    `ln 3` certifies `(4/3-ln 3)/3300 >= 1/14060`.
 
 The finite result, for `12 <= m <= n`, is
@@ -84,7 +85,7 @@ b = m,
 
 with failure at most `exp(-(4/3-ln 3)floor(n/m))`. This retains the stronger
 depth whose asymptotic expression at the selected block width is
-`(n/6)(log₂ n)^(-5/(32 ln 2))`, with exponent approximately `0.225421`.
+`(n/6)(log₂ n)^(-3/(20 ln 2))`, with exponent approximately `0.216404`.
 The public conjecture parameters give depth `1.01 n log₂log₂ n/log₂ n`.
 The library also retains the older finite tradeoffs, Conjecture 1, and the
 indegree-six Filecoin BucketSample/MetaBucket corollary. Filecoin's five

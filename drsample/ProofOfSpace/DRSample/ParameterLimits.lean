@@ -8,10 +8,10 @@ namespace ProofOfSpace.DRSample
 open Filter
 
 noncomputable def blockWidth (n : ℕ) : ℕ :=
-  Nat.ceil (3072 * Real.logb 2 n / Real.logb 2 (Real.logb 2 n))
+  Nat.ceil (3200 * Real.logb 2 n / Real.logb 2 (Real.logb 2 n))
 
 noncomputable def intervalWidth (n : ℕ) : ℕ :=
-  Nat.floor (3072 * Real.logb 2 n / Real.logb 2 (Real.logb 2 n))
+  Nat.floor (3200 * Real.logb 2 n / Real.logb 2 (Real.logb 2 n))
 
 noncomputable def deletionBudget (n : ℕ) : ℕ :=
   Nat.floor ((n : ℝ) * Real.logb 2 (Real.logb 2 n) / (20000 * Real.logb 2 n))
@@ -38,14 +38,14 @@ theorem eventually_log_parameters : ∀ᶠ n : ℕ in atTop,
     16 ≤ n ∧
     1 ≤ Real.logb 2 (Real.logb 2 n) ∧
     Real.logb 2 (Real.logb 2 n) ≤ Real.logb 2 n ∧
-    65536 * Real.logb 2 n ≤ (n : ℝ) ∧
+    262144 * Real.logb 2 n ≤ (n : ℝ) ∧
     24 * Real.logb 2 (Real.logb 2 n) ≤ (Real.logb 2 n) ^ (1 / 32 : ℝ) := by
   have hnat : Tendsto (fun n : ℕ => (n : ℝ)) atTop atTop := tendsto_natCast_atTop_atTop
   have hlog : Tendsto (fun n : ℕ => Real.logb 2 n) atTop atTop :=
     (Real.tendsto_logb_atTop (by norm_num)).comp hnat
   have hloglog : Tendsto (fun n : ℕ => Real.logb 2 (Real.logb 2 n)) atTop atTop :=
     (Real.tendsto_logb_atTop (by norm_num)).comp hlog
-  have ha := hnat.eventually (logb_eventually_le_rpow (C := 65536) (r := 1) (by norm_num) (by norm_num))
+  have ha := hnat.eventually (logb_eventually_le_rpow (C := 262144) (r := 1) (by norm_num) (by norm_num))
   have hb := hlog.eventually (logb_eventually_le_rpow (C := 1) (r := 1) (by norm_num) (by norm_num))
   have hc := hlog.eventually (logb_eventually_le_rpow (C := 24) (r := 1 / 32) (by norm_num) (by norm_num))
   filter_upwards [eventually_ge_atTop 16, hloglog.eventually_ge_atTop 1, ha, hb, hc]

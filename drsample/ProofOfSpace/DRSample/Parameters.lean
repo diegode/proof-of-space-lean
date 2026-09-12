@@ -8,7 +8,7 @@ set_option maxHeartbeats 1000000 in
 theorem finite_parameters_of_log_bounds {n : ℕ} (hn : 16 ≤ n)
     (hy : 1 ≤ Real.logb 2 (Real.logb 2 n))
     (hyx : Real.logb 2 (Real.logb 2 n) ≤ Real.logb 2 n)
-    (hsmall : 65536 * Real.logb 2 n ≤ (n : ℝ))
+    (hsmall : 262144 * Real.logb 2 n ≤ (n : ℝ))
     (hroot : 24 * Real.logb 2 (Real.logb 2 n) ≤
       (Real.logb 2 n) ^ (1 / 32 : ℝ)) :
     12 ≤ blockWidth n ∧ blockWidth n ≤ n ∧ intervalWidth n ≤ blockWidth n ∧
@@ -21,36 +21,36 @@ theorem finite_parameters_of_log_bounds {n : ℕ} (hn : 16 ≤ n)
   let m := blockWidth n
   change 1 ≤ y at hy
   change y ≤ x at hyx
-  change 65536 * x ≤ (n : ℝ) at hsmall
+  change 262144 * x ≤ (n : ℝ) at hsmall
   change 24 * y ≤ x ^ (1 / 32 : ℝ) at hroot
   have hy0 : 0 < y := by linarith
   have hx1 : 1 ≤ x := hy.trans hyx
   have hx0 : 0 < x := by linarith
-  have hscale : (3072 : ℝ) ≤ 3072 * x / y := (le_div_iff₀ hy0).mpr (by nlinarith)
-  have hlo : 3072 * x / y ≤ (m : ℝ) := Nat.le_ceil _
-  have hhi : (m : ℝ) < 3072 * x / y + 1 := Nat.ceil_lt_add_one (by positivity)
+  have hscale : (3200 : ℝ) ≤ 3200 * x / y := (le_div_iff₀ hy0).mpr (by nlinarith)
+  have hlo : 3200 * x / y ≤ (m : ℝ) := Nat.le_ceil _
+  have hhi : (m : ℝ) < 3200 * x / y + 1 := Nat.ceil_lt_add_one (by positivity)
   have hm12 : 12 ≤ m := by exact_mod_cast (show (12 : ℝ) ≤ m by linarith)
   have hm0 : 0 < m := by omega
   have hmR : (0 : ℝ) < m := by exact_mod_cast hm0
-  have hmy : (m : ℝ) * y ≤ 3073 * x := by
-    have hh := (lt_div_iff₀ hy0).mp (show (m : ℝ) - 1 < 3072 * x / y by linarith)
+  have hmy : (m : ℝ) * y ≤ 3201 * x := by
+    have hh := (lt_div_iff₀ hy0).mp (show (m : ℝ) - 1 < 3200 * x / y by linarith)
     nlinarith
-  have hscaleupper : 3072 * x / y ≤ 3072 * x := by
+  have hscaleupper : 3200 * x / y ≤ 3200 * x := by
     apply (div_le_iff₀ hy0).mpr
     nlinarith
   have hnR : (16 : ℝ) ≤ n := by exact_mod_cast hn
-  have hfour : 16 * m ≤ n := by
-    exact_mod_cast (show (16 : ℝ) * m ≤ n by linarith)
+  have hfour : 64 * m ≤ n := by
+    exact_mod_cast (show (64 : ℝ) * m ≤ n by linarith)
   have hmle : m ≤ n := by omega
-  have hquot : 16 ≤ n / m := (Nat.le_div_iff_mul_le hm0).mpr (by omega)
-  have hquotR : (16 : ℝ) ≤ (n / m : ℕ) := by exact_mod_cast hquot
+  have hquot : 64 ≤ n / m := (Nat.le_div_iff_mul_le hm0).mpr (by omega)
+  have hquotR : (64 : ℝ) ≤ (n / m : ℕ) := by exact_mod_cast hquot
   have hdivision : n < m * (n / m + 1) := by
     have hmod := Nat.mod_lt n hm0
     have heq := Nat.mod_add_div n m
     nlinarith
   have hdivisionR : (n : ℝ) < (m : ℝ) * ((n / m : ℕ) + 1) := by exact_mod_cast hdivision
   have hcomplete : (n : ℝ) ≤ (4 / 3 : ℝ) * m * (n / m : ℕ) := by nlinarith
-  have hcomplete_sharp : (n : ℝ) ≤ (17 / 16 : ℝ) * m * (n / m : ℕ) := by nlinarith
+  have hcomplete_sharp : (n : ℝ) ≤ (65 / 64 : ℝ) * m * (n / m : ℕ) := by nlinarith
   have hbudget : (deletionBudget n : ℝ) ≤ (n : ℝ) * y / (20000 * x) :=
     Nat.floor_le (by positivity)
   have hbudgetmul := (le_div_iff₀ (by positivity : 0 < 20000 * x)).mp hbudget
@@ -74,7 +74,7 @@ theorem finite_parameters_of_log_bounds {n : ℕ} (hn : 16 ≤ n)
     have hge : 1 ≤ intervalWidth n := by
       apply Nat.le_floor
       norm_num only [Nat.cast_one]
-      change (1 : ℝ) ≤ 3072 * x / y
+      change (1 : ℝ) ≤ 3200 * x / y
       linarith
     omega
   refine ⟨hm12, hmle, hb, hbpos, ?_, ?_, hcount⟩
@@ -93,7 +93,7 @@ theorem finite_parameters_of_log_bounds {n : ℕ} (hn : 16 ≤ n)
       (n : ℝ) * y / x ≤ ((n : ℝ) * x ^ (1 / 32 : ℝ) / 24) / x :=
         (div_le_div_iff_of_pos_right hx0).mpr hnum
       _ = ((n : ℝ) / 24) * (x ^ (1 / 32 : ℝ) / x) := by ring
-  have hm3072 : 3072 ≤ m := by exact_mod_cast (show (3072 : ℝ) ≤ m by linarith)
+  have hm3200 : 3200 ≤ m := by exact_mod_cast (show (3200 : ℝ) ≤ m by linarith)
   have ht : 5 * m ≤ 16 * (m / 3) := by omega
   have htR : (5 : ℝ) * m ≤ 16 * (m / 3 : ℕ) := by exact_mod_cast ht
   have htpos : 0 < m / 3 := by omega

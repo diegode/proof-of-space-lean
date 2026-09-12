@@ -5,10 +5,10 @@ project:
   description: >-
     A proof of Conjecture 2 from Appendix F of Blocki et al. (CRYPTO 2019)
     for the explicitly specified independent DRSample distribution.
-    For every n >= 2^128, the graph is block depth robust with
+    For every n >= 2^120, the graph is block depth robust with
     e=floor(n log_2 log_2 n/(20000 log_2 n)),
     d=1.01 n log_2 log_2 n/log_2 n, and
-    b=floor(3072 log_2 n/log_2 log_2 n), except with probability at most
+    b=floor(3200 log_2 n/log_2 log_2 n), except with probability at most
     exp(-(1/14060) n log_2 log_2 n/log_2 n).
     The proof establishes harmonic avoidance, a multiscale depth theorem,
     path lifting, and the integer rounding estimates.
@@ -82,7 +82,7 @@ fidelity:
     this direct per-vertex distribution with the grouped distribution used by
     the multiscale proof. The ceiling bucket count removes one repeated capped
     bucket at vertices where v+1 is a power of two, compared with the original
-    floor-plus-one convention. The numerical cutoff n >= 2^128 is certified;
+    floor-plus-one convention. The numerical cutoff n >= 2^120 is certified;
     a fixed pseudorandom seed or machine-word implementation is not.
 review:
   status: "self-assessed"
