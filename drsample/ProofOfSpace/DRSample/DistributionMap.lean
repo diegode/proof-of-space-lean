@@ -1,4 +1,4 @@
-import ProofOfSpace.DRSample.Conjectures
+import ProofOfSpace.DRSample.FiniteRobustness
 import Mathlib.Algebra.BigOperators.Fin
 
 /-! # The row-based proof law agrees with independent choices at every vertex -/

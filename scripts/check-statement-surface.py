@@ -16,11 +16,12 @@ assert len(source.splitlines()) <= 300, 'Keep the Challenge below the warning th
 imports = re.findall(r'^import\s+(\S+)', source, re.M)
 assert imports and all(name.startswith('Mathlib.') for name in imports), imports
 names = re.findall(r'^theorem\s+(\w+)', source, re.M)
-assert len(names) == 1, names
-assert config['theorem_names'] == ['ProofOfSpaceStatement.' + names[0]], config
+expected_count = 3 if sys.argv[1] == 'drsample' else 1
+assert len(names) == expected_count, names
+assert config['theorem_names'] == ['ProofOfSpaceStatement.' + name for name in names], config
 assert config['definition_names'] == []
 assert config['enable_nanoda'] is True
-assert len(re.findall(r'\bsorry\b', source)) == 1
+assert len(re.findall(r'\bsorry\b', source)) == expected_count
 # Resolve the imports with Lean as well, to reject local modules shadowing Mathlib.
 result = subprocess.run(['lake', 'env', 'lean', '--src-deps', 'Challenge.lean'],
                         cwd=project, capture_output=True, text=True, check=True)
@@ -35,4 +36,4 @@ for line in result.stdout.splitlines():
     if dep == challenge.resolve(): continue
     if not (dep.is_relative_to(mathlib) or dep.is_relative_to(core)):
         raise SystemExit('Challenge import outside Mathlib and Lean: ' + str(dep))
-print(f'{sys.argv[1]}: {len(source.splitlines())} lines; one theorem; Mathlib-only statement imports')
+print(f'{sys.argv[1]}: {len(source.splitlines())} lines; {len(names)} theorem(s); Mathlib-only statement imports')

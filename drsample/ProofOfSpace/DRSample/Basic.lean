@@ -58,7 +58,7 @@ theorem HasPath.mono_length {G : OrderedGraph n} {S : Finset (Fin n)}
   obtain ⟨P, hne, hchain, havoid, hlen⟩ := h
   exact ⟨P, hne, hchain, havoid, hdd'.trans hlen⟩
 
-/-- The implication used in Conjecture 1 requires no additional random event. -/
+/-- Ordinary depth robustness follows on the same graph event. -/
 theorem BlockDepthRobust.depthRobust {G : OrderedGraph n} {e b : ℕ} {d : ℝ}
     (h : BlockDepthRobust G e d b) (hb : 0 < b) : DepthRobust G e d := by
   intro S hS

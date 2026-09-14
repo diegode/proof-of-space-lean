@@ -1,17 +1,16 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/mathlib-initiative/formalization.yaml/main/schema/formalization.schema.json
 version: "v0.4"
 project:
-  name: "Block depth robustness of DRSample"
+  name: "Block depth robustness of DRSample, BucketSample, and HarmonicSample"
   description: >-
-    A proof of Conjecture 2 from Appendix F of Blocki et al. (CRYPTO 2019)
-    for the explicitly specified independent DRSample distribution.
-    For every n >= 2^120, the graph is block depth robust with
-    e=floor(n log_2 log_2 n/(20000 log_2 n)),
-    d=1.01 n log_2 log_2 n/log_2 n, and
-    b=floor(3200 log_2 n/log_2 log_2 n), except with probability at most
-    exp(-(1/14060) n log_2 log_2 n/log_2 n).
-    The proof establishes harmonic avoidance, a multiscale depth theorem,
-    path lifting, and the integer rounding estimates.
+    Explicit block-depth-robustness theorems for the exact independent DRSample,
+    BucketSample(n,r), and HarmonicSample(n,r) distributions, for every n >= 2^120
+    and every integer r >= 1. With L(n)=log_2 n/log_2 log_2 n, all three have
+    e=floor(n/(18000 L(n))), b=floor(3600 L(n)), and failure at most
+    exp(-n/(11000 L(n))). The depth is 1.48 n/L(n) for DRSample and BucketSample
+    and 2 n/L(n) for HarmonicSample. The proof establishes the two-thirds
+    exponential moment, the improved multiscale bound, triangular port geometry,
+    averaging over shifted block partitions, and the numerical cutoff.
   authors: ["Diego de Estrada (@diegode)"]
   responsible_maintainers: ["Diego de Estrada (@diegode)"]
   license: "Apache-2.0"
@@ -49,15 +48,29 @@ sources:
 related_formalizations: []
 status:
   scope: >-
-    The single registered statement is drsample_conjecture2. Ordinary depth
-    robustness follows by deleting singleton endpoints. The library also retains
-    the finite multiscale estimates and the ideal indegree-six Filecoin corollary;
-    these are supporting results, not additional declarations selected by Comparator.
+    Three registered exact-sampler statements: drsample_conjecture2,
+    bucketSample_block_robustness, and harmonicSample_block_robustness.
+    Supporting results include normalization, harmonic avoidance, the multiscale
+    depth bound, triangular path lifting, shift averaging, and all explicit
+    numerical estimates. The paper's cited pebbling optimality and fractional
+    robustness reductions are outside the registered scope of this project.
   sorry_count: 0
   sorry_in_definitions: 0
   axioms: ["propext", "Classical.choice", "Quot.sound"]
   main_results:
     - declaration: "ProofOfSpaceStatement.drsample_conjecture2"
+      file: "Solution.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
+    - declaration: "ProofOfSpaceStatement.bucketSample_block_robustness"
+      file: "Solution.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
+    - declaration: "ProofOfSpaceStatement.harmonicSample_block_robustness"
       file: "Solution.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
@@ -76,14 +89,13 @@ automation:
   notes: "Exact costs and wall times were not tracked; no prompt transcript is included."
 fidelity:
   divergences: >-
-    The distribution uses independent uniform bucket and distance choices.
-    The statement includes capped overlapping buckets and upward rounding and
-    measures path length in vertices. A theorem in the proof library identifies
-    this direct per-vertex distribution with the grouped distribution used by
-    the multiscale proof. The ceiling bucket count removes one repeated capped
-    bucket at vertices where v+1 is a power of two, compared with the original
-    floor-plus-one convention. The numerical cutoff n >= 2^120 is certified;
-    a fixed pseudorandom seed or machine-word implementation is not.
+    The statements specify the paper's exact finite independent distributions,
+    including capped buckets, upward rounding for DRSample, downward rounding
+    and the shared fine position for BucketSample, and harmonic normalization
+    for HarmonicSample. Path lengths count vertices. The shifted triangular
+    metagraph proof lifts paths directly through block centers, yielding a
+    slightly stronger finite depth bound than the paper's rounded-height
+    intermediate inequality; the advertised parameters and cutoff agree.
 review:
   status: "self-assessed"
   notes: >-
@@ -93,7 +105,15 @@ review:
 alignment:
   namespace: "ProofOfSpaceStatement"
   statements:
-    - source: "Blocki et al., CRYPTO 2019 full version, Appendix F, Conjecture 2"
+    - source: "paper/finalnew/sections/robustness.tex, thm:dr-conjecture2"
       lean: "ProofOfSpaceStatement.drsample_conjecture2"
       module: "Solution"
-      status: "proved with explicit constants for the stated independent sampler"
+      status: "proved with the paper's explicit constants and exact independent sampler"
+    - source: "paper/finalnew/sections/robustness.tex, thm:bucket-optimal"
+      lean: "ProofOfSpaceStatement.bucketSample_block_robustness"
+      module: "Solution"
+      status: "proved with the paper's explicit constants and exact independent sampler"
+    - source: "paper/finalnew/sections/robustness.tex, thm:harmonic-block-robustness"
+      lean: "ProofOfSpaceStatement.harmonicSample_block_robustness"
+      module: "Solution"
+      status: "proved with the paper's explicit constants and exact independent sampler"

@@ -1,125 +1,102 @@
-# Block depth robustness of DRSample
+# Block depth robustness of DRSample, BucketSample, and HarmonicSample
 
-This project proves Conjecture 2 from Appendix F of Blocki, Harsha, Kang, Lee,
-Xing, and Zhou (CRYPTO 2019), for the exact independent sampler in
-[Challenge.lean](Challenge.lean). The single registered theorem is
-`ProofOfSpaceStatement.drsample_conjecture2`. The Challenge imports only
-Mathlib and contains no proof-development imports.
+This project formalizes the three sampler theorems in the current paper's
+`robustness.tex`, using the multiscale estimates in `robustnessproof.tex`.
+[Challenge.lean](Challenge.lean) specifies the exact finite distributions and
+statements using Mathlib alone; [Solution.lean](Solution.lean) proves all three.
 
-For every `n >= 2^120`, with all logarithms below in base two,
-
-```text
-e = floor(n log₂log₂ n / (20000 log₂ n))
-d = 1.01 n log₂log₂ n / log₂ n
-b = floor(3200 log₂ n / log₂log₂ n).
-```
-
-Except with probability at most
+For every `n ≥ 2^120`, put `L(n) = log₂ n / log₂log₂ n`. All three results use
 
 ```text
-exp(-(1/14060) n log₂log₂ n/log₂ n),
+e = floor(n / (18000 L(n)))
+b = floor(3600 L(n))
+failure probability ≤ exp(-n / (11000 L(n))).
 ```
 
-every union of at most `e` left intervals of width `b` can be deleted while
-leaving a directed path on at least `d` vertices. The intervals end at their
-chosen endpoints, may overlap, and are truncated at vertex zero. Their endpoints
-may be chosen after sampling the entire graph. The failure bound tends to zero.
+| Distribution | Depth in vertices | Registered theorem in `ProofOfSpaceStatement` |
+| --- | --- | --- |
+| DRSample(n) | `1.48 n / L(n)` | `drsample_conjecture2` |
+| BucketSample(n,r), every integer r ≥ 1 | `1.48 n / L(n)` | `bucketSample_block_robustness` |
+| HarmonicSample(n,r), every integer r ≥ 1 | `2 n / L(n)` | `harmonicSample_block_robustness` |
 
-The constants are `c₀ = 1/14060`, `c₁ = 1/20000`, `c₂ = 1.01`, and `c₃ = 3200`.
-The registered theorem `drsample_conjecture2` takes `n >= 2^120` directly.
-The same cutoff applies to Conjecture 1 and to the ideal degree-six Filecoin
-sampler through `drsample_conjecture1` and `filecoin_bucket6`.
+Each event holds simultaneously for every set of at most `e` endpoints,
+including endpoints chosen after sampling the graph. Deleting their left
+intervals of width `b` leaves a path of the stated depth. Intervals may overlap
+and are truncated at vertex zero.
 
-## Sampling and statement fidelity
+## Exact distributions
 
-Vertices are numbered from zero. Include each predecessor edge. At a vertex
-`v >= 2`, choose a bucket uniformly from `1, ..., ceil(log₂(v+1))`, cap its
-upper endpoint at `v`, and choose a distance uniformly from
-`max(2,ceil(upper/2)), ..., upper`. The random parent is `v-distance`. All these
-choices are independent across vertices. The dummy parent at vertices zero and
-one is zero and creates no extra forward edge. This ceiling convention removes
-a repeated capped bucket when `v+1` is a power of two; the paper's harmonic
-argument also covers the original floor-plus-one convention.
+All graphs include predecessor edges. DRSample independently chooses one
+bucket in `1,…,ceil(log₂(v+1))`, caps its upper endpoint at `v`, and uniformly
+draws a length from `max(2,ceil(upper/2)),…,upper`.
 
-`drsampleProbability` is the finite sum of these product probabilities over
-parent assignments. The proof library proves its normalization and identifies
-it with the distribution used in the multiscale argument. In particular, the
-Challenge does not assume an avoidance bound or depth robustness of an
-unspecified sampler. Path length counts vertices, not edges.
+BucketSample uses the same fine position `r v` for all `r` independent draws
+at vertex `v`. Each draw uniformly chooses one of `ceil(log₂(r v))` buckets,
+uses the lower endpoint `max(2,floor(upper/2))`, and rounds the fine parent
+position downward by division by `r`.
 
-## Proof and the stronger finite bound
+HarmonicSample independently draws `r` lengths from `2,…,v`, with probability
+`1/(s(H_v-1))` for length `s`. The normalization and the inequality
+`H_v-1 ≤ ln n` are proved. The public finite-sum probabilities are identified
+with normalized product laws. Vertices zero and one use a dummy parent zero;
+the ordered edge relation prevents this from adding a spurious edge.
 
-The following bounds are proved in the supporting Lean modules.
+The harmonic avoidance coefficients are `1/(log₂ n+1)`,
+`r/(log₂(r n)+1)`, and `r/ln n`, respectively. The proof covers every positive
+integer `r`; it does not specialize BucketSample to five draws. Maximum
+indegree is two for DRSample and at most `r+1` for the other samplers.
 
-1. A useful bucket for distance `r` has at most `r` choices, including capped
-   buckets. Hence the harmonic parent coefficient is at least `1/(log₂ n+1)`.
-2. At deletion-density threshold `4/5`, the one-sided covering inequality leaves
-   at least `M-3|S|/2` good vertices: both exceptional sets contain every
-   deleted vertex, and their overlap is subtracted. A surviving distance with a
-   good endpoint shrinks by at most five under rank compression. The increasing-
-   subsequence estimate and Jensen's inequality give depth `(M/2) exp(-20W/M)` when
-   `|S| <= M/3`, where `W` is the forbidden harmonic mass.
-3. Exposing actual depth labels gives an exponential moment at most `2^(M-|S|)`.
-   Markov's inequality and the sum over all deleted sets give a single event
-   `W <= 8M/(3λ)` for every `S`, with failure `exp(-(4/3-ln 3)M)`.
-4. Group vertices into blocks of size `m`. First-third destination ports and
-   last-third source ports give
-   `λ = floor(m/3)²/[m(log₂ n+1)]`. A metagraph path lifts through intact blocks,
-   contributing at least `m/3` vertices per visited block. A left interval of
-   width at most `m` touches at most two blocks.
-5. With `m = ceil(3200 log₂ n/log₂log₂ n)`, the verified rounding estimates
-   give the displayed constants and failure coefficient for every `n >= 2^120`.
-   The proof certifies depth at least `1.01 n log₂log₂ n/log₂ n`, including all
-   floors and ceilings. A quadratic Taylor sum with a bounded cubic remainder
-   gives `exp((303/2000) log₂ 120) <= 57/20` for the numerical base case,
-   using `6 <= log₂ 120 <= 691/100`. The bound on
-   `ln 3` certifies `(4/3-ln 3)/3300 >= 1/14060`.
+## Proof and paper alignment
 
-The finite result, for `12 <= m <= n`, is
+The overlap of the two exceptional vertex sets gives at least `M-3|S|/2`
+good vertices. The deterministic shallow-label estimate is
+`(M/2) exp(-20W/M)` when `|S| ≤ M/3`.
 
-```text
-e = floor(floor(n/m)/6)
-d = (m floor(n/m)/6) exp(-160 m (log₂ n+1)/(3 floor(m/3)²))
-b = m,
-```
+The two-thirds exponential moment is at most `3^(M-|S|)`. Summing over all
+deleted sets gives `W ≤ 12M/(5λ)` on a single event, with failure
+`exp(-(8/5-ln 4)M)`. Thus the multiscale depth is `(M/2) exp(-48/λ)`.
 
-with failure at most `exp(-(4/3-ln 3)floor(n/m))`. This retains the stronger
-depth whose asymptotic expression at the selected block width is
-`(n/6)(log₂ n)^(-3/(20 ln 2))`, with exponent approximately `0.216404`.
-The public conjecture parameters give depth `1.01 n log₂log₂ n/log₂ n`.
-The library also retains the older finite tradeoffs, Conjecture 1, and the
-indegree-six Filecoin BucketSample/MetaBucket corollary. Filecoin's five
-independent draws and downward rounding are modeled explicitly; a fixed
-pseudorandom seed or machine-word sampling is not certified.
+For block size `B = 20a`, triangular source/destination ports supply at least
+`119 B²/800` eligible pairs. Averaging over all `B` shifts bounds the number
+of blocks touched by the endpoint intervals. The finite theorem applies
+simultaneously to all positive widths and endpoint budgets satisfying
+`e(b+B) ≤ (n-2B)/3`, with failure `B exp(-(8/5-ln 4)(n/B-2))`.
 
-The good-vertex estimate is published as Claim 2 in
-[Alwen–Blocki–Harsha](https://eprint.iacr.org/2017/443.pdf), attributed there
-to Erdős–Graham–Szemerédi. That paper also supplies the sampler and restricted
-metagraph construction. The treap ancestor probability is classical;
-[Seidel–Aragon](https://doi.org/10.1007/BF01940876) is a reference. The additional
-increasing-subsequence, depth-label, and probability arguments are proved here.
-The target conjecture is in the
-[CRYPTO 2019 full version](https://eprint.iacr.org/2018/944).
+The Lean proof lifts paths through block centers directly. The first intact
+half-block already supplies `9a` vertices, yielding the slightly stronger
+finite depth `(9/40)(n-2B) exp(-323/(ηB))`; the paper's rounded-height bound
+subtracts a further `9B/20`. Both imply the displayed sampler parameters.
+The specialization `B = 20 ceil(116 L(n))`, including its rounding and all
+numerical inequalities at `2^120`, is checked by Lean.
+
+The former public Conjecture 1 and degree-six Filecoin corollaries and their
+obsolete parameter modules have been removed. BucketSample's arbitrary-`r`
+theorem includes the five-draw case. The registered scope is these three
+sampler theorems and their supporting combinatorial/probability development;
+the paper's cited pebbling optimality and block-to-fractional reductions are
+not additional registered statements in this project.
 
 ## Verification and layout
 
 ```sh
 lake build
+python3 ../scripts/check-statement-surface.py drsample
 ../scripts/verify-comparator.sh drsample
 ```
 
-- `Challenge.lean`: self-contained definitions and the single advertised theorem.
-- `Solution.lean`: its proof from `ProofOfSpace.DRSample.ExplicitParameters`.
-- `ProofOfSpace/DRSample/Statement.lean`: the same public definitions for use by proofs.
-- `ProofOfSpace/DRSample/Registry.lean`, `DistributionMap.lean`: the sampling bridge.
-- `ProofOfSpace/DRSample/OptimizedRobustness.lean`: the overlap improvement and
-  stronger finite graph theorem.
-- `ProofOfSpace/DRSample/ExplicitParameters.lean`: the verified numerical cutoff,
-  rounded parameters, exact DRSample theorem, and Filecoin specialization.
-- `ProofOfSpace/DRSample/`: the complete multiscale and Filecoin development.
-- `comparator.json`: compares only `drsample_conjecture2`, with NanoDa enabled.
-- `formalization.yaml`: result, provenance, scope, and automation metadata.
+- `Challenge.lean`, `Solution.lean`: the three matching submission statements.
+- `Statement.lean`, `Registry.lean`, `MultiSamplerRegistry.lean`: public
+  definitions and distribution bridges.
+- `HarmonicSample.lean`, `BucketSample.lean`: exact sampler laws and avoidance.
+- `MomentSharp.lean`, `MultiscaleSharp.lean`: revised moment and depth estimates.
+- `Triangular*.lean`, `ShiftedBlocks.lean`, `ShiftedRobustness.lean`: port
+  counting, path lifting, common sampling events, and shift averaging.
+- `LogEstimates.lean`, `PaperParameters.lean`, `PaperRobustness.lean`:
+  verified numerical cutoff and the three concrete sampler results.
+- `ExplicitParameters.lean`: entry point for the current concrete results.
+- `comparator.json`: selects all three theorems, with NanoDa enabled.
 
-Only the intentional Challenge placeholder omits a proof. The proof modules
-use no custom axioms; Comparator permits `propext`, `Classical.choice`, and
-`Quot.sound`. The license is the repository-root Apache-2.0 license.
+Only the three intentional Challenge placeholders use `sorry`. The solution
+and supporting proofs use no custom axioms; Comparator permits only
+`propext`, `Classical.choice`, and `Quot.sound`. The repository-root
+Apache-2.0 license applies.

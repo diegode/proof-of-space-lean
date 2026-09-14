@@ -2,22 +2,24 @@
 
 This repository contains two independent Lean projects for separate Palomar entries.
 Each has a small self-contained `Challenge.lean`, a matching `Solution.lean`, a
-pinned Lake environment, metadata, and one selected Comparator declaration.
+pinned Lake environment, metadata, and selected Comparator declarations.
 
 | Project directory | Registered theorem | Comparator configuration |
 | --- | --- | --- |
-| [drsample](drsample/README.md) | `ProofOfSpaceStatement.drsample_conjecture2` | `drsample/comparator.json` |
+| [drsample](drsample/README.md) | DRSample, BucketSample, and HarmonicSample | `drsample/comparator.json` |
 | [pebbling_latency](pebbling_latency/README.md) | `ProofOfSpaceStatement.pebbling_latency` | `pebbling_latency/comparator.json` |
 
-The DRSample result uses `(c₁,c₂,c₃) = (1/20000,1.01,3200)` with failure
-coefficient `c₀ = 1/14060` and retains the stronger finite depth estimates and
-the ideal indegree-six Filecoin corollary in its proof library. The latency
+The sampler results use deletion constant `1/18000`, block-width constant
+`3600`, and failure coefficient `1/11000` for every `n ≥ 2^120`. The depth
+constant is `1.48` for DRSample and BucketSample and `2` for HarmonicSample;
+both samplers with multiple draws cover every integer `r ≥ 1`. The latency
 project retains its probability and conditional 18-layer Filecoin
 specializations as supporting results.
 
-Both Challenges import Mathlib alone. They contain only the definitions needed
-to state their main theorem and one intentional `sorry`. Proofs and auxiliary
-results belong to the supporting modules and `Solution.lean`.
+Both Challenges import Mathlib alone. The sampler Challenge has three
+intentional theorem placeholders, and the latency Challenge has one.
+Proofs and auxiliary results belong to the supporting modules and
+`Solution.lean`.
 
 Build and verify from the repository root:
 

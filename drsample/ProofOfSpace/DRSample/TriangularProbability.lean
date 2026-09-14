@@ -91,8 +91,7 @@ theorem triangleParents_avoidance {n t a M j : ℕ} (ha : 0 < a)
         -(eta * (triangleOffsets a k.val).card / (20 * a : ℕ)) * w) =
         -(eta * (∑ k : Fin (10 * a), ((triangleOffsets a k.val).card : ℝ)) /
           (20 * a : ℕ)) * w := by
-      simp only [neg_mul, ← sum_neg_distrib, ← sum_mul, ← sum_div, ← mul_sum,
-        ← neg_div]
+      simp only [neg_mul, sum_neg_distrib, ← sum_mul, ← sum_div, ← mul_sum]
     rw [hsum]
     apply mul_le_mul_of_nonneg_right _ hw
     apply neg_le_neg
