@@ -3,8 +3,7 @@ import ProofOfSpace.DRSample.HeightLine
 /-! # Triangular ports in a shifted partition of blocks of size `20 a`
 
 Each eligible crossing gains at least `9 a` vertices between block centers.
-This provides a deterministic path-lifting version of the paper's rounded-height
-argument, with the same harmonic coefficient.
+This is the deterministic path-lifting argument used in the paper.
 -/
 namespace ProofOfSpace.DRSample
 open Finset Classical

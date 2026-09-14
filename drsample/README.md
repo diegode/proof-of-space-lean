@@ -62,10 +62,9 @@ of blocks touched by the endpoint intervals. The finite theorem applies
 simultaneously to all positive widths and endpoint budgets satisfying
 `e(b+B) ≤ (n-2B)/3`, with failure `B exp(-(8/5-ln 4)(n/B-2))`.
 
-The Lean proof lifts paths through block centers directly. The first intact
-half-block already supplies `9a` vertices, yielding the slightly stronger
-finite depth `(9/40)(n-2B) exp(-323/(ηB))`; the paper's rounded-height bound
-subtracts a further `9B/20`. Both imply the displayed sampler parameters.
+Both proofs lift paths through block centers directly. The first intact
+half-block already supplies `9a` vertices, yielding the finite depth
+`(9/40)(n-2B) exp(-323/(ηB))` without an additive rounding loss.
 The specialization `B = 20 ceil(116 L(n))`, including its rounding and all
 numerical inequalities at `2^120`, is checked by Lean.
 

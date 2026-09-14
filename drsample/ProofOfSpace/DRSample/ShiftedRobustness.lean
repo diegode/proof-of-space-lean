@@ -30,8 +30,8 @@ theorem shifted_full_blocks {n B : ℕ} (hB : 0 < B) (hn : 2 * B < n) (t : Fin B
   have hdiv := (div_le_iff₀ hBR).mpr hNR
   linarith
 
-/-- A slightly stronger form of the paper's finite bound: deterministic lifting
-through the first intact half-block removes the final `-2B` depth loss. -/
+/-- The paper's finite bound: deterministic lifting through the first intact
+half-block avoids an additive rounding loss. -/
 theorem finite_avoidance_robustness {n a : ℕ} (ha : 0 < a) (hn : 2 * (20 * a) < n)
     (p : ℕ → FiniteLaw (Finset (Fin n))) {eta : ℝ} (heta : 0 < eta)
     (havoid : ∀ v < n, ∀ U : Finset (Fin n),
@@ -117,7 +117,8 @@ theorem finite_avoidance_robustness {n a : ℕ} (ha : 0 < a) (hn : 2 * (20 * a) 
   push_cast at h ⊢
   nlinarith
 
-/-- Exactly the finite depth expression displayed in the paper's appendix. -/
+/-- The earlier rounded-height bound, retained as a relaxation of
+`finite_avoidance_robustness`. -/
 theorem finite_avoidance_paper {n a : ℕ} (ha : 0 < a) (hn : 2 * (20 * a) < n)
     (p : ℕ → FiniteLaw (Finset (Fin n))) {eta : ℝ} (heta : 0 < eta)
     (havoid : ∀ v < n, ∀ U : Finset (Fin n),
