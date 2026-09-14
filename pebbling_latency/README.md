@@ -92,13 +92,10 @@ including those chosen after observing the wiring. Reuse requires no factor of
 `chung8Beta` is defined by the entropy formula. Its exact finite union bound is
 `chung8FailureBound`. The Filecoin corollary assumes
 `ChungSecurityConditions n lambda (1/100) (24/25)`, which requires this sum to be
-at most `2^(-lambda)`. The condition `n >= 10000` handles latency rounding;
-it does not by itself establish a chosen security level.
+at most `2^(-lambda)`.
 
 The theorem is about an unpebbled path in a static snapshot. Within-layer depth
-robustness remains a graph assumption. The development does not include a
-reduction to time-indexed cryptographic latency or identify Filecoin's Feistel
-wiring with a uniform port permutation.
+robustness remains a graph assumption.
 
 ## Proof organization
 
@@ -126,11 +123,8 @@ lake build
 
 The proved library and `Solution.lean` contain no `sorry`. `Challenge.lean`
 intentionally omits proof bodies. Comparator checks the single advertised statement and
-the permitted axioms (`propext`, `Quot.sound`, `Classical.choice`); NanoDa replays
-the solution through its independent kernel. The toolchain and verifier revisions
-are pinned by the repository.
+the permitted axioms (`propext`, `Quot.sound`, `Classical.choice`).
 
 The argument builds on Leonid Reyzin's *Proofs of Space with Maximal Hardness*
 (FOCS 2024) and Ben Fisch's *Tight Proofs of Space and Replication*
-(EUROCRYPT 2019). Licensed under Apache-2.0.
-
+(EUROCRYPT 2019).

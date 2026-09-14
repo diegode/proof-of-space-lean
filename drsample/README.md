@@ -69,13 +69,6 @@ subtracts a further `9B/20`. Both imply the displayed sampler parameters.
 The specialization `B = 20 ceil(116 L(n))`, including its rounding and all
 numerical inequalities at `2^120`, is checked by Lean.
 
-The former public Conjecture 1 and degree-six Filecoin corollaries and their
-obsolete parameter modules have been removed. BucketSample's arbitrary-`r`
-theorem includes the five-draw case. The registered scope is these three
-sampler theorems and their supporting combinatorial/probability development;
-the paper's cited pebbling optimality and block-to-fractional reductions are
-not additional registered statements in this project.
-
 ## Verification and layout
 
 ```sh
@@ -98,5 +91,4 @@ python3 ../scripts/check-statement-surface.py drsample
 
 Only the three intentional Challenge placeholders use `sorry`. The solution
 and supporting proofs use no custom axioms; Comparator permits only
-`propext`, `Classical.choice`, and `Quot.sound`. The repository-root
-Apache-2.0 license applies.
+`propext`, `Classical.choice`, and `Quot.sound`.
