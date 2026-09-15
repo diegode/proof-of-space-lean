@@ -1,14 +1,14 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/mathlib-initiative/formalization.yaml/main/schema/formalization.schema.json
 version: "v0.4"
 project:
-  name: "Block depth robustness of DRSample, BucketSample, and HarmonicSample"
+  name: "Block depth robustness of DRSample and BucketSample"
   description: >-
-    Explicit block-depth-robustness theorems for the exact independent DRSample,
-    BucketSample(n,r), and HarmonicSample(n,r) distributions, for every n >= 2^120
-    and every integer r >= 1. With L(n)=log_2 n/log_2 log_2 n, all three have
+    Explicit block-depth-robustness theorems for the exact independent DRSample
+    and BucketSample(n,r) distributions, for every n >= 2^120 and every integer
+    r >= 1. With L(n)=log_2 n/log_2 log_2 n, both have
     e=floor(n/(18000 L(n))), b=floor(3600 L(n)), and failure at most
-    exp(-n/(11000 L(n))). The depth is 1.48 n/L(n) for DRSample and BucketSample
-    and 2 n/L(n) for HarmonicSample. The proof establishes the two-thirds
+    exp(-n/(11000 L(n))). The depth is 1.48 n/L(n). Both sampler proofs apply
+    the paper's common avoidance lemma. The proof establishes the two-thirds
     exponential moment, the improved multiscale bound, triangular port geometry,
     averaging over shifted block partitions, and the numerical cutoff.
   authors: ["Diego de Estrada (@diegode)"]
@@ -48,12 +48,14 @@ sources:
 related_formalizations: []
 status:
   scope: >-
-    Three registered exact-sampler statements: drsample_conjecture2,
-    bucketSample_block_robustness, and harmonicSample_block_robustness.
-    Supporting results include normalization, harmonic avoidance, the multiscale
-    depth bound, triangular path lifting, shift averaging, and all explicit
+    One registered exact-sampler statement: drsample_conjecture2.
+    Solution.lean also proves bucketSample_block_robustness for every r >= 1.
+    Supporting results include normalization, reciprocal-distance avoidance,
+    the multiscale depth bound, triangular path lifting, shift averaging, and all explicit
     numerical estimates. The paper's cited pebbling optimality and fractional
-    robustness reductions are outside the registered scope of this project.
+    robustness reductions, and its general conditional-label multiscale theorem,
+    are outside the public theorem scope. The required graph specialization of
+    the multiscale theorem is proved.
   sorry_count: 0
   sorry_in_definitions: 0
   axioms: ["propext", "Classical.choice", "Quot.sound"]
@@ -68,13 +70,6 @@ status:
       file: "Solution.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
-      comparator_config: "comparator.json"
-      literature_dependencies: []
-    - declaration: "ProofOfSpaceStatement.harmonicSample_block_robustness"
-      file: "Solution.lean"
-      sorry_count: 0
-      axioms: ["propext", "Classical.choice", "Quot.sound"]
-      comparator_config: "comparator.json"
       literature_dependencies: []
 automation:
   methods:
@@ -91,16 +86,18 @@ fidelity:
   divergences: >-
     The statements specify the paper's exact finite independent distributions,
     including capped buckets, upward rounding for DRSample, downward rounding
-    and the shared fine position for BucketSample, and harmonic normalization
-    for HarmonicSample. Path lengths count vertices. The shifted triangular
-    metagraph proof lifts paths directly through block centers, yielding a
-    slightly stronger finite depth bound than the paper's rounded-height
-    intermediate inequality; the advertised parameters and cutoff agree.
+    and the shared fine position for BucketSample. Path lengths count vertices.
+    Both proofs lift paths directly through block centers. Lean specializes the
+    half-block size to s = 10 ceil(116 L(n)), whereas the paper uses
+    s = ceil(1160 L(n)); both lie between 1160 L(n) and 1161 L(n). Lean's
+    integral port condition is slightly stricter and ensures a gain of 9s/10.
+    The displayed sampler parameters and cutoff agree.
 review:
   status: "self-assessed"
   notes: >-
-    The development is checked by Lean and the configured Comparator and NanoDa
-    kernels. These checks establish proof validity and statement agreement;
+    Lean checks both sampler proofs. The configured Comparator and NanoDa
+    kernels check the sole Challenge theorem, drsample_conjecture2.
+    These checks establish proof validity and statement agreement;
     no independent human mathematical review is claimed.
 alignment:
   namespace: "ProofOfSpaceStatement"
@@ -109,11 +106,7 @@ alignment:
       lean: "ProofOfSpaceStatement.drsample_conjecture2"
       module: "Solution"
       status: "proved with the paper's explicit constants and exact independent sampler"
-    - source: "paper/finalnew/sections/robustness.tex, thm:bucket-optimal"
+    - source: "paper/finalnew/sections/robustness.tex, cor:bucket-optimal"
       lean: "ProofOfSpaceStatement.bucketSample_block_robustness"
-      module: "Solution"
-      status: "proved with the paper's explicit constants and exact independent sampler"
-    - source: "paper/finalnew/sections/robustness.tex, thm:harmonic-block-robustness"
-      lean: "ProofOfSpaceStatement.harmonicSample_block_robustness"
       module: "Solution"
       status: "proved with the paper's explicit constants and exact independent sampler"

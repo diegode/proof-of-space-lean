@@ -1,8 +1,8 @@
 import ProofOfSpace.DRSample.PaperRobustness
 
-/-! # Explicit sampler theorems matching the current paper
+/-! # Entry point for the paper's concrete avoidance lemma
 
 The verified parameters and cutoff are in `PaperParameters`; `PaperRobustness`
-applies them to the exact DRSample, BucketSample, and HarmonicSample laws.
-The public submission statements are proved in `Solution.lean`.
+proves the common avoidance lemma. Its DRSample and BucketSample applications
+are proved only in `Solution.lean`.
 -/

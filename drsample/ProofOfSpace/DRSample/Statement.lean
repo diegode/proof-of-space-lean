@@ -68,13 +68,6 @@ noncomputable def bucketSampleParentProbability {n : ℕ} (r : ℕ) (v u : Fin n
             (1 : ℝ) / (bucketSampleBucket (r * v.val) (k.val + 1)).card else 0
   else if u.val = 0 then 1 else 0
 
-/-- One HarmonicSample parent: length `s∈{2,…,v}` has mass `1/(s(H_v-1))`. -/
-noncomputable def harmonicSampleParentProbability {n : ℕ} (v u : Fin n) : ℝ :=
-  if 2 ≤ v.val then
-    if u.val + 2 ≤ v.val then
-      ((1 : ℝ) / (v.val - u.val : ℕ)) / (∑ s ∈ Icc 2 v.val, (1 : ℝ) / s) else 0
-  else if u.val = 0 then 1 else 0
-
 /-- Product probability over all destinations and all independent parent draws. -/
 noncomputable def multiSampleProbability (n r : ℕ) (p : Fin n → Fin n → ℝ)
     (event : (Fin n → Fin r → Fin n) → Prop) : ℝ := by
@@ -85,10 +78,6 @@ noncomputable def multiSampleProbability (n r : ℕ) (p : Fin n → Fin n → �
 noncomputable def bucketSampleProbability (n r : ℕ)
     (event : (Fin n → Fin r → Fin n) → Prop) : ℝ :=
   multiSampleProbability n r (bucketSampleParentProbability r) event
-
-noncomputable def harmonicSampleProbability (n r : ℕ)
-    (event : (Fin n → Fin r → Fin n) → Prop) : ℝ :=
-  multiSampleProbability n r harmonicSampleParentProbability event
 
 /-- The predecessor edge together with the `r` chosen parent edges. -/
 def multiSampleEdge {n r : ℕ} (parents : Fin n → Fin r → Fin n) (u v : Fin n) : Prop :=

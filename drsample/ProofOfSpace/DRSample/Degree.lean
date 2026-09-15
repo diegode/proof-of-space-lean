@@ -3,7 +3,7 @@ import ProofOfSpace.DRSample.MultiSamplerRegistry
 namespace ProofOfSpaceStatement
 open Finset Classical ProofOfSpace.DRSample
 
-/-- Both samplers with `r` draws have maximum indegree at most `r+1`. -/
+/-- The graph with `r` parent draws has maximum indegree at most `r+1`. -/
 theorem multiSample_indegree {n r : ℕ} (parents : Fin n → Fin r → Fin n) (v : Fin n) :
     (univ.filter fun u => multiSampleEdge parents u v).card ≤ r + 1 := by
   apply (card_le_card (show (univ.filter fun u => multiSampleEdge parents u v) ⊆

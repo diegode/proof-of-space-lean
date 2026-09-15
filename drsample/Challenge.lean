@@ -53,58 +53,6 @@ def DRSampleBlockDepthRobust {n : ℕ} (parents : Fin n → Fin n)
       (∀ u ∈ path, ∀ v ∈ endpoints, ¬ (u ≤ v ∧ v.val < u.val + b)) ∧
       d ≤ (path.length : ℝ)
 
-/-- Fine distances in a BucketSample bucket, with its downward-rounded lower endpoint. -/
-def bucketSampleBucket (p k : ℕ) : Finset (Fin (p + 1)) :=
-  univ.filter fun s => max 2 (min p (2 ^ k) / 2) ≤ s.val ∧ s.val ≤ min p (2 ^ k)
-
-/-- One BucketSample draw at the shared fine position `r v`. -/
-noncomputable def bucketSampleParentProbability {n : ℕ} (r : ℕ) (v u : Fin n) : ℝ := by
-  classical
-  exact if 2 ≤ v.val then
-    ∑ k : Fin (Nat.clog 2 (r * v.val)),
-      ((1 : ℝ) / Nat.clog 2 (r * v.val)) *
-        ∑ s ∈ bucketSampleBucket (r * v.val) (k.val + 1),
-          if (r * v.val - s.val) / r = u.val then
-            (1 : ℝ) / (bucketSampleBucket (r * v.val) (k.val + 1)).card else 0
-  else if u.val = 0 then 1 else 0
-
-/-- One HarmonicSample parent: length `s∈{2,…,v}` has mass `1/(s(H_v-1))`. -/
-noncomputable def harmonicSampleParentProbability {n : ℕ} (v u : Fin n) : ℝ :=
-  if 2 ≤ v.val then
-    if u.val + 2 ≤ v.val then
-      ((1 : ℝ) / (v.val - u.val : ℕ)) / (∑ s ∈ Icc 2 v.val, (1 : ℝ) / s) else 0
-  else if u.val = 0 then 1 else 0
-
-/-- Product probability over all destinations and all independent parent draws. -/
-noncomputable def multiSampleProbability (n r : ℕ) (p : Fin n → Fin n → ℝ)
-    (event : (Fin n → Fin r → Fin n) → Prop) : ℝ := by
-  classical
-  exact ∑ parents : Fin n → Fin r → Fin n,
-    if event parents then ∏ v : Fin n, ∏ j : Fin r, p v (parents v j) else 0
-
-noncomputable def bucketSampleProbability (n r : ℕ)
-    (event : (Fin n → Fin r → Fin n) → Prop) : ℝ :=
-  multiSampleProbability n r (bucketSampleParentProbability r) event
-
-noncomputable def harmonicSampleProbability (n r : ℕ)
-    (event : (Fin n → Fin r → Fin n) → Prop) : ℝ :=
-  multiSampleProbability n r harmonicSampleParentProbability event
-
-/-- The predecessor edge together with the `r` chosen parent edges. -/
-def multiSampleEdge {n r : ℕ} (parents : Fin n → Fin r → Fin n) (u v : Fin n) : Prop :=
-  u < v ∧ (u.val + 1 = v.val ∨ ∃ j : Fin r, parents v j = u)
-
-def MultiSampleBlockDepthRobust {n r : ℕ} (parents : Fin n → Fin r → Fin n)
-    (e : ℕ) (d : ℝ) (b : ℕ) : Prop :=
-  ∀ endpoints : Finset (Fin n), endpoints.card ≤ e →
-    ∃ path : List (Fin n), path ≠ [] ∧ path.IsChain (multiSampleEdge parents) ∧
-      (∀ u ∈ path, ∀ v ∈ endpoints, ¬ (u ≤ v ∧ v.val < u.val + b)) ∧
-      d ≤ (path.length : ℝ)
-
-end ProofOfSpaceStatement
-
-namespace ProofOfSpaceStatement
-
 /-- DRSample: Theorem `thm:dr-conjecture2` of the paper.
 The depth counts vertices and the endpoint set may depend on the sampled graph. -/
 theorem drsample_conjecture2 {n : ℕ} (hn : 2 ^ 120 ≤ n) :
@@ -112,28 +60,6 @@ theorem drsample_conjecture2 {n : ℕ} (hn : 2 ^ 120 ≤ n) :
     drsampleProbability n (fun parents => DRSampleBlockDepthRobust parents
       (Nat.floor ((n : ℝ) / (18000 * L)))
       ((37 / 25 : ℝ) * n / L)
-      (Nat.floor (3600 * L))) ≥
-    1 - Real.exp (-(n : ℝ) / (11000 * L)) := by
-  sorry
-
-/-- BucketSample for every `r ≥ 1`: Theorem `thm:bucket-optimal`.
-The depth counts vertices and the endpoint set may depend on the sampled graph. -/
-theorem bucketSample_block_robustness {n r : ℕ} (hn : 2 ^ 120 ≤ n) (hr : 1 ≤ r) :
-    let L := Real.logb 2 n / Real.logb 2 (Real.logb 2 n)
-    bucketSampleProbability n r (fun parents => MultiSampleBlockDepthRobust parents
-      (Nat.floor ((n : ℝ) / (18000 * L)))
-      ((37 / 25 : ℝ) * n / L)
-      (Nat.floor (3600 * L))) ≥
-    1 - Real.exp (-(n : ℝ) / (11000 * L)) := by
-  sorry
-
-/-- HarmonicSample for every `r ≥ 1`: Theorem `thm:harmonic-block-robustness`.
-The depth counts vertices and the endpoint set may depend on the sampled graph. -/
-theorem harmonicSample_block_robustness {n r : ℕ} (hn : 2 ^ 120 ≤ n) (hr : 1 ≤ r) :
-    let L := Real.logb 2 n / Real.logb 2 (Real.logb 2 n)
-    harmonicSampleProbability n r (fun parents => MultiSampleBlockDepthRobust parents
-      (Nat.floor ((n : ℝ) / (18000 * L)))
-      ((2 : ℝ) * n / L)
       (Nat.floor (3600 * L))) ≥
     1 - Real.exp (-(n : ℝ) / (11000 * L)) := by
   sorry

@@ -1,15 +1,8 @@
 import ProofOfSpace.DRSample.Registry
-import ProofOfSpace.DRSample.HarmonicSample
 import ProofOfSpace.DRSample.BucketSample
 
 namespace ProofOfSpace.DRSample
 open Finset Classical ProofOfSpaceStatement
-
-theorem harmonicParentLaw_weight_statement {n : ℕ} (hn : 0 < n) (v u : Fin n) :
-    (harmonicParentLaw hn v.val).weight u = harmonicSampleParentProbability v u := by
-  by_cases hv : 2 ≤ v.val
-  · simp [harmonicParentLaw, v.isLt, hv, harmonicSampleParentProbability, harmonicNormalizer]
-  · simp [harmonicParentLaw, v.isLt, hv, harmonicSampleParentProbability, FiniteLaw.pure, Fin.ext_iff]
 
 theorem bucketParentLaw_weight_statement {n r : ℕ} (hn : 0 < n) (hr : 0 < r) (v u : Fin n) :
     (bucketParentLaw hn hr v.val).weight u = bucketSampleParentProbability r v u := by
@@ -38,15 +31,6 @@ theorem multiSampleProbability_eq {n r : ℕ} (p : Fin n → FiniteLaw (Fin n))
     multiSampleProbability n r (fun v u => (p v).weight u) event =
       (FiniteLaw.pi (fun v : Fin n => FiniteLaw.pi (fun _ : Fin r => p v))).probability event := rfl
 
-theorem harmonicSampleProbability_eq {n r : ℕ} (hn : 0 < n)
-    (event : (Fin n → Fin r → Fin n) → Prop) :
-    harmonicSampleProbability n r event =
-      (FiniteLaw.pi (fun v : Fin n =>
-        FiniteLaw.pi (fun _ : Fin r => harmonicParentLaw hn v.val))).probability event := by
-  rw [← multiSampleProbability_eq]
-  simp_rw [harmonicParentLaw_weight_statement]
-  rfl
-
 theorem bucketSampleProbability_eq {n r : ℕ} (hn : 0 < n) (hr : 0 < r)
     (event : (Fin n → Fin r → Fin n) → Prop) :
     bucketSampleProbability n r event =
@@ -55,10 +39,6 @@ theorem bucketSampleProbability_eq {n r : ℕ} (hn : 0 < n) (hr : 0 < r)
   rw [← multiSampleProbability_eq]
   simp_rw [bucketParentLaw_weight_statement]
   rfl
-
-theorem harmonicSampleProbability_total {n r : ℕ} (hn : 0 < n) :
-    harmonicSampleProbability n r (fun _ => True) = 1 := by
-  rw [harmonicSampleProbability_eq hn, FiniteLaw.probability_true]
 
 theorem bucketSampleProbability_total {n r : ℕ} (hn : 0 < n) (hr : 0 < r) :
     bucketSampleProbability n r (fun _ => True) = 1 := by

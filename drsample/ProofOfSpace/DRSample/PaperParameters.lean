@@ -48,7 +48,7 @@ theorem paper_quadratic_small {n : ℕ} (hn : 2 ^ 120 ≤ n) :
   nlinarith [sq_nonneg (Real.logb 2 n)]
 
 theorem paper_depth_scalar {x c C E : ℝ} (hx : 120 ≤ x) (hc : c ≤ 1 / 5)
-    (hC : 0 ≤ C) (hE : 0 < E)
+    (hE : 0 < E)
     (hbase : Real.exp (c * Real.logb 2 120) ≤ E)
     (hnum : C * (6907 / 1000 : ℝ) * E ≤ (999 * 9 / 40000 : ℝ) * 120) :
     C * Real.logb 2 x ≤ (999 * 9 / 40000 : ℝ) * x * Real.exp (-c * Real.logb 2 x) := by
@@ -94,26 +94,11 @@ theorem paper_depth_scalar {x c C E : ℝ} (hx : 120 ≤ x) (hc : c ≤ 1 / 5)
 theorem paper_depth_scalar_dr {x : ℝ} (hx : 120 ≤ x) :
     (37 / 25 : ℝ) * Real.logb 2 x ≤ (999 * 9 / 40000 : ℝ) * x *
       Real.exp (-(39083 / 278400 : ℝ) * Real.logb 2 x) := by
-  apply paper_depth_scalar hx (by norm_num) (by norm_num) (E := 1319 / 500) (by norm_num)
+  apply paper_depth_scalar hx (by norm_num) (E := 1319 / 500) (by norm_num)
   · have hbound := Real.exp_bound' (n := 10)
       (by norm_num : (0 : ℝ) ≤ 97 / 100) (by norm_num : (97 / 100 : ℝ) ≤ 1) (by norm_num)
     have hmono : Real.exp ((39083 / 278400 : ℝ) * Real.logb 2 120) ≤ Real.exp (97 / 100 : ℝ) :=
       Real.exp_le_exp.mpr (by nlinarith [logb_120_upper])
-    norm_num [Finset.sum_range_succ] at hbound
-    linarith
-  · norm_num
-
-theorem paper_depth_scalar_harmonic {x : ℝ} (hx : 120 ≤ x) :
-    (2 : ℝ) * Real.logb 2 x ≤ (999 * 9 / 40000 : ℝ) * x *
-      Real.exp (-(323 / 2320 * Real.log 2) * Real.logb 2 x) := by
-  apply paper_depth_scalar hx (by linarith [Real.log_two_lt_d9]) (by norm_num)
-    (E := 1949 / 1000) (by norm_num)
-  · have hbound := Real.exp_bound' (n := 10)
-      (by norm_num : (0 : ℝ) ≤ 667 / 1000) (by norm_num : (667 / 1000 : ℝ) ≤ 1) (by norm_num)
-    have hprod := mul_le_mul (le_of_lt Real.log_two_lt_d9) logb_120_upper
-      (by linarith [logb_120_bounds.1]) (by norm_num)
-    have hmono : Real.exp ((323 / 2320 * Real.log 2) * Real.logb 2 120) ≤
-        Real.exp (667 / 1000 : ℝ) := Real.exp_le_exp.mpr (by nlinarith)
     norm_num [Finset.sum_range_succ] at hbound
     linarith
   · norm_num
@@ -169,10 +154,7 @@ theorem paper_integer_parameters {n : ℕ} (hn : 2 ^ 120 ≤ n) :
 theorem paper_depth_parameters {n : ℕ} (hn : 2 ^ 120 ≤ n) :
     (37 / 25 : ℝ) * (n : ℝ) / paperScale n ≤
       (9 / 40 : ℝ) * ((n : ℝ) - 2 * (20 * paperBlockUnit n)) *
-        Real.exp (-323 / ((1 / (Real.logb 2 n + 1)) * (20 * paperBlockUnit n))) ∧
-    (2 : ℝ) * (n : ℝ) / paperScale n ≤
-      (9 / 40 : ℝ) * ((n : ℝ) - 2 * (20 * paperBlockUnit n)) *
-        Real.exp (-323 / ((1 / Real.log n) * (20 * paperBlockUnit n))) := by
+        Real.exp (-323 / ((1 / (Real.logb 2 n + 1)) * (20 * paperBlockUnit n))) := by
   let x := Real.logb 2 n
   let y := Real.logb 2 x
   let B : ℝ := 20 * paperBlockUnit n
@@ -195,20 +177,11 @@ theorem paper_depth_parameters {n : ℕ} (hn : 2 ^ 120 ≤ n) :
     push_cast at h
     change 2 * B ≤ (n : ℝ) / 1000 at h
     linarith
-  have hlog : Real.log n = x * Real.log 2 := by
-    dsimp [x, Real.logb]
-    field_simp
-  have hlog0 : 0 < Real.log n := Real.log_pos (by exact_mod_cast (show 1 < n by omega))
   have hcoef_dr : 323 / ((1 / (x + 1)) * B) ≤ (39083 / 278400 : ℝ) * y := by
     have hxp : 0 < x + 1 := by linarith
     apply (div_le_iff₀ (by positivity : 0 < (1 / (x + 1)) * B)).mpr
     field_simp
     nlinarith
-  have hcoef_harm : 323 / ((1 / Real.log n) * B) ≤ (323 / 2320 * Real.log 2) * y := by
-    apply (div_le_iff₀ (by positivity : 0 < (1 / Real.log n) * B)).mpr
-    field_simp
-    rw [hlog]
-    nlinarith [mul_le_mul_of_nonneg_right hlo (Real.log_pos (by norm_num : (1 : ℝ) < 2)).le]
   have hscalar (C c : ℝ) (hc : C * y ≤ (999 * 9 / 40000 : ℝ) * x * Real.exp (-c * y)) :
       C * (n : ℝ) / paperScale n ≤
         (9 / 40 : ℝ) * ((n : ℝ) - 2 * B) * Real.exp (-c * y) := by
@@ -222,15 +195,10 @@ theorem paper_depth_parameters {n : ℕ} (hn : 2 ^ 120 ≤ n) :
     apply h.trans
     apply mul_le_mul_of_nonneg_right _ (Real.exp_pos _).le
     linarith
-  constructor
-  · apply (hscalar _ _ (paper_depth_scalar_dr hx)).trans
-    have h := mul_le_mul_of_nonneg_left (Real.exp_le_exp.mpr (neg_le_neg hcoef_dr))
-      (show 0 ≤ (9 / 40 : ℝ) * ((n : ℝ) - 2 * B) by nlinarith)
-    simpa only [neg_mul, neg_div] using h
-  · apply (hscalar _ _ (paper_depth_scalar_harmonic hx)).trans
-    have h := mul_le_mul_of_nonneg_left (Real.exp_le_exp.mpr (neg_le_neg hcoef_harm))
-      (show 0 ≤ (9 / 40 : ℝ) * ((n : ℝ) - 2 * B) by nlinarith)
-    simpa only [neg_mul, neg_div] using h
+  apply (hscalar _ _ (paper_depth_scalar_dr hx)).trans
+  have h := mul_le_mul_of_nonneg_left (Real.exp_le_exp.mpr (neg_le_neg hcoef_dr))
+    (show 0 ≤ (9 / 40 : ℝ) * ((n : ℝ) - 2 * B) by nlinarith)
+  simpa only [neg_mul, neg_div] using h
 
 theorem paper_failure_parameters {n : ℕ} (hn : 2 ^ 120 ≤ n) :
     ((20 * paperBlockUnit n : ℕ) : ℝ) *

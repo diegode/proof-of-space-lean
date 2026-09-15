@@ -6,18 +6,18 @@ pinned Lake environment, metadata, and selected Comparator declarations.
 
 | Project directory | Registered theorem | Comparator configuration |
 | --- | --- | --- |
-| [drsample](drsample/README.md) | DRSample, BucketSample, and HarmonicSample | `drsample/comparator.json` |
+| [drsample](drsample/README.md) | `ProofOfSpaceStatement.drsample_conjecture2` | `drsample/comparator.json` |
 | [pebbling_latency](pebbling_latency/README.md) | `ProofOfSpaceStatement.pebbling_latency` | `pebbling_latency/comparator.json` |
 
 The sampler results use deletion constant `1/18000`, block-width constant
 `3600`, and failure coefficient `1/11000` for every `n ≥ 2^120`. The depth
-constant is `1.48` for DRSample and BucketSample and `2` for HarmonicSample;
-both samplers with multiple draws cover every integer `r ≥ 1`. The latency
+constant is `1.48` for DRSample and BucketSample, with BucketSample covering
+every integer `r ≥ 1` as a supporting result in `Solution.lean`. The latency
 project retains its probability and conditional 18-layer Filecoin
 specializations as supporting results.
 
-Both Challenges import Mathlib alone. The sampler Challenge has three
-intentional theorem placeholders, and the latency Challenge has one.
+Both Challenges import Mathlib alone and each has one intentional theorem
+placeholder.
 Proofs and auxiliary results belong to the supporting modules and
 `Solution.lean`.
 
