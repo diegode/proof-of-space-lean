@@ -4,10 +4,11 @@ version: "v0.4"
 project:
   name: "Formalized latency bounds for stacked proofs of space"
   description: >-
-    A Lean 4 uniform-gain latency theorem for stacked depth-robust graphs,
-    with exact integer source counting and a finite Chung port-model union bound.
+    A Lean 4 reference-trajectory latency theorem for stacked depth-robust graphs,
+    with concave expansion, explicit repair accounting, exact integer source
+    counting, and a finite Chung port-model union bound.
     Under explicit graph and security assumptions, the Filecoin specialization
-    gives at least 0.205n path vertices at 18 layers for n at least 10000.
+    gives at least 0.205n path vertices at 17 layers for n at least 10000.
   authors:
     - "Diego de Estrada (@diegode)"
   license: "Apache-2.0"
@@ -27,8 +28,9 @@ sources:
     relationship: "adapts"
     note: >-
       Adapts the footprint and expansion framework to path latency using
-      ordinary depth robustness, an integer source lemma, and uniform-gain
-      affine accounting. The notation pi, alpha_pi, and zeta_delta follows Reyzin.
+      ordinary depth robustness, an integer source lemma, interpolated free
+      trajectories, and explicit finite budget accounting. The notation pi,
+      alpha_pi, and zeta_delta follows Reyzin.
     author_endorsement: "not-contacted"
   - title: "Tight proofs of space and replication"
     authors: ["Ben Fisch"]
@@ -45,23 +47,28 @@ related_formalizations: []
 
 status:
   scope: >-
-    The single registered statement is pebbling_latency. The probability and
-    Filecoin specializations remain proved supporting results in Solution.lean.
-    The deterministic pebbling_latency theorem proves ceil(alpha_pi*n)+(z-1)q
-    path vertices from interval expansion and ordinary depth robustness.
-    The integer source increment is
-    q=min(ceil(alpha_pi*n),ceil(alpha_pi*n)+m-ceil(pi*n)-s+1).
-    The gain is defined as g=beta(m/n)-delta-m/n and assumed positive and
-    minimal throughout the query interval. For zeta-delta at least m/n,
-    the layer condition is ell > 1+rho/g+z*(1+(beta(m/n)-beta(s/n))/g).
-    The challenge set is S; footprint and source cardinalities are m and s.
-    chung8_pebbling_latency_whp lifts this to one uniform permutation of 8n
-    ports reused throughout the stack. The event quantifies over all admissible
-    graphs, positions, and challenges after the wiring is sampled.
-    chung8_pebbling_latency_18 yields 0.205n at the Filecoin pebble fractions
-    for n at least 10000, assuming the exact functional Chung failure sum on
-    [0.01,0.96] is at most 2^-lambda. This security condition remains explicit;
-    n at least 10000 only supplies the finite-width latency estimates.
+    The single registered statement is pebbling_latency. It proves
+    ceil(alpha_pi*n)+(z-1)q path vertices from concave interval expansion and
+    ordinary depth robustness, where
+    q=min(ceil(alpha_pi*n),ceil(alpha_pi*n)+m+1-(ceil(pi*n)+s)).
+    Let p=m/n, sigma=s/n, F=beta-delta, g=F(p)-p, and kappa=F(sigma)-a,
+    with positive band floor a. The scale tau interpolates the free trajectory
+    from a through its first crossing of p. Set D=tau(p)-tau(sigma) and
+    D0=tau(p)-tau(min(p,zeta-delta)). The sufficient layer bound is
+    ell > 1+D0+(z-1)*(1+D)+rho/g+max(0,(rho-kappa)/g+2).
+    Assumptions include monotonicity and concavity on [a,p], positive g,
+    gain at a at least g, gain at sigma at least 2g, and
+    rho+a at most min(zeta-delta,F(p)).
+    chung8_reference_latency_whp lifts this result to one uniform permutation
+    of 8n ports reused throughout the stack, uniformly over admissible graphs,
+    positions, and challenges chosen after sampling.
+    chung8_reference_latency_17 instantiates this theorem with
+    a=0.05089, m=ceil(0.8n), s=ceil(0.195n), z=2, and free crossing time 4.
+    It yields at least 0.205n path vertices at 17 layers for every n at least
+    10000, under the explicit depth-robustness and functional Chung failure-sum
+    assumption on [0.01,0.96]. Its proof includes exact rational trajectory
+    evaluation and finite-width vertex rounding. Seventeen is a sufficient
+    layer count; no matching necessity result is asserted.
   sorry_count: 0
   sorry_in_definitions: 0
   axioms: ["propext", "Classical.choice", "Quot.sound"]
@@ -107,7 +114,11 @@ automation:
 fidelity:
   divergences: >-
     The theorem concerns path latency in a static pebbling snapshot, using
-    ordinary depth robustness and a nondecreasing interval expansion bound.
+    ordinary depth robustness and a nondecreasing concave interval expansion bound.
+    It adapts the local advisor draft using a floor-based interpolated delay
+    and a global repair correction; it does not assert the draft's exact
+    classification theorem or optimal adversarial strategy. ADVISOR_ALIGNMENT.md
+    records these corrections.
     Its probability model samples one uniform permutation of all 8n ports and
     reuses it across layers; no equivalence with deployed Feistel wiring is
     asserted. Within-layer depth robustness and the exact finite security
@@ -133,7 +144,9 @@ alignment:
       module: "Solution"
       status: "adapted and proved"
       note: >-
-        A uniform-gain path latency theorem using exact integer source counts.
+        A reference-trajectory path latency theorem using exact integer source
+        counts and explicit repair accounting; see ADVISOR_ALIGNMENT.md for
+        correspondence with the local advisor draft.
         The Chung port-model union bound is uniform over admissible positions
         and challenges chosen after the sampled wiring is known.
 

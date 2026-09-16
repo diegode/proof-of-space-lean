@@ -1,8 +1,8 @@
-import ProofOfSpace.Amplification
+import ProofOfSpace.ReferenceAmplification
 import ProofOfSpace.PortStack
 import ProofOfSpace.PortExpansionProbability
 import ProofOfSpace.ChungRelative
-import ProofOfSpace.UniformGainNumerics
+import ProofOfSpace.FilecoinReferenceNumerics
 
 namespace ProofOfSpaceStatement
 
@@ -311,50 +311,103 @@ private theorem operational_of_density (W : ChungInterlayer n) (hn : 0 < n)
     (hmono hx ⟨hx.1.trans hxY, hYm⟩ hxY) hnR.le).trans
       (hY.trans (by exact_mod_cast hcard))
 
-/-- Latency amplification. The gain `g` is defined at density `m/n`; the interval
-hypothesis requires at least this gain at every queried density. -/
+/-- Linear interpolation along a finite free trajectory. Only the interval
+between the first and final knots is used. -/
+noncomputable def referenceScale (y : ℕ → ℝ) : ℕ → ℝ → ℝ
+  | 0, _ => 0
+  | t + 1, x => if x ≤ y 1 then (x - y 0) / (y 1 - y 0)
+      else 1 + referenceScale (fun i => y (i + 1)) t x
+
+private theorem referenceScale_eq : referenceScale = Delay.scale := by
+  funext y t x
+  induction t generalizing y with
+  | zero => rfl
+  | succ t ih =>
+    rw [referenceScale, Delay.scale]
+    split_ifs
+    · rfl
+    · rw [ih]
+
+/-- Reference-trajectory latency with explicit accounting for repairs.
+`a` is the band floor and `t` is its free fertility time. The correction
+`max 0 (rho-kappa+2g)` pays for repairs; no optimality claim is assumed. -/
 theorem pebbling_latency {ℓ n : ℕ} (W : ChungInterlayer n)
-    (β : ℝ → ℝ) (απ π : ℝ) (m s z : ℕ) (δ ρ ζ : ℝ) :
+    (β : ℝ → ℝ) (απ π a : ℝ) (m s z t : ℕ) (δ ρ ζ : ℝ) :
+    let p := (m : ℝ) / n
     let σ := (s : ℝ) / n
-    let g := β ((m : ℝ) / n) - δ - (m : ℝ) / n
-    let I := Icc (min (ζ - δ) (β ((m : ℝ) / n) - δ) - ρ) ((m : ℝ) / n)
+    let g := β p - δ - p
+    let y := fun i : ℕ => (fun x => β x - δ)^[i] a
+    let D := referenceScale y t p - referenceScale y t σ
+    let D₀ := referenceScale y t p - referenceScale y t (min p (ζ - δ))
+    let κ := β σ - δ - a
     let q := min (Nat.ceil (απ * n))
       (Nat.ceil (απ * n) + m + 1 - (Nat.ceil (π * n) + s))
-    Nat.ceil (π * n) ≤ m → 1 ≤ q → 1 ≤ z → 0 < g →
-    ρ < min (ζ - δ) (β ((m : ℝ) / n) - δ) → σ ∈ I →
-    MonotoneOn β I → (∀ x ∈ I, g ≤ β x - δ - x) →
-    2 * g ≤ β σ - δ - min (ζ - δ) (β ((m : ℝ) / n) - δ) + ρ →
-    (∀ X : Finset (Fin n), (X.card : ℝ) / n ∈ I →
+    Nat.ceil (π * n) ≤ m → 1 ≤ q → 1 ≤ z → 0 < g → 0 < a →
+    ρ + a ≤ min (ζ - δ) (β p - δ) → σ ∈ Ico a p →
+    MonotoneOn β (Icc a p) → ConcaveOn ℝ (Icc a p) β →
+    g ≤ β a - δ - a → 2 * g ≤ β σ - δ - σ →
+    (∀ i < t, y i < p) → p ≤ y t →
+    (∀ X : Finset (Fin n), (X.card : ℝ) / n ∈ Icc a p →
       β ((X.card : ℝ) / n) * n ≤ (W.neighborhood X).card) →
-    ρ + g + max ((m : ℝ) / n - (ζ - δ)) (g + β ((m : ℝ) / n) - β σ) +
-      ((z : ℝ) - 1) * (g + β ((m : ℝ) / n) - β σ) < g * ℓ →
+    ρ + max 0 (ρ - κ + 2 * g) + g * (1 + D₀ + ((z : ℝ) - 1) * (1 + D)) < g * ℓ →
     PebblingGame.LatencyEvent ℓ n απ δ π ρ ζ
       (Nat.ceil (απ * n) + ((z : ℝ) - 1) * q) W := by
   classical
   dsimp only
-  intro htm hq hz hg hentry hσ hmono hgain hsource hexp hlevels
+  intro htm hq hz hg ha hentry hσ hmono hconc hfloorGain hsource hfirst hreach hexp hlevels
     N hNαπ hNδ hNπ hNρ hNζ hN S hS hSweight
   have hnR : (0 : ℝ) < n := by exact_mod_cast hN.n_pos
   have hρ : 0 ≤ ρ := by simpa [hNρ] using hN.black_total 0
   have htop : (m : ℝ) / n + (β ((m : ℝ) / n) - δ - (m : ℝ) / n) =
       β ((m : ℝ) / n) - δ := by ring
-  let R : UniformGain.Parameters := {
-    p := (m : ℝ) / n, σ := (s : ℝ) / n,
+  let R : Reference.Parameters := {
+    a := a, p := (m : ℝ) / n, σ := (s : ℝ) / n,
     g := β ((m : ℝ) / n) - δ - (m : ℝ) / n,
     h := β ((s : ℝ) / n) - δ, w := ζ - δ, ρ := ρ,
-    g_pos := hg, rho_nonneg := hρ,
-    a_pos := by rw [htop]; linarith,
-    a_le_source := by rw [htop]; exact hσ.1,
-    source_le_p := hσ.2,
+    g_pos := hg, rho_nonneg := hρ, a_pos := ha,
+    entry := by rw [htop]; linarith,
+    a_le_source := hσ.1, source_le_p := hσ.2.le,
     h_le := by
       rw [htop]
-      exact sub_le_sub_right (hmono hσ ⟨hσ.1.trans hσ.2, le_rfl⟩ hσ.2) _,
-    source_guard := by rw [htop]; linarith }
-  have hrange : Icc R.a R.p =
-      Icc (min (ζ - δ) (β ((m : ℝ) / n) - δ) - ρ) ((m : ℝ) / n) := by
-    dsimp [UniformGain.Parameters.a, R]; rw [htop]
-  have hcost : R.C = R.g + β ((m : ℝ) / n) - β ((s : ℝ) / n) := by
-    dsimp [UniformGain.Parameters.C, R]; ring
+      exact sub_le_sub_right (hmono ⟨hσ.1, hσ.2.le⟩
+        ⟨hσ.1.trans hσ.2.le, le_rfl⟩ hσ.2.le) _,
+    source_guard := by linarith [hσ.1] }
+  have hgain' : ∀ x ∈ Icc R.a R.p, x + R.g ≤ β x - δ := by
+    intro x hx
+    exact Delay.gain_on_band hconc (by linarith) (by dsimp [R]; linarith) hx
+  have hconc' : ConcaveOn ℝ (Icc R.a R.p) (fun x => β x - δ) := by
+    convert hconc.add_const (-δ) using 1 <;> rfl
+  let T := Delay.ofFunction (fun x => β x - δ) R.a R.p R.g t hg
+    (lt_of_le_of_lt hσ.1 hσ.2) hgain' hfirst hreach (by dsimp [R]; ring) hconc'
+  let C := Reference.clockOfTrajectory R β δ hgain' le_rfl hmono htop.symm T rfl
+  let steps := referenceScale (fun i : ℕ => (fun x => β x - δ)^[i] a) t
+  have hscore (v : ℝ) (hv : v ≤ R.p) :
+      C.score v = R.p + R.g * (steps v - steps R.p) := by
+    change T.clock v = _
+    rw [Delay.Trajectory.clock, if_pos hv]
+    dsimp only [steps]
+    rw [referenceScale_eq]
+    rfl
+  have hpU : R.p ≤ R.U := by dsimp [Reference.Parameters.U]; linarith [R.g_pos]
+  have hinitCost : R.U - C.score (min R.U R.w) ≤
+      R.g * (1 + (steps R.p - steps (min R.p R.w))) := by
+    by_cases hw : R.w ≤ R.p
+    · rw [min_eq_right (hw.trans hpU), min_eq_right hw, hscore R.w hw]
+      dsimp [Reference.Parameters.U]; ring_nf; rfl
+    · have hmin : min R.U R.w ∈ Icc R.p R.U :=
+        ⟨le_min hpU (le_of_not_ge hw), min_le_left _ _⟩
+      rw [C.top _ hmin, min_eq_left (le_of_not_ge hw)]
+      dsimp [Reference.Parameters.U] at *
+      linarith [hmin.1]
+  have hlinkCost : R.g + R.U - C.score ((Reference.ofProfile R β δ hgain' le_rfl).F R.σ) ≤
+      R.g * (1 + (steps R.p - steps R.σ)) := by
+    have hm : R.σ ∈ Icc R.a R.U := ⟨R.a_le_source, R.source_le_p.trans hpU⟩
+    have hs := C.step R.σ hm
+    have hlo := C.below R.σ ⟨R.a_le_source, R.source_le_p⟩
+    rw [min_eq_right (by dsimp [Reference.Parameters.U]; linarith)] at hs
+    rw [hscore R.σ R.source_le_p] at hs
+    dsimp [Reference.Parameters.U]
+    nlinarith
   let H : Concrete.StandaloneGraph n :=
     { edge := N.intra, edge_lt := fun {_ _} h => hN.intra_rank h }
   let G := Concrete.portStack H ℓ (fun _ => interlayerEquiv n W)
@@ -374,10 +427,9 @@ theorem pebbling_latency {ℓ n : ℕ} (W : ChungInterlayer n)
     apply Concrete.portStack_expands
     intro k hk X x hx hX
     apply operational_of_density W hN.n_pos β R.a m
-    · rwa [hrange]
+    · exact hmono
     · intro Y hlo hhi
       apply hexp Y
-      rw [← hrange]
       exact ⟨hlo, hhi⟩
     · exact hx
     · exact hX
@@ -394,15 +446,20 @@ theorem pebbling_latency {ℓ n : ℕ} (W : ChungInterlayer n)
     change ζ - δ ≤ _
     rw [Concrete.Pebbling.weight, le_div_iff₀ hnR]
     linarith
-  have hgain' : ∀ x ∈ Icc R.a R.p, x + R.g ≤ β x - δ := by
-    intro x hx
-    rw [hrange] at hx
-    have := hgain x hx
-    change x + (β ((m : ℝ) / n) - δ - (m : ℝ) / n) ≤ _
-    linarith
-  have hlevels' : R.ρ + R.g + max (R.p - R.w) R.C + ((z : ℝ) - 1) * R.C < R.g * ℓ := by
-    rw [hcost]; exact hlevels
-  have hpath := B.latency (E := R) hN.n_pos hgain' le_rfl hGexp hDR htm hq
+  have hlevels' : R.U - C.score (min R.U R.w) + R.ρ + max 0 (R.ρ - R.K) +
+      ((z : ℝ) - 1) * (R.g + R.U - C.score ((Reference.ofProfile R β δ hgain' le_rfl).F R.σ)) <
+      R.g * ℓ := by
+    have hzR : (1 : ℝ) ≤ z := by exact_mod_cast hz
+    have hmul := mul_le_mul_of_nonneg_left hlinkCost (sub_nonneg.mpr hzR)
+    have hK : R.ρ - R.K = ρ - (β ((s : ℝ) / n) - δ - a) +
+        2 * (β ((m : ℝ) / n) - δ - (m : ℝ) / n) := by
+      dsimp [Reference.Parameters.K, R]; ring
+    rw [hK]
+    change R.ρ + max 0 (R.ρ - (β R.σ - δ - a) + 2 * R.g) +
+      R.g * (1 + (steps R.p - steps (min R.p R.w)) +
+        ((z : ℝ) - 1) * (1 + (steps R.p - steps R.σ))) < R.g * ℓ at hlevels
+    nlinarith
+  have hpath := B.reference_latency (E := R) hN.n_pos hgain' le_rfl hGexp C hDR htm hq
     rfl rfl hz hlevels' (S \ N.red 0) hS' hSred hweight
   obtain ⟨u, v, hv, Q, _, hlast, hlength⟩ := hpath
   refine ⟨v, (Finset.mem_sdiff.mp hv).1, Q.nodes, Q.nonempty, Q.chain,
@@ -410,32 +467,37 @@ theorem pebbling_latency {ℓ n : ℕ} (W : ChungInterlayer n)
   rw [List.getLast?_eq_some_getLast Q.nonempty]
   exact congrArg some hlast
 
-/-- The same latency theorem on one uniform Chung port permutation, simultaneously
-for all admissible positions and challenge sets `S`. -/
-theorem chung8_pebbling_latency_whp {ℓ n : ℕ} (lambda : ℕ) (u v : ℝ)
+/-- The reference-trajectory latency theorem on a sampled Chung-8 wiring,
+uniform over all admissible positions chosen after the wiring is observed. -/
+theorem chung8_reference_latency_whp {ℓ n : ℕ} (lambda : ℕ) (u v : ℝ)
     [ChungSecurityConditions n lambda u v]
-    (β : ℝ → ℝ) (απ π : ℝ) (m s z : ℕ) (δ ρ ζ : ℝ) :
+    (β : ℝ → ℝ) (απ π a : ℝ) (m s z t : ℕ) (δ ρ ζ : ℝ) :
+    let p := (m : ℝ) / n
     let σ := (s : ℝ) / n
-    let g := β ((m : ℝ) / n) - δ - (m : ℝ) / n
-    let I := Icc (min (ζ - δ) (β ((m : ℝ) / n) - δ) - ρ) ((m : ℝ) / n)
+    let g := β p - δ - p
+    let y := fun i : ℕ => (fun x => β x - δ)^[i] a
+    let D := referenceScale y t p - referenceScale y t σ
+    let D₀ := referenceScale y t p - referenceScale y t (min p (ζ - δ))
+    let κ := β σ - δ - a
     let q := min (Nat.ceil (απ * n))
       (Nat.ceil (απ * n) + m + 1 - (Nat.ceil (π * n) + s))
-    Nat.ceil (π * n) ≤ m → 1 ≤ q → 1 ≤ z → 0 < g →
-    ρ < min (ζ - δ) (β ((m : ℝ) / n) - δ) → σ ∈ I → I ⊆ Icc u v →
-    MonotoneOn β I → (∀ x ∈ I, g ≤ β x - δ - x) →
-    2 * g ≤ β σ - δ - min (ζ - δ) (β ((m : ℝ) / n) - δ) + ρ →
-    (∀ x ∈ I, β x ≤ chung8Beta x) →
-    ρ + g + max ((m : ℝ) / n - (ζ - δ)) (g + β ((m : ℝ) / n) - β σ) +
-      ((z : ℝ) - 1) * (g + β ((m : ℝ) / n) - β σ) < g * ℓ →
+    Nat.ceil (π * n) ≤ m → 1 ≤ q → 1 ≤ z → 0 < g → 0 < a →
+    ρ + a ≤ min (ζ - δ) (β p - δ) → σ ∈ Ico a p →
+    MonotoneOn β (Icc a p) → ConcaveOn ℝ (Icc a p) β →
+    g ≤ β a - δ - a → 2 * g ≤ β σ - δ - σ →
+    (∀ i < t, y i < p) → p ≤ y t →
+    Icc a p ⊆ Icc u v → (∀ x ∈ Icc a p, β x ≤ chung8Beta x) →
+    ρ + max 0 (ρ - κ + 2 * g) + g * (1 + D₀ + ((z : ℝ) - 1) * (1 + D)) < g * ℓ →
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
       (PebblingGame.LatencyEvent ℓ n απ δ π ρ ζ
         (Nat.ceil (απ * n) + ((z : ℝ) - 1) * q))
       ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
   dsimp only
-  intro htm hq hz hg hentry hσ hI hmono hgain hsource hdom hlevels
+  intro htm hq hz hg ha hentry hσ hmono hconc hfloorGain hsource hfirst hreach hI hdom hlevels
   apply chung8_of_expands_whp lambda u v
   intro W hW
-  apply pebbling_latency W β απ π m s z δ ρ ζ htm hq hz hg hentry hσ hmono hgain hsource
+  apply pebbling_latency W β απ π a m s z t δ ρ ζ htm hq hz hg ha hentry hσ
+    hmono hconc hfloorGain hsource hfirst hreach
   · intro X hX
     have hn : 0 < n := ChungSecurityConditions.n_pos (lambda := lambda) (a := u) (b := v)
     have hnR : (0 : ℝ) < n := by exact_mod_cast hn
@@ -447,27 +509,28 @@ theorem chung8_pebbling_latency_whp {ℓ n : ℕ} (lambda : ℕ) (u v : ℝ)
       ((Nat.le_ceil _).trans (by exact_mod_cast hceil))
   · exact hlevels
 
-/-- Eighteen layers give more than `0.2n` latency at the Filecoin parameters,
-including finite-width rounding and the explicit Chung security assumption. -/
-theorem chung8_pebbling_latency_18 (n lambda : ℕ) (hn : 10000 ≤ n)
+/-- Seventeen layers give at least `0.205n > 0.2n` path vertices via the
+reference-trajectory theorem, with finite-width rounding and explicit security. -/
+theorem chung8_reference_latency_17 (n lambda : ℕ) (hn : 10000 ≤ n)
     [ChungSecurityConditions n lambda (1 / 100) (24 / 25)] :
     HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
-      (PebblingGame.LatencyEvent 18 n (1 / 5) (189 / 5000) (4 / 5) (4 / 5) (9 / 10)
+      (PebblingGame.LatencyEvent 17 n (1 / 5) (189 / 5000) (4 / 5) (4 / 5) (9 / 10)
         (41 / 200 * n)) ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
   have hnR : (10000 : ℝ) ≤ n := by exact_mod_cast hn
   have hnpos : (0 : ℝ) < n := by linarith
   let m := Nat.ceil ((4 : ℝ) / 5 * n)
   let d := Nat.ceil ((1 : ℝ) / 5 * n)
   let s := Nat.ceil ((39 : ℝ) / 200 * n)
+  let p := (m : ℝ) / n
   let σ := (s : ℝ) / n
   let β := ChungCurve.filecoinBeta
-  let g := β ((m : ℝ) / n) - 189 / 5000 - (m : ℝ) / n
+  let g := β p - 189 / 5000 - p
   have hmlo : (4 : ℝ) / 5 * n ≤ m := Nat.le_ceil _
   have hmhi : (m : ℝ) < 4 / 5 * n + 1 := Nat.ceil_lt_add_one (by positivity)
   have hdlo : (1 : ℝ) / 5 * n ≤ d := Nat.le_ceil _
   have hslo : (39 : ℝ) / 200 * n ≤ s := Nat.le_ceil _
   have hshi : (s : ℝ) < 39 / 200 * n + 1 := Nat.ceil_lt_add_one (by positivity)
-  have hm : (m : ℝ) / n ∈ Icc ((4 : ℝ) / 5) (8001 / 10000) := by
+  have hp : p ∈ Icc ((4 : ℝ) / 5) (8001 / 10000) := by
     constructor
     · exact (le_div_iff₀ hnpos).mpr hmlo
     · apply (div_le_iff₀ hnpos).mpr; nlinarith
@@ -483,54 +546,53 @@ theorem chung8_pebbling_latency_18 (n lambda : ℕ) (hn : 10000 ≤ n)
   have hq : 1 ≤ min d (d + m + 1 - (m + s)) := by rw [hqeq]; omega
   have hg : g ∈ Icc ((111 : ℝ) / 1000) (11131 / 100000) := by
     dsimp [g, β]
-    rw [ChungCurve.filecoinBeta_affine_11 hm.1 (by linarith [hm.2])]
-    constructor <;> linarith [hm.1, hm.2]
-  have hmin : min ((9 : ℝ) / 10 - 189 / 5000)
-      (β ((m : ℝ) / n) - 189 / 5000) = 4311 / 5000 := by
-    have hfree : (m : ℝ) / n + g = β ((m : ℝ) / n) - 189 / 5000 := by dsimp [g]; ring
-    rw [min_eq_left (by linarith [hm.1, hg.1])]; norm_num
+    rw [ChungCurve.filecoinBeta_affine_11 hp.1 (by linarith [hp.2])]
+    constructor <;> linarith [hp.1, hp.2]
+  have hfree : p + g = β p - 189 / 5000 := by dsimp [g]; ring
   have hsource : (4806 : ℝ) / 10000 ≤ β σ - 189 / 5000 :=
-    UniformGain.filecoin_source_0195.trans
+    FilecoinReference.source_lower.trans
       (sub_le_sub_right (ChungCurve.filecoinBeta_strictMono.monotone hσ.1) _)
-  have hdifference : g + β ((m : ℝ) / n) - β σ ≤ (54212 : ℝ) / 100000 := by
-    have hfree : β ((m : ℝ) / n) - 189 / 5000 = (m : ℝ) / n + g := by dsimp [g]; ring
-    linarith [hm.2, hg.2]
-  have hmax : max ((m : ℝ) / n - ((9 : ℝ) / 10 - 189 / 5000))
-      (g + β ((m : ℝ) / n) - β σ) = g + β ((m : ℝ) / n) - β σ := by
-    apply max_eq_right
-    have hmono : β σ ≤ β ((m : ℝ) / n) :=
-      ChungCurve.filecoinBeta_strictMono.monotone (by linarith [hσ.2, hm.1])
-    linarith [hm.2, hg.1]
+  have hcross := FilecoinReference.first_crossing hp
+  have hD : referenceScale FilecoinReference.y 4 p -
+      referenceScale FilecoinReference.y 4 σ ≤ 231 / 100 := by
+    rw [referenceScale_eq]
+    exact FilecoinReference.delay_le hp hσ
   have hgeneric : HoldsWithFailureAtMost (ChungInterlayer.uniformLaw n)
-      (PebblingGame.LatencyEvent 18 n (1 / 5) (189 / 5000) (4 / 5) (4 / 5) (9 / 10)
+      (PebblingGame.LatencyEvent 17 n (1 / 5) (189 / 5000) (4 / 5) (4 / 5) (9 / 10)
         (d + (((2 : ℕ) : ℝ) - 1) * (min d (d + m + 1 - (m + s)))))
       ((2 : ℝ≥0∞)⁻¹ ^ lambda) := by
-    apply chung8_pebbling_latency_whp lambda (1 / 100) (24 / 25)
-      β (1 / 5) (4 / 5) m s 2 (189 / 5000) (4 / 5) (9 / 10)
+    apply chung8_reference_latency_whp lambda (1 / 100) (24 / 25)
+      β (1 / 5) (4 / 5) (5089 / 100000) m s 2 4 (189 / 5000) (4 / 5) (9 / 10)
     · exact le_rfl
     · exact hq
     · norm_num
     · change 0 < g; linarith [hg.1]
-    · rw [hmin]; norm_num
-    · change σ ∈ Icc (min _ _ - _) ((m : ℝ) / n)
-      rw [hmin]
-      constructor <;> linarith [hσ.1, hσ.2, hm.1]
-    · intro x hx
-      rw [hmin] at hx
-      constructor <;> linarith [hx.1, hx.2, hm.2]
+    · norm_num
+    · apply le_min <;> linarith [hp.1, hg.1]
+    · exact ⟨by linarith [hσ.1], by linarith [hσ.2, hp.1]⟩
     · exact ChungCurve.filecoinBeta_strictMono.monotone.monotoneOn _
+    · exact ChungCurve.filecoinBeta_concaveOn.subset
+        (by intro x hx; exact ⟨by linarith [hx.1], by linarith [hx.2, hp.2]⟩)
+        (convex_Icc _ _)
+    · exact hg.2.trans FilecoinReference.floor_gain
+    · change 2 * g ≤ β σ - 189 / 5000 - σ
+      linarith [hg.2, hσ.2]
+    · exact hcross.1
+    · exact hcross.2
     · intro x hx
-      rw [hmin] at hx
-      apply UniformGain.filecoin_gain_at_threshold hm
-      exact ⟨by linarith [hx.1], hx.2⟩
-    · change 2 * g ≤ β σ - 189 / 5000 - min _ _ + 4 / 5
-      rw [hmin]; linarith [hg.2]
+      exact ⟨by linarith [hx.1], by linarith [hx.2, hp.2]⟩
     · intro x hx
-      rw [hmin] at hx
-      exact filecoinBeta_le_chung8Beta (by linarith [hx.1]) (by linarith [hx.2, hm.2])
-    · change (4 : ℝ) / 5 + g + max _ (g + β ((m : ℝ) / n) - β σ) +
-        (2 - 1) * (g + β ((m : ℝ) / n) - β σ) < g * 18
-      rw [hmax]; nlinarith [hg.1, hg.2]
+      exact filecoinBeta_le_chung8Beta (by linarith [hx.1]) (by linarith [hx.2, hp.2])
+    · change (4 : ℝ) / 5 + max 0 (4 / 5 - (β σ - 189 / 5000 - 5089 / 100000) + 2*g) +
+        g * (1 + (referenceScale FilecoinReference.y 4 p -
+          referenceScale FilecoinReference.y 4 (min p (9/10-189/5000))) +
+          (2-1) * (1 + (referenceScale FilecoinReference.y 4 p -
+            referenceScale FilecoinReference.y 4 σ))) < g * 17
+      rw [min_eq_left (by linarith [hp.2])]
+      have hrepair : max 0 (4 / 5 - (β σ - 189 / 5000 - 5089 / 100000) + 2*g) ≤
+          (59291 : ℝ) / 100000 := max_le (by norm_num) (by linarith [hg.2])
+      have hdelay := mul_le_mul_of_nonneg_left hD (by linarith [hg.1] : 0 ≤ g)
+      nlinarith [hg.1, hg.2]
   have hlength : (41 : ℝ) / 200 * n ≤
       d + (((2 : ℕ) : ℝ) - 1) * (min d (d + m + 1 - (m + s))) := by
     rw [hqeq, Nat.cast_sub (by omega : s ≤ d + 1)]
@@ -543,4 +605,3 @@ theorem chung8_pebbling_latency_18 (n lambda : ℕ) (hn : 10000 ≤ n)
   exact ⟨v, hv, Q, hQ, hc, hu, he, hlength.trans hl⟩
 
 end ProofOfSpaceStatement
-

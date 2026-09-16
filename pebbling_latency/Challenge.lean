@@ -1,4 +1,5 @@
 import Mathlib.Data.Real.Basic
+import Mathlib.Analysis.Convex.Function
 import Mathlib.Data.Finset.Card
 import Mathlib.Data.List.Chain
 import Mathlib.Order.Monotone.Basic
@@ -102,24 +103,37 @@ def PebblingGame.LatencyEvent (ℓ n : ℕ) (απ δ π ρ ζ L : ℝ)
     ∀ S : Finset (ℕ × Fin n), S ⊆ G.layer 0 → ζ ≤ (S.card : ℝ) / n →
       G.HasUnpebbledPathTo S L p
 
-/-- Latency amplification. The gain `g` is defined at density `m/n`; the interval
-hypothesis requires at least this gain at every queried density. -/
+/-- Linear interpolation along a finite free trajectory. Only the interval
+between the first and final knots is used. -/
+noncomputable def referenceScale (y : ℕ → ℝ) : ℕ → ℝ → ℝ
+  | 0, _ => 0
+  | t + 1, x => if x ≤ y 1 then (x - y 0) / (y 1 - y 0)
+      else 1 + referenceScale (fun i => y (i + 1)) t x
+
+/-- Reference-trajectory latency with explicit accounting for repairs.
+`a` is the band floor and `t` is its free fertility time. The correction
+`max 0 (rho-kappa+2g)` pays for repairs; no optimality claim is assumed. -/
 theorem pebbling_latency {ℓ n : ℕ} (W : ChungInterlayer n)
-    (β : ℝ → ℝ) (απ π : ℝ) (m s z : ℕ) (δ ρ ζ : ℝ) :
+    (β : ℝ → ℝ) (απ π a : ℝ) (m s z t : ℕ) (δ ρ ζ : ℝ) :
+    let p := (m : ℝ) / n
     let σ := (s : ℝ) / n
-    let g := β ((m : ℝ) / n) - δ - (m : ℝ) / n
-    let I := Icc (min (ζ - δ) (β ((m : ℝ) / n) - δ) - ρ) ((m : ℝ) / n)
+    let g := β p - δ - p
+    let y := fun i : ℕ => (fun x => β x - δ)^[i] a
+    let D := referenceScale y t p - referenceScale y t σ
+    let D₀ := referenceScale y t p - referenceScale y t (min p (ζ - δ))
+    let κ := β σ - δ - a
     let q := min (Nat.ceil (απ * n))
       (Nat.ceil (απ * n) + m + 1 - (Nat.ceil (π * n) + s))
-    Nat.ceil (π * n) ≤ m → 1 ≤ q → 1 ≤ z → 0 < g →
-    ρ < min (ζ - δ) (β ((m : ℝ) / n) - δ) → σ ∈ I →
-    MonotoneOn β I → (∀ x ∈ I, g ≤ β x - δ - x) →
-    2 * g ≤ β σ - δ - min (ζ - δ) (β ((m : ℝ) / n) - δ) + ρ →
-    (∀ X : Finset (Fin n), (X.card : ℝ) / n ∈ I →
+    Nat.ceil (π * n) ≤ m → 1 ≤ q → 1 ≤ z → 0 < g → 0 < a →
+    ρ + a ≤ min (ζ - δ) (β p - δ) → σ ∈ Ico a p →
+    MonotoneOn β (Icc a p) → ConcaveOn ℝ (Icc a p) β →
+    g ≤ β a - δ - a → 2 * g ≤ β σ - δ - σ →
+    (∀ i < t, y i < p) → p ≤ y t →
+    (∀ X : Finset (Fin n), (X.card : ℝ) / n ∈ Icc a p →
       β ((X.card : ℝ) / n) * n ≤ (W.neighborhood X).card) →
-    ρ + g + max ((m : ℝ) / n - (ζ - δ)) (g + β ((m : ℝ) / n) - β σ) +
-      ((z : ℝ) - 1) * (g + β ((m : ℝ) / n) - β σ) < g * ℓ →
+    ρ + max 0 (ρ - κ + 2 * g) + g * (1 + D₀ + ((z : ℝ) - 1) * (1 + D)) < g * ℓ →
     PebblingGame.LatencyEvent ℓ n απ δ π ρ ζ
-      (Nat.ceil (απ * n) + ((z : ℝ) - 1) * q) W := by sorry
+      (Nat.ceil (απ * n) + ((z : ℝ) - 1) * q) W := by
+  sorry
 
 end ProofOfSpaceStatement

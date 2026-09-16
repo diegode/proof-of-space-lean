@@ -13,8 +13,9 @@ The sampler results use deletion constant `1/18000`, block-width constant
 `3600`, and failure coefficient `1/11000` for every `n ≥ 2^120`. The depth
 constant is `1.48` for DRSample and BucketSample, with BucketSample covering
 every integer `r ≥ 1` as a supporting result in `Solution.lean`. The latency
-project retains its probability and conditional 18-layer Filecoin
-specializations as supporting results.
+project proves reference-trajectory amplification with explicit repair accounting.
+Its probability theorem and conditional 17-layer Filecoin specialization are
+proved supporting results.
 
 Both Challenges import Mathlib alone and each has one intentional theorem
 placeholder.
