@@ -2,7 +2,11 @@
   "challenge_module": "Challenge",
   "solution_module": "Solution",
   "theorem_names": [
-    "ProofOfSpaceStatement.drsample_conjecture2"
+    "ProofOfSpaceStatement.drsample_conjecture2",
+    "ProofOfSpaceStatement.sampler_avoidance",
+    "ProofOfSpaceStatement.bucketSample_block_robustness",
+    "ProofOfSpaceStatement.dr_subsequence",
+    "ProofOfSpaceStatement.dr_labels"
   ],
   "definition_names": [],
   "permitted_axioms": [

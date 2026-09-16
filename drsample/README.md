@@ -1,82 +1,104 @@
-# Block depth robustness of DRSample and BucketSample
+# Robustness results from the current paper
 
-This project formalizes the DRSample theorem and BucketSample corollary in the
-current paper's `robustness.tex`, using the estimates in `robustnessproof.tex`.
-[Challenge.lean](Challenge.lean) contains only the DRSample definitions and
-`drsample_conjecture2`, using Mathlib alone. [Solution.lean](Solution.lean)
-proves that theorem and the BucketSample corollary. HarmonicSample is outside
-the current paper and is not imported by the solution.
+This project is being aligned with `paper/finalnew/sections/robustness.tex`
+and `robustnessproof.tex`. **The requested full-paper formalization is not yet
+complete.** Five of the eleven labeled results have complete Lean proofs and
+matching statements in [Challenge.lean](Challenge.lean). [Solution.lean](Solution.lean)
+proves the sampler theorems and imports the other three proofs. No unproved
+results are assumed by these proofs.
 
-For every `n ≥ 2^120`, put `L(n) = log₂ n / log₂log₂ n`. Both results use
+For `L(n) = log₂ n / log₂log₂ n`, the sampler statements now assert that positive
+constants `c,C` exist such that, for every fixed `0 < ε < 1` and all sufficiently
+large `n`, there are natural parameters `e,b` with
 
 ```text
-e = floor(n / (18000 L(n)))
-b = floor(3600 L(n))
-failure probability ≤ exp(-n / (11000 L(n))).
+c ε n/L(n) ≤ e ≤ C ε n/L(n)
+c L(n)/ε ≤ b ≤ C L(n)/ε
+d = c n/(log₂ n)^ε
+failure probability ≤ exp(-c ε n/L(n)).
 ```
 
-| Distribution | Depth in vertices | Theorem in `ProofOfSpaceStatement` |
-| --- | --- | --- |
-| DRSample(n) | `1.48 n / L(n)` | `drsample_conjecture2` |
-| BucketSample(n,r), every integer r ≥ 1 | `1.48 n / L(n)` | `bucketSample_block_robustness` |
+The constants are independent of `ε`; the size threshold can depend on it.
+BucketSample covers every integer number of draws `r ≥ 1`. The sampler-avoidance
+lemma also allows any fixed `0 < β < 1` and guarantees `eb ≥ βn`, with constants
+depending only on `β`.
 
-Each event holds simultaneously for every set of at most `e` endpoints,
-including endpoints chosen after sampling the graph. Deleting their left
-intervals of width `b` leaves a path of the stated depth. Intervals may overlap
-and are truncated at vertex zero.
+These replace the former public `n ≥ 2^120`, depth `1.48 n/L(n)`, and fixed
+numerical parameter statements. A large-size cutoff and numerical constants
+remain internal proof tools, not the public statements.
 
-## Exact distributions
+## Complete paper inventory
+
+| Paper label | Lean declaration or status |
+| --- | --- |
+| `thm:dr-conjecture2` | Proved: `drsample_conjecture2` |
+| `lem:sampler-avoidance` | Proved: `sampler_avoidance` |
+| `cor:drsample-brg-optimal` | Not yet proved |
+| `cor:bucket-optimal` | Proved: `bucketSample_block_robustness` |
+| `def:fractional-dr` | Defined: `FractionalDepthRobust` |
+| `thm:block-to-fractional` | Not yet proved |
+| `cor:bucket-fractional` | Not yet proved (both samplers) |
+| `thm:valiant-depth-reduction` | Not yet proved |
+| `cor:balanced-robustness-optimality` | Width obstruction proved in `PaperWidth`; balanced bound not yet proved |
+| `lem:dr-subsequence` | Proved: `dr_subsequence` |
+| `lem:dr-labels` | Proved: `dr_labels`, for every `0 < α < 1` |
+| `thm:multiscale` | Independent-graph specialization proved for every `0 < α < 1`; general conditional-label statement not yet proved |
+
+The two algorithms are defined by the exact finite distributions below.
+Section and equation labels are represented by the surrounding definitions and
+theorems rather than separate theorem declarations. The six remaining labeled
+results have not been inserted as unproved Solution declarations.
+
+## Distributions and events
 
 All graphs include predecessor edges. DRSample independently chooses one
 bucket in `1,…,ceil(log₂(v+1))`, caps its upper endpoint at `v`, and uniformly
 draws a length from `max(2,ceil(upper/2)),…,upper`.
 
-BucketSample uses the same fine position `r v` for all `r` independent draws
-at vertex `v`. Each draw uniformly chooses one of `ceil(log₂(r v))` buckets,
-uses the lower endpoint `max(2,floor(upper/2))`, and rounds the fine parent
-position downward by division by `r`.
+BucketSample uses the same fine position `rv` for all `r` independent draws
+at vertex `v`. Each draw chooses one of `ceil(log₂(rv))` buckets uniformly,
+uses lower endpoint `max(2,floor(upper/2))`, and divides the fine parent
+position by `r`, rounding downward.
 
-The public finite-sum probabilities are identified with normalized product
-laws. Vertices zero and one use a dummy parent zero; the ordered edge relation
-prevents this from adding a spurious edge.
+The finite-sum probabilities agree with normalized independent product laws.
+Vertices zero and one use a dummy parent zero. Ordered edges prevent this from
+adding a spurious edge. Path lengths count vertices. Endpoint sets are quantified
+after sampling the graph, and backward deletion blocks may overlap or be truncated
+at zero.
 
-The reciprocal-distance avoidance coefficients are `1/(log₂ n+1)` and
-`r/(log₂(r n)+1)`, respectively. The proof covers every positive integer `r`.
-Maximum indegree is two for DRSample and at most `r+1` for BucketSample.
+`sampler_avoidance` uses normalized distributions of whole incoming-edge sets.
+`SupportedIncomingEdges` specifies the topological order and line edges;
+`HarmonicAvoidance` states the paper's reciprocal-distance bound.
 
-## Proof and paper alignment
+## Proof organization
 
-Both sampler proofs apply `concrete_avoidance_criterion`, corresponding to
-Lemma `lem:concrete-avoidance`. The concrete parameters prove the common depth
-`1.48 n/L(n)` used by both results.
+- `Statement.lean`: exact DRSample and BucketSample definitions.
+- `PaperDefinitions.lean`: general graph, finite probability, fractional
+  robustness, BRG, pebbling, and conditional-label definitions.
+- `PaperSubsequence.lean`: the paper's increasing-subsequence lemma, using
+  the existing finite pivot proof.
+- `GeneralLabels.lean`: arbitrary deletion fractions, accounting for the
+  overlap of the two exceptional sets; the density threshold is `(q-1)/q`.
+- `GeneralMultiscale.lean`: the independent-graph multiscale bound for any
+  fixed deletion fraction, with failure `exp(-(2-ln 3)n)`.
+- `GeneralBlocks.lean`: shift averaging and path lifting at that fraction.
+- `GeneralParameters.lean`, `PaperAvoidance.lean`: asymptotic parameters with
+  `eb ≥ βn` and the public sampler-avoidance statement.
+- `AsymptoticRobustness.lean`: a fixed-fraction parameter choice sufficient
+  for the DRSample and BucketSample statements.
+- `PaperWidth.lean`: the width obstruction `b < n/e`.
 
-The overlap of the two exceptional vertex sets gives at least `M-3|S|/2`
-good vertices. The deterministic shallow-label estimate is
-`(M/2) exp(-20W/M)` when `|S| ≤ M/3`.
+The proof retains the existing integer block geometry (`20a` vertices per full
+block) and chooses `a` proportional to `L(n)/ε`. Its internal constants differ
+from the appendix's choices; the stated asymptotic orders and dependencies agree.
+The imported sampler proofs no longer use the former concrete avoidance lemma.
+Historical finite estimates remain available in supporting files.
 
-The two-thirds exponential moment is at most `3^(M-|S|)`. Summing over all
-deleted sets gives `W ≤ 12M/(5λ)` on a single event, with failure
-`exp(-(8/5-ln 4)M)`. Thus the multiscale depth is `(M/2) exp(-48/λ)`.
+The BRG definition follows [BHKLXZ19, Definition 4](https://eprint.iacr.org/2018/944.pdf):
+it retains the first-layer graph, adds the line on both layers, and joins the
+layers by bit reversal. Its pebbling bound remains a proof target.
 
-The paper uses blocks of size `2s`, with `s` any positive integer. Triangular
-source/destination ports supply at least `119 s²/200` eligible pairs, and
-averaging over all `2s` shifts bounds the number of blocks touched by the
-endpoint intervals. The finite bound applies simultaneously to all positive
-widths and endpoint budgets satisfying `e(b+2s) ≤ (n-4s)/3`, with failure
-`2s exp(-(8/5-ln 4)(n/(2s)-2))`.
-
-Both proofs lift paths through block centers directly, yielding depth
-`(9/40)(n-4s) exp(-323/(2ηs))` without an additive rounding loss. The paper
-requires each crossing to gain at least `9s/10` vertices. Lean retains the
-integer scale `s = 10a` (full block size `20a`) and its slightly stricter
-port condition, with integral gain `9a`.
-
-The paper chooses `s = ceil(1160 L(n))`; Lean chooses
-`s = 10 ceil(116 L(n))`. Both satisfy `1160 L(n) ≤ s ≤ 1161 L(n)` and give
-the same displayed sampler parameters. The rounding and numerical
-inequalities at `2^120` for Lean's choice are checked by Lean.
-
-## Verification and layout
+## Verification
 
 ```sh
 lake build
@@ -84,25 +106,9 @@ python3 ../scripts/check-statement-surface.py drsample
 ../scripts/verify-comparator.sh drsample
 ```
 
-- `Challenge.lean`: the sole submission statement, `drsample_conjecture2`.
-- `Solution.lean`: proofs of DRSample and BucketSample
-  (`thm:dr-conjecture2` and `cor:bucket-optimal`).
-- `Statement.lean`, `Registry.lean`, `MultiSamplerRegistry.lean`: public
-  definitions and distribution bridges.
-- `Samplers.lean`, `BucketSample.lean`: sampler laws and avoidance bounds.
-- `MomentSharp.lean`, `MultiscaleSharp.lean`: revised moment and depth estimates.
-- `Triangular*.lean`, `ShiftedBlocks.lean`, `ShiftedRobustness.lean`: port
-  counting, path lifting, common sampling events, and shift averaging.
-- `LogEstimates.lean`, `PaperParameters.lean`, `PaperRobustness.lean`:
-  verified numerical cutoff and the common concrete avoidance lemma.
-- `ExplicitParameters.lean`: entry point for the concrete avoidance lemma.
-- `comparator.json`: selects only `drsample_conjecture2`, with NanoDa enabled.
-
-Only the single intentional Challenge placeholder uses `sorry`. The solution
-and supporting proofs use no custom axioms; Comparator permits only
+The full Lake build, statement-surface check, and Comparator run passed for all
+five completed results. Both NanoDa and the Lean default kernel accepted the
+exported proofs; the axiom audit reports only the three permitted axioms. Each has
+one intentional statement placeholder in Challenge. Solution and its supporting
+proofs contain no placeholders or custom axioms. Permitted proof axioms are only
 `propext`, `Classical.choice`, and `Quot.sound`.
-
-The cited pebbling optimality and fractional robustness reductions, and the
-fully general conditional-label version of the multiscale theorem, are outside
-this project's public theorem scope. The multiscale graph specialization used
-by both sampler proofs is proved in `MultiscaleSharp.lean`.

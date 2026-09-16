@@ -6,21 +6,19 @@ pinned Lake environment, metadata, and selected Comparator declarations.
 
 | Project directory | Registered theorem | Comparator configuration |
 | --- | --- | --- |
-| [drsample](drsample/README.md) | `ProofOfSpaceStatement.drsample_conjecture2` | `drsample/comparator.json` |
+| [drsample](drsample/README.md) | Five results; see project inventory | `drsample/comparator.json` |
 | [pebbling_latency](pebbling_latency/README.md) | `ProofOfSpaceStatement.pebbling_latency` | `pebbling_latency/comparator.json` |
 
-The sampler results use deletion constant `1/18000`, block-width constant
-`3600`, and failure coefficient `1/11000` for every `n ≥ 2^120`. The depth
-constant is `1.48` for DRSample and BucketSample, with BucketSample covering
-every integer `r ≥ 1` as a supporting result in `Solution.lean`. The latency
-project proves reference-trajectory amplification with explicit repair accounting.
-Its probability theorem and conditional 17-layer Filecoin specialization are
-proved supporting results.
+The sampler project now states exponent-dependent bounds: for each fixed
+`0 < ε < 1`, the deletion budget is `Θ(ε n/L(n))`, depth is
+`Ω(n/(log₂ n)^ε)`, and block width is `Θ(L(n)/ε)`. Five current paper results
+have proofs and matching Challenge statements. The full-paper expansion is
+unfinished; the [sampler inventory](drsample/README.md#complete-paper-inventory)
+records the six remaining results. The latency project proves reference-trajectory
+amplification with explicit repair accounting.
 
-Both Challenges import Mathlib alone and each has one intentional theorem
-placeholder.
-Proofs and auxiliary results belong to the supporting modules and
-`Solution.lean`.
+Both Challenges import Mathlib alone. Their intentional theorem placeholders
+have proofs in supporting modules and `Solution.lean`.
 
 Build and verify from the repository root:
 

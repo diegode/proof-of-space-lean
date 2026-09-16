@@ -3,14 +3,14 @@ version: "v0.4"
 project:
   name: "Block depth robustness of DRSample and BucketSample"
   description: >-
-    Explicit block-depth-robustness theorems for the exact independent DRSample
-    and BucketSample(n,r) distributions, for every n >= 2^120 and every integer
-    r >= 1. With L(n)=log_2 n/log_2 log_2 n, both have
-    e=floor(n/(18000 L(n))), b=floor(3600 L(n)), and failure at most
-    exp(-n/(11000 L(n))). The depth is 1.48 n/L(n). Both sampler proofs apply
-    the paper's common avoidance lemma. The proof establishes the two-thirds
-    exponential moment, the improved multiscale bound, triangular port geometry,
-    averaging over shifted block partitions, and the numerical cutoff.
+    Exponent-dependent block-depth robustness for the exact independent DRSample
+    and BucketSample distributions, the sampler-avoidance lemma with any fixed
+    product fraction beta < 1, and the two deterministic appendix lemmas.
+    The deletion budget is Theta(epsilon n/L(n)), surviving depth is
+    Omega(n/(log_2 n)^epsilon), and block width is Theta(L(n)/epsilon), for
+    every fixed 0 < epsilon < 1 and all sufficiently large n.
+    Five of eleven labeled paper results are proved; full-paper coverage remains
+    unfinished, as recorded in README.md.
   authors: ["Diego de Estrada (@diegode)"]
   responsible_maintainers: ["Diego de Estrada (@diegode)"]
   license: "Apache-2.0"
@@ -25,8 +25,8 @@ sources:
     location: "CRYPTO 2019; Conjecture 2 in Appendix F of the full version"
     relationship: "adapts"
     note: >-
-      Proves the stated conjectural block-depth-robustness regime, with explicit
-      constants, for the independent sampler and integer rounding in Challenge.lean.
+      Proves the current exponent-dependent block-depth-robustness regime for the
+      independent sampler and integer rounding in Challenge.lean.
     author_endorsement: "not-contacted"
   - title: "Practical Graphs for Optimal Side-Channel Resistant Memory-Hard Functions"
     authors: ["Joel Alwen", "Jeremiah Blocki", "Ben Harsha"]
@@ -36,7 +36,8 @@ sources:
     note: >-
       Source of DRSample and the restricted metagraph construction. Claim 2 gives
       the good-vertex estimate, attributed there to Erdos, Graham, and Szemeredi;
-      the proof development proves its required four-fifths density instance.
+      the proof development generalizes the density estimate to every fixed
+      deletion fraction below one.
     author_endorsement: "not-contacted"
   - title: "Randomized Search Trees"
     authors: ["Raimund Seidel", "Cecilia R. Aragon"]
@@ -48,14 +49,13 @@ sources:
 related_formalizations: []
 status:
   scope: >-
-    One registered exact-sampler statement: drsample_conjecture2.
-    Solution.lean also proves bucketSample_block_robustness for every r >= 1.
-    Supporting results include normalization, reciprocal-distance avoidance,
-    the multiscale depth bound, triangular path lifting, shift averaging, and all explicit
-    numerical estimates. The paper's cited pebbling optimality and fractional
-    robustness reductions, and its general conditional-label multiscale theorem,
-    are outside the public theorem scope. The required graph specialization of
-    the multiscale theorem is proved.
+    Five registered statements from the current paper have complete proofs.
+    The full-paper request is unfinished: BRG pebbling optimality, block-to-fractional
+    conversion, the two-sided fractional corollary, Valiant's depth reduction,
+    balanced optimality, and the general conditional-label multiscale theorem
+    remain unproved. Supporting results prove arbitrary-fraction graph multiscale
+    bounds, block lifting, parameter selection with eb >= beta n, and the width
+    obstruction. No unproved paper result is assumed in the completed proofs.
   sorry_count: 0
   sorry_in_definitions: 0
   axioms: ["propext", "Classical.choice", "Quot.sound"]
@@ -66,10 +66,29 @@ status:
       axioms: ["propext", "Classical.choice", "Quot.sound"]
       comparator_config: "comparator.json"
       literature_dependencies: []
+    - declaration: "ProofOfSpaceStatement.sampler_avoidance"
+      file: "ProofOfSpace/DRSample/PaperAvoidance.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
     - declaration: "ProofOfSpaceStatement.bucketSample_block_robustness"
       file: "Solution.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
+    - declaration: "ProofOfSpaceStatement.dr_subsequence"
+      file: "ProofOfSpace/DRSample/PaperSubsequence.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
+    - declaration: "ProofOfSpaceStatement.dr_labels"
+      file: "ProofOfSpace/DRSample/GeneralLabels.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
       literature_dependencies: []
 automation:
   methods:
@@ -84,29 +103,44 @@ automation:
   notes: "Exact costs and wall times were not tracked; no prompt transcript is included."
 fidelity:
   divergences: >-
-    The statements specify the paper's exact finite independent distributions,
-    including capped buckets, upward rounding for DRSample, downward rounding
-    and the shared fine position for BucketSample. Path lengths count vertices.
-    Both proofs lift paths directly through block centers. Lean specializes the
-    half-block size to s = 10 ceil(116 L(n)), whereas the paper uses
-    s = ceil(1160 L(n)); both lie between 1160 L(n) and 1161 L(n). Lean's
-    integral port condition is slightly stricter and ensures a gain of 9s/10.
-    The displayed sampler parameters and cutoff agree.
+    The exact independent sampler distributions, integer rounding, vertex-count
+    path lengths, and adversarial deletion events are preserved. Public sampler
+    statements now quantify over every exponent between zero and one, using
+    positive constants to witness the paper's orders. Their thresholds may depend
+    on the exponent. The general avoidance constants depend only on beta.
+    The proof retains integer blocks of size 20a and the existing triangular port
+    geometry, with a proportional to L(n)/epsilon. The density threshold in the
+    label proof is (q-1)/q for a suitable q depending on alpha; these internal
+    choices differ from the appendix but yield its stated bounds.
 review:
   status: "self-assessed"
   notes: >-
-    Lean checks both sampler proofs. The configured Comparator and NanoDa
-    kernels check the sole Challenge theorem, drsample_conjecture2.
-    These checks establish proof validity and statement agreement;
-    no independent human mathematical review is claimed.
+    Lean checks the five completed results and their supporting proofs.
+    Comparator verified agreement for all five statements, and both NanoDa and
+    the Lean default kernel accepted their exported proofs.
+    No independent human mathematical review is claimed. The six missing paper
+    results are recorded explicitly in README.md and are not theorem placeholders
+    in Solution or supporting proof modules.
 alignment:
   namespace: "ProofOfSpaceStatement"
   statements:
     - source: "paper/finalnew/sections/robustness.tex, thm:dr-conjecture2"
       lean: "ProofOfSpaceStatement.drsample_conjecture2"
       module: "Solution"
-      status: "proved with the paper's explicit constants and exact independent sampler"
+      status: "proved in the current paper's generality"
+    - source: "paper/finalnew/sections/robustness.tex, lem:sampler-avoidance"
+      lean: "ProofOfSpaceStatement.sampler_avoidance"
+      module: "Solution"
+      status: "proved in the current paper's generality"
     - source: "paper/finalnew/sections/robustness.tex, cor:bucket-optimal"
       lean: "ProofOfSpaceStatement.bucketSample_block_robustness"
       module: "Solution"
-      status: "proved with the paper's explicit constants and exact independent sampler"
+      status: "proved in the current paper's generality"
+    - source: "paper/finalnew/sections/robustnessproof.tex, lem:dr-subsequence"
+      lean: "ProofOfSpaceStatement.dr_subsequence"
+      module: "Solution"
+      status: "proved in the current paper's generality"
+    - source: "paper/finalnew/sections/robustnessproof.tex, lem:dr-labels"
+      lean: "ProofOfSpaceStatement.dr_labels"
+      module: "Solution"
+      status: "proved in the current paper's generality"

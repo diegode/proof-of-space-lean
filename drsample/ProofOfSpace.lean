@@ -1,4 +1,6 @@
-import ProofOfSpace.DRSample.Registry
-import ProofOfSpace.DRSample.Corollaries
-import ProofOfSpace.DRSample.ExplicitParameters
+import ProofOfSpace.DRSample.AsymptoticRobustness
+import ProofOfSpace.DRSample.PaperAvoidance
+import ProofOfSpace.DRSample.PaperSubsequence
+import ProofOfSpace.DRSample.GeneralLabels
+import ProofOfSpace.DRSample.PaperWidth
 import ProofOfSpace.DRSample.Degree

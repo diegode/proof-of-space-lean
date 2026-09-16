@@ -16,7 +16,7 @@ assert len(source.splitlines()) <= 300, 'Keep the Challenge below the warning th
 imports = re.findall(r'^import\s+(\S+)', source, re.M)
 assert imports and all(name.startswith('Mathlib.') for name in imports), imports
 names = re.findall(r'^theorem\s+(\w+)', source, re.M)
-expected_count = 1
+expected_count = 5 if sys.argv[1] == 'drsample' else 1
 assert len(names) == expected_count, names
 assert config['theorem_names'] == ['ProofOfSpaceStatement.' + name for name in names], config
 assert config['definition_names'] == []
