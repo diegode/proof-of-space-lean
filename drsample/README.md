@@ -28,17 +28,12 @@ parameters `(e,d,f,f)` with the same orders for `e,d` and failure probability.
 The constants depend only on `f`; the threshold may also depend on `ε`.
 Both directions hold on the same block-robustness event.
 
-These replace the former public `n ≥ 2^120`, depth `1.48 n/L(n)`, and fixed
-numerical parameter statements. A large-size cutoff and numerical constants
-remain internal proof tools, not the public statements.
-
 ## Complete paper inventory
 
 | Paper label | Lean declaration or status |
 | --- | --- |
 | `thm:dr-conjecture2` | Proved: `drsample_conjecture2` |
 | `lem:sampler-avoidance` | Proved: `sampler_avoidance` |
-| `cor:drsample-brg-optimal` | Out of scope: cited existing result; not needed by these proofs |
 | `cor:bucket-optimal` | Proved: `bucketSample_block_robustness` |
 | `def:fractional-dr` | Defined: `FractionalDepthRobust` |
 | `thm:block-to-fractional` | Proved: `block_to_fractional` |
@@ -80,7 +75,7 @@ at zero.
 
 - `Statement.lean`: exact DRSample and BucketSample definitions.
 - `PaperDefinitions.lean`: general graph, finite probability, fractional
-  robustness, BRG, pebbling, and conditional-label definitions.
+  robustness, pebbling, and conditional-label definitions.
 - `PaperSubsequence.lean`: the paper's increasing-subsequence lemma, using
   the existing finite pivot proof.
 - `GeneralLabels.lean`: arbitrary deletion fractions, accounting for the
@@ -109,7 +104,6 @@ at zero.
 The proof retains the existing integer block geometry (`20a` vertices per full
 block) and chooses `a` proportional to `L(n)/ε`. Its internal constants differ
 from the appendix's choices; the stated asymptotic orders and dependencies agree.
-The imported sampler proofs no longer use the former concrete avoidance lemma.
 Historical finite estimates remain available in supporting files.
 
 The fractional conversion follows the statement of
@@ -131,11 +125,6 @@ The conditional-label theorem uses a PMF on the joint array of labels for all
 deletion sets. It assumes the paper's inequality only on histories of positive
 probability. Labels may be unbounded and dependent. Conditioning, summing over
 histories, and the `3^n` union bound are proved without added axioms.
-
-The BRG definition follows [BHKLXZ19, Definition 4](https://eprint.iacr.org/2018/944.pdf):
-it retains the first-layer graph, adds the line on both layers, and joins the
-layers by bit reversal. The cited pebbling bound is outside the formalization
-scope and is not used by the proofs.
 
 ## Verification
 
