@@ -6,16 +6,17 @@ pinned Lake environment, metadata, and selected Comparator declarations.
 
 | Project directory | Registered theorem | Comparator configuration |
 | --- | --- | --- |
-| [drsample](drsample/README.md) | Ten results (eleven declarations); see project inventory | `drsample/comparator.json` |
+| [drsample](drsample/README.md) | `ProofOfSpaceStatement.drsample_conjecture2` | `drsample/comparator.json` |
 | [pebbling_latency](pebbling_latency/README.md) | `ProofOfSpaceStatement.pebbling_latency` | `pebbling_latency/comparator.json` |
 
 The sampler project now states exponent-dependent bounds: for each fixed
 `0 < ε < 1`, the deletion budget is `Θ(ε n/L(n))`, depth is
 `Ω(n/(log₂ n)^ε)`, and block width is `Θ(L(n)/ε)`. The block-to-fractional
 conversion also gives both samplers two-sided fractional robustness for any
-fixed fraction below one half. All ten required paper results have proofs and
-matching Challenge statements, including Valiant depth reduction, balanced
-optimality, and the general conditional-label multiscale theorem. The
+fixed fraction below one half. All ten required paper results have proofs exposed
+through `Solution.lean`, including Valiant depth reduction, balanced optimality,
+and the general conditional-label multiscale theorem. Only the main DRSample
+theorem is stated in its Challenge and registered with Comparator. The
 [sampler inventory](drsample/README.md#complete-paper-inventory) excludes the
 cited BRG pebbling corollary, as requested. The latency project proves
 reference-trajectory amplification with explicit repair accounting.

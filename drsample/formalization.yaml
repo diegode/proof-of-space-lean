@@ -65,8 +65,9 @@ sources:
 related_formalizations: []
 status:
   scope: >-
-    Eleven registered statements cover all ten required labeled results from the
-    current paper. Supporting results prove arbitrary-fraction graph multiscale
+    Solution exposes eleven declarations covering all ten required labeled results
+    from the current paper. Only drsample_conjecture2 is registered in Challenge
+    and Comparator. Supporting results prove arbitrary-fraction graph multiscale
     bounds, block lifting, parameter selection with eb >= beta n, and asymptotic
     domination of the samplers' deletion budgets by their certified depths.
     The general multiscale theorem allows unbounded dependent integer labels.
@@ -86,61 +87,51 @@ status:
       file: "ProofOfSpace/DRSample/PaperAvoidance.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
-      comparator_config: "comparator.json"
       literature_dependencies: []
     - declaration: "ProofOfSpaceStatement.bucketSample_block_robustness"
       file: "Solution.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
-      comparator_config: "comparator.json"
       literature_dependencies: []
     - declaration: "ProofOfSpaceStatement.block_to_fractional"
       file: "ProofOfSpace/DRSample/Fractional.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
-      comparator_config: "comparator.json"
       literature_dependencies: []
     - declaration: "ProofOfSpaceStatement.drsample_fractional_robustness"
       file: "ProofOfSpace/DRSample/PaperFractional.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
-      comparator_config: "comparator.json"
       literature_dependencies: []
     - declaration: "ProofOfSpaceStatement.bucketSample_fractional_robustness"
       file: "ProofOfSpace/DRSample/PaperFractional.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
-      comparator_config: "comparator.json"
       literature_dependencies: []
     - declaration: "ProofOfSpaceStatement.dr_subsequence"
       file: "ProofOfSpace/DRSample/PaperSubsequence.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
-      comparator_config: "comparator.json"
       literature_dependencies: []
     - declaration: "ProofOfSpaceStatement.dr_labels"
       file: "ProofOfSpace/DRSample/GeneralLabels.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
-      comparator_config: "comparator.json"
       literature_dependencies: []
     - declaration: "ProofOfSpaceStatement.valiant_depth_reduction"
       file: "ProofOfSpace/DRSample/Valiant.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
-      comparator_config: "comparator.json"
       literature_dependencies: []
     - declaration: "ProofOfSpaceStatement.balanced_robustness_optimality"
       file: "ProofOfSpace/DRSample/PaperOptimality.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
-      comparator_config: "comparator.json"
       literature_dependencies: []
     - declaration: "ProofOfSpaceStatement.conditional_multiscale"
       file: "ProofOfSpace/DRSample/ConditionalLabels.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
-      comparator_config: "comparator.json"
       literature_dependencies: []
 automation:
   methods:
@@ -175,8 +166,10 @@ review:
   status: "self-assessed"
   notes: >-
     Lean checks all ten required results and their supporting proofs.
-    Comparator verified agreement for all eleven statements, and both NanoDa and
-    the Lean default kernel accepted their exported proofs.
+    The full Lake build and statement-surface check pass with the main theorem as
+    the only challenge. Comparator verifies drsample_conjecture2, and both NanoDa
+    and the Lean default kernel accept its exported proof. All eleven declarations
+    are exposed through Solution and their axiom audit reports only permitted axioms.
     No independent human mathematical review is claimed. Solution and supporting
     proof modules contain no theorem placeholders.
 alignment:

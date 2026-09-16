@@ -1,10 +1,11 @@
 # Robustness results from the current paper
 
 This project is being aligned with `paper/finalnew/sections/robustness.tex`
-and `robustnessproof.tex`. **All ten required labeled results now have complete Lean proofs** and
-matching statements in [Challenge.lean](Challenge.lean). [Solution.lean](Solution.lean)
-proves the block sampler theorems and imports the other proofs. No unproved
-results are assumed by these proofs.
+and `robustnessproof.tex`. **All ten required labeled results have complete Lean proofs**
+exposed through [Solution.lean](Solution.lean), which proves the block sampler
+theorems and imports the other proofs. [Challenge.lean](Challenge.lean) contains
+only `drsample_conjecture2` and the definitions needed to state it; Comparator
+registers only that theorem. No unproved results are assumed by these proofs.
 
 For `L(n) = log₂ n / log₂log₂ n`, the sampler statements now assert that positive
 constants `c,C` exist such that, for every fixed `0 < ε < 1` and all sufficiently
@@ -51,7 +52,7 @@ remain internal proof tools, not the public statements.
 The two algorithms are defined by the exact finite distributions below.
 Section and equation labels are represented by the surrounding definitions and
 theorems rather than separate theorem declarations. The ten required results
-are represented by eleven registered declarations; the fractional corollary
+are represented by eleven declarations exposed through Solution; the fractional corollary
 has separate DRSample and BucketSample statements.
 
 ## Distributions and events
@@ -144,10 +145,10 @@ python3 ../scripts/check-statement-surface.py drsample
 ../scripts/verify-comparator.sh drsample
 ```
 
-The full Lake build, statement-surface check, and Comparator run passed for all
-eleven declarations representing all ten required results. Both NanoDa and the
-Lean default kernel accepted the exported proofs; the axiom audit reports only
-the three permitted axioms. Each declaration has
-one intentional statement placeholder in Challenge. Solution and its supporting
-proofs contain no placeholders or custom axioms. Permitted proof axioms are only
-`propext`, `Classical.choice`, and `Quot.sound`.
+The full Lake build, statement-surface check, and Comparator run pass with
+`drsample_conjecture2` as the single intentional theorem placeholder in Challenge.
+Both NanoDa and the Lean default kernel accept its exported proof. The full
+Lake build also checks all supporting results exposed through Solution, and an
+axiom audit of all eleven paper declarations reports only the permitted axioms.
+Solution and its supporting proofs contain no placeholders or custom axioms.
+Permitted proof axioms are only `propext`, `Classical.choice`, and `Quot.sound`.

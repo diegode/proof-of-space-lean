@@ -8,6 +8,9 @@ import ProofOfSpace.DRSample.PaperFractional
 
 /-! # Sampler results in the current paper
 
+This is the entry point for all proved paper results. `Challenge` contains
+only the statement of `drsample_conjecture2` and its required definitions.
+
 The DRSample theorem and BucketSample corollary hold for every fixed exponent
 `0 < ε < 1`, with deletion budget `Θ(ε n / L(n))`, depth
 `Ω(n / (log₂ n)^ε)`, block width `Θ(L(n) / ε)`, and failure probability
