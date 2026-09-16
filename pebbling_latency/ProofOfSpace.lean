@@ -1,6 +1,6 @@
 import ProofOfSpace.ReferenceAmplification
+import ProofOfSpace.Transition
 import ProofOfSpace.PortStack
 import ProofOfSpace.PortExpansionProbability
 import ProofOfSpace.ChungRelative
 import ProofOfSpace.FilecoinReferenceNumerics
-

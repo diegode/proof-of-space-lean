@@ -1,6 +1,9 @@
+import ProofOfSpace.DRSample.ConditionalLabels
+import ProofOfSpace.DRSample.PaperOptimality
 import ProofOfSpace.DRSample.AsymptoticRobustness
 import ProofOfSpace.DRSample.PaperAvoidance
 import ProofOfSpace.DRSample.PaperSubsequence
 import ProofOfSpace.DRSample.GeneralLabels
+import ProofOfSpace.DRSample.PaperFractional
 import ProofOfSpace.DRSample.PaperWidth
 import ProofOfSpace.DRSample.Degree

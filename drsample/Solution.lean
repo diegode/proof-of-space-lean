@@ -1,7 +1,10 @@
+import ProofOfSpace.DRSample.ConditionalLabels
+import ProofOfSpace.DRSample.PaperOptimality
 import ProofOfSpace.DRSample.AsymptoticRobustness
 import ProofOfSpace.DRSample.PaperAvoidance
 import ProofOfSpace.DRSample.PaperSubsequence
 import ProofOfSpace.DRSample.GeneralLabels
+import ProofOfSpace.DRSample.PaperFractional
 
 /-! # Sampler results in the current paper
 
@@ -10,8 +13,10 @@ The DRSample theorem and BucketSample corollary hold for every fixed exponent
 `Ω(n / (log₂ n)^ε)`, block width `Θ(L(n) / ε)`, and failure probability
 `exp(-Ω(ε n / L(n)))`. Positive constants explicitly witness these orders.
 
-The imports also prove `sampler_avoidance`, `dr_subsequence`, and `dr_labels`.
-The README records the remaining paper results; they are not assumed as axioms.
+The imports also prove `sampler_avoidance`, `dr_subsequence`, `dr_labels`,
+`block_to_fractional`, and fractional robustness for both samplers.
+The imports also prove Valiant depth reduction, balanced optimality, and the
+general conditional-label multiscale theorem. No unproved result is assumed.
 -/
 
 namespace ProofOfSpaceStatement

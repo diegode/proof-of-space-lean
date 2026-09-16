@@ -1,16 +1,19 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/mathlib-initiative/formalization.yaml/main/schema/formalization.schema.json
 version: "v0.4"
 project:
-  name: "Block depth robustness of DRSample and BucketSample"
+  name: "Block and fractional depth robustness of DRSample and BucketSample"
   description: >-
     Exponent-dependent block-depth robustness for the exact independent DRSample
     and BucketSample distributions, the sampler-avoidance lemma with any fixed
-    product fraction beta < 1, and the two deterministic appendix lemmas.
+    product fraction beta < 1, the two deterministic appendix lemmas, and
+    block-to-fractional conversion with two-sided fractional bounds for both samplers,
+    Valiant depth reduction, balanced optimality, and the general conditional-label
+    multiscale theorem.
     The deletion budget is Theta(epsilon n/L(n)), surviving depth is
     Omega(n/(log_2 n)^epsilon), and block width is Theta(L(n)/epsilon), for
     every fixed 0 < epsilon < 1 and all sufficiently large n.
-    Five of eleven labeled paper results are proved; full-paper coverage remains
-    unfinished, as recorded in README.md.
+    All ten required labeled paper results are proved; the cited BRG pebbling
+    corollary is outside scope, as recorded in README.md.
   authors: ["Diego de Estrada (@diegode)"]
   responsible_maintainers: ["Diego de Estrada (@diegode)"]
   license: "Apache-2.0"
@@ -37,7 +40,20 @@ sources:
       Source of DRSample and the restricted metagraph construction. Claim 2 gives
       the good-vertex estimate, attributed there to Erdos, Graham, and Szemeredi;
       the proof development generalizes the density estimate to every fixed
-      deletion fraction below one.
+      deletion fraction below one. Lemma 2.2 supplies the binary edge-class
+      depth-reduction construction, checked in local Zotero item A3LAU3M7,
+      attachment 2M8AVSYF.
+    author_endorsement: "not-contacted"
+  - title: "On the Depth-Robustness and Cumulative Pebbling Cost of Argon2i"
+    authors: ["Jeremiah Blocki", "Samson Zhou"]
+    type: "paper"
+    id: "https://doi.org/10.1007/978-3-319-70500-2_15"
+    location: "TCC 2017; Theorem 4"
+    relationship: "adapts"
+    note: >-
+      The block-to-fractional conversion is proved with integer deletion budgets
+      and truncated boundary blocks. The source was checked in local Zotero item
+      JLUWR5RH, attachment PMHMDREK. Graph reversal gives two-sided guarantees.
     author_endorsement: "not-contacted"
   - title: "Randomized Search Trees"
     authors: ["Raimund Seidel", "Cecilia R. Aragon"]
@@ -49,13 +65,13 @@ sources:
 related_formalizations: []
 status:
   scope: >-
-    Five registered statements from the current paper have complete proofs.
-    The full-paper request is unfinished: BRG pebbling optimality, block-to-fractional
-    conversion, the two-sided fractional corollary, Valiant's depth reduction,
-    balanced optimality, and the general conditional-label multiscale theorem
-    remain unproved. Supporting results prove arbitrary-fraction graph multiscale
-    bounds, block lifting, parameter selection with eb >= beta n, and the width
-    obstruction. No unproved paper result is assumed in the completed proofs.
+    Eleven registered statements cover all ten required labeled results from the
+    current paper. Supporting results prove arbitrary-fraction graph multiscale
+    bounds, block lifting, parameter selection with eb >= beta n, and asymptotic
+    domination of the samplers' deletion budgets by their certified depths.
+    The general multiscale theorem allows unbounded dependent integer labels.
+    The cited BRG pebbling corollary is out of scope and is not used.
+    No unproved paper result is assumed in the proofs.
   sorry_count: 0
   sorry_in_definitions: 0
   axioms: ["propext", "Classical.choice", "Quot.sound"]
@@ -78,6 +94,24 @@ status:
       axioms: ["propext", "Classical.choice", "Quot.sound"]
       comparator_config: "comparator.json"
       literature_dependencies: []
+    - declaration: "ProofOfSpaceStatement.block_to_fractional"
+      file: "ProofOfSpace/DRSample/Fractional.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
+    - declaration: "ProofOfSpaceStatement.drsample_fractional_robustness"
+      file: "ProofOfSpace/DRSample/PaperFractional.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
+    - declaration: "ProofOfSpaceStatement.bucketSample_fractional_robustness"
+      file: "ProofOfSpace/DRSample/PaperFractional.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
     - declaration: "ProofOfSpaceStatement.dr_subsequence"
       file: "ProofOfSpace/DRSample/PaperSubsequence.lean"
       sorry_count: 0
@@ -86,6 +120,24 @@ status:
       literature_dependencies: []
     - declaration: "ProofOfSpaceStatement.dr_labels"
       file: "ProofOfSpace/DRSample/GeneralLabels.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
+    - declaration: "ProofOfSpaceStatement.valiant_depth_reduction"
+      file: "ProofOfSpace/DRSample/Valiant.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
+    - declaration: "ProofOfSpaceStatement.balanced_robustness_optimality"
+      file: "ProofOfSpace/DRSample/PaperOptimality.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+      literature_dependencies: []
+    - declaration: "ProofOfSpaceStatement.conditional_multiscale"
+      file: "ProofOfSpace/DRSample/ConditionalLabels.lean"
       sorry_count: 0
       axioms: ["propext", "Classical.choice", "Quot.sound"]
       comparator_config: "comparator.json"
@@ -108,19 +160,25 @@ fidelity:
     statements now quantify over every exponent between zero and one, using
     positive constants to witness the paper's orders. Their thresholds may depend
     on the exponent. The general avoidance constants depend only on beta.
+    Fractional constants depend only on f < 1/2. A residue-class cover replaces
+    the greedy procedure in Blocki--Zhou Theorem 4, accounts for truncated blocks,
+    and proves both directions by reversing the same sampled graph.
     The proof retains integer blocks of size 20a and the existing triangular port
     geometry, with a proportional to L(n)/epsilon. The density threshold in the
     label proof is (q-1)/q for a suitable q depending on alpha; these internal
-    choices differ from the appendix but yield its stated bounds.
+    choices differ from the appendix but yield its stated bounds. Valiant's bound
+    uses binary edge classes. Balanced reduction uses k = ceil(log_2 ceil(log_2 n))
+    instead of ceil(log_2 L(n)), yielding the same asymptotic order. The conditional
+    label theorem uses a PMF on the joint array of all labels and states positivity
+    on its support; its failure exponent is explicitly 2 - log(3).
 review:
   status: "self-assessed"
   notes: >-
-    Lean checks the five completed results and their supporting proofs.
-    Comparator verified agreement for all five statements, and both NanoDa and
+    Lean checks all ten required results and their supporting proofs.
+    Comparator verified agreement for all eleven statements, and both NanoDa and
     the Lean default kernel accepted their exported proofs.
-    No independent human mathematical review is claimed. The six missing paper
-    results are recorded explicitly in README.md and are not theorem placeholders
-    in Solution or supporting proof modules.
+    No independent human mathematical review is claimed. Solution and supporting
+    proof modules contain no theorem placeholders.
 alignment:
   namespace: "ProofOfSpaceStatement"
   statements:
@@ -142,5 +200,29 @@ alignment:
       status: "proved in the current paper's generality"
     - source: "paper/finalnew/sections/robustnessproof.tex, lem:dr-labels"
       lean: "ProofOfSpaceStatement.dr_labels"
+      module: "Solution"
+      status: "proved in the current paper's generality"
+    - source: "paper/finalnew/sections/robustness.tex, thm:block-to-fractional"
+      lean: "ProofOfSpaceStatement.block_to_fractional"
+      module: "Solution"
+      status: "proved in the current paper's generality"
+    - source: "paper/finalnew/sections/robustness.tex, cor:bucket-fractional"
+      lean: "ProofOfSpaceStatement.drsample_fractional_robustness"
+      module: "Solution"
+      status: "proved in the current paper's generality"
+    - source: "paper/finalnew/sections/robustness.tex, cor:bucket-fractional"
+      lean: "ProofOfSpaceStatement.bucketSample_fractional_robustness"
+      module: "Solution"
+      status: "proved in the current paper's generality"
+    - source: "paper/finalnew/sections/robustness.tex, thm:valiant-depth-reduction"
+      lean: "ProofOfSpaceStatement.valiant_depth_reduction"
+      module: "Solution"
+      status: "proved in the current paper's generality"
+    - source: "paper/finalnew/sections/robustness.tex, cor:balanced-robustness-optimality"
+      lean: "ProofOfSpaceStatement.balanced_robustness_optimality"
+      module: "Solution"
+      status: "proved in the current paper's generality"
+    - source: "paper/finalnew/sections/robustnessproof.tex, thm:multiscale"
+      lean: "ProofOfSpaceStatement.conditional_multiscale"
       module: "Solution"
       status: "proved in the current paper's generality"

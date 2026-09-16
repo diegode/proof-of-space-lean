@@ -5,8 +5,14 @@
     "ProofOfSpaceStatement.drsample_conjecture2",
     "ProofOfSpaceStatement.sampler_avoidance",
     "ProofOfSpaceStatement.bucketSample_block_robustness",
+    "ProofOfSpaceStatement.block_to_fractional",
+    "ProofOfSpaceStatement.drsample_fractional_robustness",
+    "ProofOfSpaceStatement.bucketSample_fractional_robustness",
     "ProofOfSpaceStatement.dr_subsequence",
-    "ProofOfSpaceStatement.dr_labels"
+    "ProofOfSpaceStatement.dr_labels",
+    "ProofOfSpaceStatement.valiant_depth_reduction",
+    "ProofOfSpaceStatement.balanced_robustness_optimality",
+    "ProofOfSpaceStatement.conditional_multiscale"
   ],
   "definition_names": [],
   "permitted_axioms": [

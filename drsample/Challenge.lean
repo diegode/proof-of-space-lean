@@ -2,26 +2,22 @@ import Mathlib.Analysis.SpecialFunctions.Log.Base
 import Mathlib.Data.List.Chain
 import Mathlib.Data.Nat.Log
 import Mathlib.Algebra.BigOperators.Group.Finset.Pi
-import Mathlib.Tactic
 import Mathlib.Probability.ProbabilityMassFunction.Basic
+import Mathlib.Tactic
 
 /-! # Current paper statements with completed Lean proofs
 
 This is the Mathlib-only statement surface. Each intentional placeholder has
 an independently checked proof in `Solution`. See README.md for the full paper
-inventory and results that still require proof development.
+inventory; the cited BRG pebbling corollary is outside scope.
 -/
 namespace ProofOfSpaceStatement
 open Finset Filter
 
-/-- Distances in bucket `k`, capped at the number `v` of earlier vertices.
-The lower endpoint is rounded upward and excludes distances zero and one. -/
 def drsampleBucket (v k : ℕ) : Finset (Fin (v + 1)) :=
   univ.filter fun r => max 2 ((min v (2 ^ k) + 1) / 2) ≤ r.val ∧
     r.val ≤ min v (2 ^ k)
 
-/-- Probability that the single random parent of `v` is `u`.
-Vertices zero and one use the dummy parent zero; the graph also has line edges. -/
 noncomputable def drsampleParentProbability {n : ℕ} (v u : Fin n) : ℝ := by
   classical
   exact if 2 ≤ v.val then
@@ -32,8 +28,6 @@ noncomputable def drsampleParentProbability {n : ℕ} (v u : Fin n) : ℝ := by
             (1 : ℝ) / (drsampleBucket v.val (k.val + 1)).card else 0
   else if u.val = 0 then 1 else 0
 
-/-- Probability of an event under independent parent choices at all vertices.
-This is the ordinary finite sum of the event's product probabilities. -/
 noncomputable def drsampleProbability (n : ℕ) (event : (Fin n → Fin n) → Prop) : ℝ := by
   classical
   exact ∑ parents : Fin n → Fin n,
@@ -43,9 +37,6 @@ noncomputable def drsampleProbability (n : ℕ) (event : (Fin n → Fin n) → P
 def drsampleEdge {n : ℕ} (parents : Fin n → Fin n) (u v : Fin n) : Prop :=
   u < v ∧ (u.val + 1 = v.val ∨ parents v = u)
 
-/-- Deleting at most `e` left intervals of width `b` leaves a directed path of
-at least `d` vertices. Intervals end at the chosen endpoints, may overlap, and
-are truncated at vertex zero. Endpoints are chosen after sampling the graph. -/
 def DRSampleBlockDepthRobust {n : ℕ} (parents : Fin n → Fin n)
     (e : ℕ) (d : ℝ) (b : ℕ) : Prop :=
   ∀ endpoints : Finset (Fin n), endpoints.card ≤ e →
@@ -123,8 +114,6 @@ def EndsLongPath {n : ℕ} (edge : Fin n → Fin n → Prop)
   ∃ path : List (Fin n), AvoidingPath edge D path ∧
     path.getLast? = some v ∧ d ≤ (path.length : ℝ)
 
-/-- Definition `def:fractional-dr`: both directional guarantees hold after
-every allowed deletion, on the same graph. -/
 def FractionalDepthRobust {n : ℕ} (edge : Fin n → Fin n → Prop)
     (e : ℕ) (d fPlus fMinus : ℝ) : Prop := by
   classical
@@ -170,33 +159,6 @@ def HarmonicAvoidance {n : ℕ}
     finiteProbability (p v) (fun parents => Disjoint parents A) ≤
     Real.exp (-(1 / (Real.logb 2 n + 1)) * ∑ u ∈ A, (1 : ℝ) / (v.val - u.val : ℕ))
 
-/-- Reverse exactly `k` binary digits, using zero-based integer encodings. -/
-def reverseBits (k v : ℕ) : ℕ :=
-  ∑ i ∈ range k, (v / 2 ^ i % 2) * 2 ^ (k - 1 - i)
-
-/-- The BRG overlay from BHKLXZ19, Definition 4. For `n = 2^k`, retain the
-original graph on the first `n` vertices, add the full line on `2n` vertices,
-and join the first layer to the second by reversal of `k` binary digits. -/
-def bitReversalOverlay {n : ℕ} (edge : Fin n → Fin n → Prop)
-    (u v : Fin (2 * n)) : Prop :=
-  u.val + 1 = v.val ∨
-  (∃ i j : Fin n, i.val = u.val ∧ j.val = v.val ∧ edge i j) ∨
-  (u.val < n ∧ n ≤ v.val ∧ u.val = reverseBits (Nat.log 2 n) (v.val - n))
-
-/-- Parallel black pebbling: only newly placed pebbles require parents in the
-previous configuration. Retention and removal are unrestricted. -/
-def ParallelPebbling {n : ℕ} (edge : Fin n → Fin n → Prop)
-    (T : ℕ) (P : ℕ → Finset (Fin n)) : Prop :=
-  P 0 = ∅ ∧ ∀ t < T, ∀ v ∈ P (t + 1), v ∉ P t → ∀ u, edge u v → u ∈ P t
-
-/-- A lower bound for every pebbling reaching the last vertex, equivalently
-for the minimum cumulative cost of reaching the sink of an ordered line DAG. -/
-def ParallelCumulativeCostAtLeast {n : ℕ} (edge : Fin n → Fin n → Prop)
-    (cost : ℝ) : Prop :=
-  ∀ T P, ParallelPebbling edge T P →
-    (∃ v : Fin n, v.val + 1 = n ∧ v ∈ P T) →
-    cost ≤ (∑ t ∈ range (T + 1), ((P t).card : ℝ))
-
 /-- The reciprocal-distance cost `c_j` in `lem:dr-subsequence`. -/
 noncomputable def comparisonCost (a : ℕ → ℤ) (n j : ℕ) : ℝ :=
   (∑ i ∈ Ico 0 j, if a j ≤ a i then (1 : ℝ) / (j - i : ℕ) else 0) +
@@ -206,8 +168,6 @@ noncomputable def comparisonCost (a : ℕ → ℤ) (n j : ℕ) : ℝ :=
 noncomputable def labelMass (U : Finset ℕ) (h : ℕ → ℕ) : ℝ :=
   ∑ j ∈ U, ∑ i ∈ U, if i < j ∧ h j ≤ h i then (1 : ℝ) / (j - i : ℕ) else 0
 
-/-- Countably supported laws suffice for the joint tuple of all integer labels.
-The labels for distinct deletion sets are on one common probability space. -/
 abbrev LabelArray (n : ℕ) := Finset (Fin n) → Fin n → ℕ
 
 noncomputable def labelProbability {n : ℕ} (p : PMF (LabelArray n))
@@ -218,8 +178,6 @@ def EarlierLabels {n : ℕ} (S : Finset (Fin n)) (j : Fin n)
     (past : Fin n → ℕ) (h : LabelArray n) : Prop :=
   ∀ i, i ∉ S → i < j → h S i = past i
 
-/-- Equation `eq:dr-conditional-height`, written by multiplying through by
-the positive probability of the tuple of earlier labels. -/
 def ConditionalHeightBound {n : ℕ} (p : PMF (LabelArray n)) (lambda : ℝ) : Prop :=
   ∀ S j, j ∉ S → ∀ past : Fin n → ℕ,
     0 < labelProbability p (EarlierLabels S j past) → ∀ k : ℕ, 0 < k →
@@ -268,6 +226,37 @@ theorem bucketSample_block_robustness :
           1 - Real.exp (-c * (ε * n / L)) := by
   sorry
 
+/-- Paper result `thm:block-to-fractional` (Blocki--Zhou, Theorem 4). -/
+theorem block_to_fractional {n e b : ℕ} {edge : Fin n → Fin n → Prop}
+    (_hordered : IsOrdered edge) (hline : ContainsLine edge)
+    (hb : 1 ≤ b) (hbn : b ≤ n) {d : ℝ} (_hd : 0 < d)
+    (hrobust : GraphBlockDepthRobust edge e d b) :
+    FractionalDepthRobust edge (e / 2) d 0 ((e : ℝ) * b / (2 * n)) := by
+  sorry
+
+/-- Paper result `cor:bucket-fractional`, for DRSample. -/
+theorem drsample_fractional_robustness {f : ℝ} (hf : 0 < f) (hfHalf : f < 1 / 2) :
+    ∃ c C : ℝ, 0 < c ∧ 0 < C ∧
+      ∀ ε : ℝ, 0 < ε → ε < 1 → ∀ᶠ n : ℕ in atTop,
+        let L := Real.logb 2 n / Real.logb 2 (Real.logb 2 n)
+        ∃ e : ℕ, c * (ε * n / L) ≤ e ∧ (e : ℝ) ≤ C * (ε * n / L) ∧
+          drsampleProbability n (fun parents => FractionalDepthRobust (drsampleEdge parents)
+            e (c * n / (Real.logb 2 n) ^ ε) f f) ≥
+          1 - Real.exp (-c * (ε * n / L)) := by
+  sorry
+
+/-- Paper result `cor:bucket-fractional`, for every positive number of draws. -/
+theorem bucketSample_fractional_robustness {f : ℝ} (hf : 0 < f) (hfHalf : f < 1 / 2) :
+    ∃ c C : ℝ, 0 < c ∧ 0 < C ∧
+      ∀ ε : ℝ, 0 < ε → ε < 1 → ∀ r : ℕ, 1 ≤ r → ∀ᶠ n : ℕ in atTop,
+        let L := Real.logb 2 n / Real.logb 2 (Real.logb 2 n)
+        ∃ e : ℕ, c * (ε * n / L) ≤ e ∧ (e : ℝ) ≤ C * (ε * n / L) ∧
+          bucketSampleProbability n r (fun parents =>
+            FractionalDepthRobust (multiSampleEdge parents)
+              e (c * n / (Real.logb 2 n) ^ ε) f f) ≥
+          1 - Real.exp (-c * (ε * n / L)) := by
+  sorry
+
 /-- Paper result `lem:dr-subsequence`. -/
 theorem dr_subsequence {n : ℕ} (_hn : 1 ≤ n) (a : ℕ → ℤ)
     (T : Finset ℕ) (hT : T ⊆ range n) :
@@ -283,4 +272,29 @@ theorem dr_labels {α : ℝ} (hα : 0 < α) (hα1 : α < 1) :
       (n : ℝ) / c * Real.exp (-c * labelMass (range n \ S) h / n) ≤ d := by
   sorry
 
+theorem valiant_depth_reduction {n Δ : ℕ} (hn : 2 ≤ n) (_hΔ : 2 ≤ Δ)
+    {edge : Fin n → Fin n → Prop} (hordered : IsOrdered edge)
+    (hdegree : IndegreeAtMost edge Δ) {k : ℕ} (hk : k < Nat.clog 2 n) :
+    ∃ S : Finset (Fin n), S.card ≤ Δ * n * k / Nat.clog 2 n ∧
+      DepthAtMost edge S (2 ^ (Nat.clog 2 n - k)) := by
+  sorry
+
+theorem balanced_robustness_optimality (Δ : ℕ) (hΔ : 2 ≤ Δ) :
+    ∃ C : ℝ, 0 < C ∧ ∀ᶠ n : ℕ in atTop,
+      ∀ edge : Fin n → Fin n → Prop, IsOrdered edge → IndegreeAtMost edge Δ →
+      ∀ e b : ℕ, 1 ≤ e → 1 ≤ b → ∀ d : ℝ, 0 < d →
+        GraphBlockDepthRobust edge e d b →
+        min (e : ℝ) d ≤ C * n / (Real.logb 2 n / Real.logb 2 (Real.logb 2 n)) ∧
+          (b : ℝ) < (n : ℝ) / e := by
+  sorry
+
+theorem conditional_multiscale {α : ℝ} (hα : 0 < α) (hα1 : α < 1) :
+    ∃ c : ℝ, 0 < c ∧ ∀ n : ℕ, 0 < n → ∀ lambda : ℝ, 0 < lambda →
+      ∀ p : PMF (LabelArray n),
+      (∀ h ∈ p.support, ∀ S j, j ∉ S → 0 < h S j) → ConditionalHeightBound p lambda →
+      labelProbability p (fun h => ∀ S : Finset (Fin n), (S.card : ℝ) ≤ α * n →
+        (n : ℝ) / c * Real.exp (-c / lambda) ≤
+          ((univ.filter (fun j => j ∉ S)).sup (h S) : ℕ)) ≥
+        1 - Real.exp (-(2 - Real.log 3) * n) := by
+  sorry
 end ProofOfSpaceStatement
