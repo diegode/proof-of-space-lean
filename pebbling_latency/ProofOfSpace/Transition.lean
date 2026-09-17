@@ -7,8 +7,10 @@ import ProofOfSpace.Reference
 
 /-! # Accounting lemmas for the revised manuscript transition
 
-These lemmas make the September 16 transition's first-fertile certificate,
-deep-crush premium, and floor-based remaining delay explicit. They use the
+These lemmas make the September 16–17 transition's first-fertile certificate,
+deep-crush premium, and floor-based remaining delay explicit. The revised
+paper's `κ` is `Parameters.K = h-a-2g`, whereas the original public latency
+statement uses `κ = h-a`. They use the
 existing capped lower recurrence and do not assert the draft's full transition
 or terminal theorem. The end-to-end latency theorem retains its global repair
 allowance and its finite-depth proof.
@@ -36,7 +38,7 @@ theorem remainingDelay_antitone : AntitoneOn T.remainingDelay (Icc (T.y 0) p) :=
   dsimp [remainingDelay]
   linarith
 
-/-- The missing `eq:tau-linear` in the revised draft. -/
+/-- The linear bound for the paper's floor-clock distance (Definition `def:tau`). -/
 theorem remainingDelay_le {x : ℝ} (hx : x ∈ Icc (T.y 0) p) :
     T.remainingDelay x ≤ (p - x) / g :=
   (ProofOfSpace.Delay.scale_calculus T.positive T.spaced hx.1 hx.2 T.reaches).2
@@ -58,12 +60,121 @@ theorem crush_certificate_le {W κ : ℝ}
   rw [sub_div]
   linarith
 
+/-- September 17 notation: the surplus `K = κ_old-2g` absorbs the two levels
+in the previous certificate. This is an algebraic change, not a stronger bound. -/
+theorem crush_certificate_reparametrize (W κ : ℝ) :
+    T.remainingDelay (p + g - W) + 2 - κ / g =
+      T.remainingDelay (p + g - W) - (κ - 2 * g) / g := by
+  have hg : g ≠ 0 := ne_of_gt T.positive
+  field_simp [hg]
+  ring
+
+/-- The revised certificate increment in the paper's surplus notation. -/
+theorem crush_surplus_le {W K : ℝ}
+    (hfloor : T.y 0 ≤ p + g - W) (hW : g ≤ W) :
+    T.remainingDelay (p + g - W) - K / g ≤ (W - K) / g - 1 := by
+  have h := T.regrowth_allowance hfloor hW
+  rw [sub_div]
+  linarith
+
 end ProofOfSpace.Delay.Trajectory
+
+namespace ProofOfSpace.Reference.Budget
+
+variable {S : Parameters} (B : Budget S)
+
+/-- A local crush must carry its spending window, in addition to the scalar
+remaining-budget bound in the revised Transition statement. -/
+theorem window_le_remaining {b e : ℕ} {c W : ℝ}
+    (hcert : ((b : ℝ) - c) * S.g ≤ B.B (b + 1))
+    (hwindow : W ≤ B.B (e + 1) - B.B (b + 1)) :
+    W ≤ S.ρ - ((b : ℝ) - c) * S.g := by
+  linarith [B.bound (e + 1)]
+
+/-- The disjoint consecutive windows required by Terminal iteration.
+An individual bound on each `W r` would not justify the sum bound. -/
+theorem terminal_budget {q : ℕ} (b : ℕ → ℕ) (W : ℕ → ℝ) (c : ℝ)
+    (hcert : ((b 0 : ℝ) - c) * S.g ≤ B.B (b 0 + 1))
+    (hwindow : ∀ r < q, W r ≤ B.B (b (r + 1) + 1) - B.B (b r + 1)) :
+    ∑ r ∈ Finset.range q, W r ≤ S.ρ - ((b 0 : ℝ) - c) * S.g := by
+  have htel : ∀ k ≤ q, ∑ r ∈ Finset.range k, W r ≤
+      B.B (b k + 1) - B.B (b 0 + 1) := by
+    intro k hk
+    induction k with
+    | zero => simp
+    | succ k ih =>
+      rw [Finset.sum_range_succ]
+      have := ih (by omega)
+      have := hwindow k (by omega)
+      linarith
+  have := htel q le_rfl
+  linarith [B.bound (b q + 1)]
+
+/-- Rationing uses the revised strict crush threshold `K+2g`. -/
+theorem terminal_crush_count {q : ℕ} (hq : 0 < q)
+    (b : ℕ → ℕ) (W : ℕ → ℝ) (c : ℝ)
+    (hcert : ((b 0 : ℝ) - c) * S.g ≤ B.B (b 0 + 1))
+    (hwindow : ∀ r < q, W r ≤ B.B (b (r + 1) + 1) - B.B (b r + 1))
+    (hpremium : ∀ r < q, S.K + 2 * S.g < W r) :
+    (q : ℝ) * (S.K + 2 * S.g) < S.ρ - ((b 0 : ℝ) - c) * S.g := by
+  have hsum : (∑ _r ∈ Finset.range q, (S.K + 2 * S.g)) <
+      ∑ r ∈ Finset.range q, W r := by
+    apply Finset.sum_lt_sum_of_nonempty (Finset.nonempty_range_iff.mpr (by omega))
+    intro r hr
+    exact hpremium r (Finset.mem_range.mp hr)
+  simp only [Finset.sum_const, Finset.card_range, nsmul_eq_mul] at hsum
+  exact hsum.trans_le (B.terminal_budget b W c hcert hwindow)
+
+/-- The revised local certificate follows by adding the old certificate,
+crush spending and regrowth spending. No seed-fertility lower bound on the
+parent's regrowth time is assumed. -/
+theorem crush_certificate {b m i : ℕ} {c W R d : ℝ}
+    (hcert : ((b : ℝ) - c) * S.g ≤ B.B (b + 1))
+    (hcrush : S.K + ((m : ℝ) + 1) * S.g ≤ W)
+    (hregrow : ((i : ℝ) - 1 - d) * S.g ≤ R)
+    (hwindow : B.B (b + 1) + W + R ≤ B.B (b + m + i + 1)) :
+    (((b + m + i : ℕ) : ℝ) - (c + d - S.K / S.g)) * S.g ≤
+      B.B (b + m + i + 1) := by
+  have hdiv : S.K / S.g * S.g = S.K := div_mul_cancel₀ _ (ne_of_gt S.g_pos)
+  push_cast
+  nlinarith
+
+end ProofOfSpace.Reference.Budget
 
 namespace ProofOfSpace.Reference.Growth
 
 open Set
 variable {S : Parameters} (F : Growth S) (B : Budget S)
+
+/-- A normalized fertile parent survives any later spending. This proves the
+parent-floor estimate directly, rather than applying a lemma about red-free
+initial weight to an arbitrary set. -/
+theorem fertile_orbit (b k : ℕ) :
+    F.orbit B b S.p k ∈ Icc S.a S.U ∧
+      (0 < k → S.U - (B.B (b + k + 1) - B.B (b + 1)) ≤
+        F.orbit B b S.p k) := by
+  induction k with
+  | zero =>
+    refine ⟨⟨S.a_le_p, ?_⟩, by omega⟩
+    change S.p ≤ S.p + S.g
+    linarith [S.g_pos]
+  | succ k ih =>
+    have hs := F.orbit_step B b S.p k
+    have hlo : S.U - (B.B (b + (k + 1) + 1) - B.B (b + 1)) ≤
+        F.orbit B b S.p (k + 1) := by
+      cases k with
+      | zero =>
+        have hfree := F.fertile (x := S.p) ih.1 le_rfl
+        simpa only [orbit, hfree, Budget.r, Nat.add_zero] using hs
+      | succ k =>
+        have hi := ih.2 (by omega)
+        have hg := F.nondecreasing_step ih.1
+        dsimp [Budget.r] at hs
+        simp only [Nat.add_assoc] at hs hi ⊢
+        linarith
+    refine ⟨⟨?_, F.orbit_cap B ih.1⟩, fun _ => hlo⟩
+    have hbudget := B.diff_le_rho (b + 1) (b + (k + 1) + 1)
+    linarith [S.a_le_U_sub_rho]
 
 /-- Spending through an infertile challenge prefix, retaining the original
 challenge surplus even when the recurrence is capped above fertility. -/
@@ -168,4 +279,83 @@ theorem deep_crush_premium (b k : ℕ)
   have h := F.source_prefix_spending B b k hband
   linarith
 
+/-- The same strict spending bound with September 17's `κ = K`.
+The exit index is `m = k+1`, so the premium is `K+(m+1)g`. -/
+theorem deep_crush_surplus (b k : ℕ)
+    (hband : ∀ i, 1 ≤ i → i ≤ k → F.orbit B b S.σ i ∈ Icc S.a S.p)
+    (hcrush : F.orbit B b S.σ (k + 1) < S.a) :
+    S.K + ((k : ℝ) + 2) * S.g < B.B (b + (k + 1) + 1) - B.B (b + 1) := by
+  have h := F.deep_crush_premium B b k hband hcrush
+  dsimp [Parameters.K]
+  nlinarith
+
 end ProofOfSpace.Reference.Growth
+
+/-! The September 17 proof constructs the first fertile *parent* after a
+crush. It cannot assign that depth the free fertility lower bound of the
+discarded *source*. This example checks the local recurrence and regime;
+it is not a counterexample graph to every alternative in the Transition
+theorem's existential disjunction. -/
+namespace ProofOfSpace.Reference.DeepCrushExample
+
+open Set
+noncomputable section
+
+def beta (x : ℝ) : ℝ := 2 * x - x ^ 2
+def expand (x : ℝ) : ℝ := beta x - 1 / 1000
+def floor : ℝ := 1 / 100
+def target : ℝ := 99 / 100
+def source : ℝ := 1 / 40
+def budget : ℝ := 1 / 20
+def gain : ℝ := expand target - target
+
+def orbit (x : ℝ) : ℕ → ℝ
+  | 0 => x
+  | i + 1 => max 0 (expand (orbit x i) - if i = 0 then budget else 0)
+
+theorem beta_monotone : MonotoneOn beta (Icc 0 1) := by
+  intro x hx y hy hxy
+  dsimp [beta]
+  nlinarith [mul_nonneg (sub_nonneg.mpr hxy)
+    (show 0 ≤ 2 - x - y by linarith [hx.2, hy.2])]
+
+theorem beta_concave : ConcaveOn ℝ (Icc 0 1) beta := by
+  refine ⟨convex_Icc _ _, ?_⟩
+  intro x _ y _ u v hu hv huv
+  simp only [smul_eq_mul, beta]
+  have h := mul_nonneg (mul_nonneg hu hv) (sq_nonneg (x - y))
+  nlinarith [sq_nonneg (u * x + v * y - x),
+    show u = 1 - v by linarith]
+
+/-- Conditions (a)--(c), taking `ζ-δ=target`, and the band endpoint gain. -/
+theorem regime :
+    0 < floor ∧ floor < source ∧ source < target ∧ 0 < gain ∧
+    budget + floor ≤ target ∧ budget + floor < expand target ∧
+    expand floor - floor = gain ∧ 2 * gain ≤ expand source - source := by
+  norm_num [floor, source, target, budget, gain, expand, beta]
+
+/-- All spending is on the first level. The maximal high-spending stride is
+four levels, since five base rates cost less than the budget and six do not. -/
+theorem stride : 5 * gain < budget ∧ budget ≤ 6 * gain := by
+  norm_num [gain, budget, expand, beta, target]
+
+theorem source_erased (i : ℕ) : orbit source (i + 1) = 0 := by
+  induction i with
+  | zero => norm_num [orbit, source, budget, expand, beta]
+  | succ i ih =>
+    rw [orbit, ih]
+    norm_num [expand, beta]
+
+/-- The construction is in case (III), yet its first fertile parent is only
+two levels above the input, before even the source's first two free steps
+reach fertility. Thus the constructed depth does not satisfy `b' ≥ b+t_σ`. -/
+theorem early_parent_regrowth :
+    orbit source 5 < source ∧ orbit source 1 < floor ∧
+    orbit target 1 < target ∧ target ≤ orbit target 2 ∧
+    source < target ∧ expand source < target ∧ expand (expand source) < target := by
+  rw [show (5 : ℕ) = 4 + 1 from rfl, source_erased,
+    show (1 : ℕ) = 0 + 1 from rfl, source_erased]
+  norm_num [orbit, source, target, floor, budget, expand, beta]
+
+end
+end ProofOfSpace.Reference.DeepCrushExample

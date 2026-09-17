@@ -29,13 +29,13 @@ Define
 ```text
 D  = τ(p) - τ(σ),
 D₀ = τ(p) - τ(min(p, ζ - δ)),
-κ  = F(σ) - a.
+κ  = F(σ) - a - 2g.
 ```
 
 For `z >= 1`, the proved layer condition is
 
 ```text
-ℓ > 1 + D₀ + (z - 1)(1 + D) + ρ/g + max(0, (ρ - κ)/g + 2).
+ℓ > 1 + D₀ + (z - 1)(1 + D) + ρ/g + max(0, (ρ - κ)/g).
 ```
 
 It guarantees an unpebbled path ending in the challenge with at least
@@ -50,21 +50,24 @@ requires `ceil(π n) <= m` and `q >= 1`; ordinary depth robustness says that eve
 set of at least `ceil(π n)` vertices contains a path with at least `ceil(απ n)`
 vertices. All vertex rounding is retained in the formal statement.
 
-The global correction `max(0, (ρ - κ)/g + 2)` pays for repairs. The theorem does
+The global correction `max(0, (ρ - κ)/g)` pays for repairs. The theorem does
 not assume that repairs have zero net cost or replace the floor-based `D` by the
 seed's free fertility time. It is a corrected sufficient bound, with no claim
 of optimal constants or exact equivalence to the unfinished draft.
 
-Carla's September 16 afternoon revisions are compatible with this theorem.
-The revised condition (a) additionally requires `ζ-δ >= π` (hence `D₀=0`
-when `p=π`). We interpret the new transition's undefined `τ_x` as the remaining
-floor-based delay `τ(p)-τ(x)`, distinct from the seed's integer fertility time. The supporting
-[Transition.lean](ProofOfSpace/Transition.lean) proves the first-fertile
-certificate and finite-stack existence bound, the deep-crush spending premium
-(including a zero endpoint), and the linear regrowth allowance. The full
-manuscript transition/terminal theorem is still outside the registered result;
-[ADVISOR_ALIGNMENT.md](ADVISOR_ALIGNMENT.md#september-16-afternoon-review)
-records the remaining discrepancies. The sufficient 17-layer result is unchanged.
+The notation above follows Carla's September 17 revision: her new `κ` is
+`Reference.Parameters.K`. The registered statement retains its original local
+name `κ₀=F(σ)-a`; its correction `max(0,(ρ-κ₀)/g+2)` is exactly the same bound.
+The manuscript now defines `τ_x=τ(p)-τ(x)` and uses it in the Terminal theorem.
+Its condition (a) requires `ζ-δ >= π`, which gives `D₀=0` when `p=π`.
+
+[Transition.lean](ProofOfSpace/Transition.lean) proves the revised surplus
+premium, local certificate update, remaining-budget and disjoint-window bounds,
+crush-count bound, and normalized parent floor. It also checks a counterexample
+to the new proof's claim that parent regrowth must take at least `t_σ` levels.
+The full manuscript Transition/Terminal theorem is still outside the registered
+result; [ADVISOR_ALIGNMENT.md](ADVISOR_ALIGNMENT.md#september-17-review)
+records the precise remaining gaps. The sufficient 17-layer result is unchanged.
 
 ## Public results
 
@@ -93,7 +96,7 @@ from `a` is exactly
 ```
 
 Ignoring vertex rounding, `g = 0.11131`, `D₀ = 0`, `D ≈ 2.30447922`, and
-`κ ≈ 0.42973326`; the layer condition is `ℓ > 16.81806055`.
+`κ ≈ 0.20711326`; the layer condition is `ℓ > 16.81806055`.
 The Lean corollary accounts for rounding uniformly for `n >= 10000`, using
 `g >= 0.111`, `g <= 0.11131`, `D <= 2.31`, and a repair density at most `0.59291`:
 
@@ -126,7 +129,7 @@ path in a static snapshot.
 | --- | --- |
 | `Delay.lean` | Interpolated clock, concavity, general and seed-based delay bounds |
 | `Reference.lean` | Floors, standard expandability, protected levels, finite budget accounting |
-| `Transition.lean` | Revised first-fertile certificate, deep-crush premium, remaining-delay bounds |
+| `Transition.lean` | First-fertile and crush certificates, parent floor, terminal spending bounds, regrowth counterexample |
 | `ReferenceAmplification.lean` | Actual footprint lower bounds, source chains, graph latency |
 | `Model.lean`, `Sources.lean` | Physical graphs, path splicing, exact integer source count |
 | `PortModel.lean`, `PortStack.lean` | Port permutations and their physical stacks |
