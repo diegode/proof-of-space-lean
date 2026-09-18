@@ -61,13 +61,21 @@ name `κ₀=F(σ)-a`; its correction `max(0,(ρ-κ₀)/g+2)` is exactly the same
 The manuscript now defines `τ_x=τ(p)-τ(x)` and uses it in the Terminal theorem.
 Its condition (a) requires `ζ-δ >= π`, which gives `D₀=0` when `p=π`.
 
-[Transition.lean](ProofOfSpace/Transition.lean) proves the revised surplus
-premium, local certificate update, remaining-budget and disjoint-window bounds,
-crush-count bound, and normalized parent floor. It also checks a counterexample
-to the new proof's claim that parent regrowth must take at least `t_σ` levels.
-The full manuscript Transition/Terminal theorem is still outside the registered
-result; [ADVISOR_ALIGNMENT.md](ADVISOR_ALIGNMENT.md#september-17-review)
-records the precise remaining gaps. The sufficient 17-layer result is unchanged.
+[Transition.lean](ProofOfSpace/Transition.lean) now proves the September 18
+kill-length certificate `c + τ_(p-κ-mg) - κ/g`, including the elimination of
+actual spending `W`, and sums the strict kill premiums over disjoint windows.
+[CrushAllowance.lean](ProofOfSpace/CrushAllowance.lean) proves that the resulting
+integer optimization is finite and attains its maximum, bounds every feasible
+plan by `A(B)`, and proves monotonicity in the available budget. The empty plan
+is retained at zero budget. Carla has repaired the earlier parent-regrowth depth
+claim and restored local spending and parent containment to Transition (III).
+
+The registered graph proof continues to use its proved global repair bound.
+The new manuscript's full Transition/Terminal/Round construction and cost
+theorem are not asserted as end-to-end Lean results. In particular, its latency
+maximum needs a domain restriction and its finite-depth existence argument
+needs completion. [ADVISOR_ALIGNMENT.md](ADVISOR_ALIGNMENT.md#september-18-review)
+records the remaining issues. The verified 17-layer result is unchanged.
 
 ## Public results
 
@@ -109,6 +117,28 @@ This is a sufficient layer count certified by the theorem, not a lower bound
 showing that fewer layers are impossible. Within-layer depth robustness and
 `ChungSecurityConditions n lambda (1/100) (24/25)` remain explicit hypotheses.
 
+## Filecoin crush allowance
+
+For the cost-model choice `σ = απ = 0.2`, with `π = ρ = 0.8`, `δ = 0.0378`
+and `ζ = 0.9`, Carla's new definition gives:
+
+| Expansion profile | `c_free^max` | `b_max = ceil(c_free^max + ρ/g)` |
+| --- | ---: | ---: |
+| Entropy-defined Chung-8 curve, numerical evaluation | 0.692642050643042 | 8 |
+| Certified rational `ChungCurve.filecoinBeta`, exact Lean proof | `6011005/8615394 ≈ 0.697705177499717` | 8 |
+
+Both maxima use initial depth zero and one crush of kill length four. Two
+crushes cannot fit in the budget. For initial depth one, the remaining budget
+is `0.7378`, the maximizing kill length is three, and the resulting total
+certificate is smaller. These are unrounded density calculations; the rational
+profile result is separate from the entropy calculation, not an error bound
+for it or a newly proved graph cost theorem.
+
+[FilecoinCrushNumerics.lean](ProofOfSpace/FilecoinCrushNumerics.lean) proves the
+exact rational maximum and `b_max = 8`.
+[FILECOIN_CRUSH_ALLOWANCE.md](FILECOIN_CRUSH_ALLOWANCE.md) gives the enumeration,
+assumptions, and reproducible calculation command.
+
 ## Probability and scope
 
 The random wiring is one uniform permutation of all `8n` ports, reused between
@@ -129,12 +159,14 @@ path in a static snapshot.
 | --- | --- |
 | `Delay.lean` | Interpolated clock, concavity, general and seed-based delay bounds |
 | `Reference.lean` | Floors, standard expandability, protected levels, finite budget accounting |
-| `Transition.lean` | First-fertile and crush certificates, parent floor, terminal spending bounds, regrowth counterexample |
+| `Transition.lean` | First-fertile and kill-length certificates, parent floor, exact terminal spending bounds, historical regrowth example |
+| `CrushAllowance.lean` | Finite attained crush maximum, budget monotonicity, clock domain, zero-budget case |
 | `ReferenceAmplification.lean` | Actual footprint lower bounds, source chains, graph latency |
 | `Model.lean`, `Sources.lean` | Physical graphs, path splicing, exact integer source count |
 | `PortModel.lean`, `PortStack.lean` | Port permutations and their physical stacks |
 | `UnionBound.lean`, `PortExpansionProbability.lean`, `Chung*.lean` | Finite expansion probability and entropy bounds |
 | `FilecoinReferenceNumerics.lean` | Exact free trajectory and rounded 17-layer estimates |
+| `FilecoinCrushNumerics.lean` | Exact cost-model crush optimization and `b_max = 8` for the rational profile |
 
 Lean depth zero is the paper's bottom level `ℓ`. The internal graph theorem
 permits different layer graphs and interlayers; the public game uses one

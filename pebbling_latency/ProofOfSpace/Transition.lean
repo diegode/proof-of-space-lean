@@ -7,7 +7,7 @@ import ProofOfSpace.Reference
 
 /-! # Accounting lemmas for the revised manuscript transition
 
-These lemmas make the September 16–17 transition's first-fertile certificate,
+These lemmas make the September 16–18 transition's first-fertile certificate,
 deep-crush premium, and floor-based remaining delay explicit. The revised
 paper's `κ` is `Parameters.K = h-a-2g`, whereas the original public latency
 statement uses `κ = h-a`. They use the
@@ -77,6 +77,26 @@ theorem crush_surplus_le {W K : ℝ}
   rw [sub_div]
   linarith
 
+/-- September 18: eliminate the actual spending `W` using the kill length `m`.
+The Lipschitz estimate has the direction needed for an upper certificate bound. -/
+theorem crush_length_certificate {W K : ℝ} {m : ℕ}
+    (hK : 0 ≤ K) (_hm : 1 ≤ m)
+    (hfloor : T.y 0 ≤ p + g - W)
+    (hW : K + ((m : ℝ) + 1) * g ≤ W) :
+    T.remainingDelay (p + g - W) + ((m : ℝ) + 1) - W / g ≤
+      T.remainingDelay (p - K - (m : ℝ) * g) - K / g := by
+  have hg := T.positive
+  have hm0 : (0 : ℝ) ≤ m := Nat.cast_nonneg _
+  have horder : p + g - W ≤ p - K - (m : ℝ) * g := by linarith
+  have htop : p - K - (m : ℝ) * g ≤ p := by nlinarith
+  have h := (ProofOfSpace.Delay.scale_calculus T.positive T.spaced
+    hfloor horder (htop.trans T.reaches)).2
+  have h := (le_div_iff₀ hg).mp h
+  have hWdiv : W / g * g = W := div_mul_cancel₀ _ (ne_of_gt hg)
+  have hKdiv : K / g * g = K := div_mul_cancel₀ _ (ne_of_gt hg)
+  dsimp [remainingDelay]
+  nlinarith
+
 end ProofOfSpace.Delay.Trajectory
 
 namespace ProofOfSpace.Reference.Budget
@@ -138,6 +158,42 @@ theorem crush_certificate {b m i : ℕ} {c W R d : ℝ}
   have hdiv : S.K / S.g * S.g = S.K := div_mul_cancel₀ _ (ne_of_gt S.g_pos)
   push_cast
   nlinarith
+
+/-- The manuscript's optimized certificate, with actual crush and regrowth
+windows. In contrast to `crush_certificate`, its delay is evaluated at the
+minimum permitted crush spending, not at the actual spending. -/
+theorem crush_length_certificate {free : ℝ → ℝ}
+    (T : ProofOfSpace.Delay.Trajectory free S.p S.g)
+    {b m i : ℕ} {c W R : ℝ} (hm : 1 ≤ m)
+    (hfloor : T.y 0 ≤ S.p + S.g - W)
+    (hcert : ((b : ℝ) - c) * S.g ≤ B.B (b + 1))
+    (hcrush : S.K + ((m : ℝ) + 1) * S.g ≤ W)
+    (hregrow : ((i : ℝ) - 1 - T.remainingDelay (S.p + S.g - W)) * S.g ≤ R)
+    (hwindow : B.B (b + 1) + W + R ≤ B.B (b + m + i + 1)) :
+    (((b + m + i : ℕ) : ℝ) -
+      (c + T.remainingDelay (S.p - S.K - (m : ℝ) * S.g) - S.K / S.g)) * S.g ≤
+        B.B (b + m + i + 1) := by
+  have h := T.crush_length_certificate S.K_nonneg hm hfloor hcrush
+  have hWdiv : W / S.g * S.g = W := div_mul_cancel₀ _ (ne_of_gt S.g_pos)
+  have hKdiv : S.K / S.g * S.g = S.K := div_mul_cancel₀ _ (ne_of_gt S.g_pos)
+  push_cast
+  nlinarith [S.g_pos]
+
+/-- Sum the exact kill-length premiums over disjoint windows. Strictness
+requires at least one crush; the empty plan is handled separately. -/
+theorem terminal_kill_budget {q : ℕ} (hq : 0 < q)
+    (b m : ℕ → ℕ) (W : ℕ → ℝ) (c : ℝ)
+    (hcert : ((b 0 : ℝ) - c) * S.g ≤ B.B (b 0 + 1))
+    (hwindow : ∀ r < q, W r ≤ B.B (b (r + 1) + 1) - B.B (b r + 1))
+    (hpremium : ∀ r < q, S.K + ((m r : ℝ) + 1) * S.g < W r) :
+    ∑ r ∈ Finset.range q, (S.K + ((m r : ℝ) + 1) * S.g) <
+      S.ρ - ((b 0 : ℝ) - c) * S.g := by
+  have hsum : (∑ r ∈ Finset.range q, (S.K + ((m r : ℝ) + 1) * S.g)) <
+      ∑ r ∈ Finset.range q, W r := by
+    apply Finset.sum_lt_sum_of_nonempty (Finset.nonempty_range_iff.mpr (by omega))
+    intro r hr
+    exact hpremium r (Finset.mem_range.mp hr)
+  exact hsum.trans_le (B.terminal_budget b W c hcert hwindow)
 
 end ProofOfSpace.Reference.Budget
 
